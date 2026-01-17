@@ -7,6 +7,7 @@
 
 package frc.robot;
 
+import static frc.robot.subsystems.shooter.ShooterSubsystem.*;
 import static frc.robot.subsystems.vision.VisionConstants.*;
 
 import com.pathplanner.lib.auto.AutoBuilder;
@@ -20,6 +21,7 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.DriveCommands;
+import frc.robot.commands.Shoot;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.GyroIO;
@@ -27,6 +29,7 @@ import frc.robot.subsystems.drive.GyroIOPigeon2;
 import frc.robot.subsystems.drive.ModuleIO;
 import frc.robot.subsystems.drive.ModuleIOSim;
 import frc.robot.subsystems.drive.ModuleIOTalonFX;
+import frc.robot.subsystems.shooter.ShooterSubsystem;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionIO;
 import frc.robot.subsystems.vision.VisionIOPhotonVision;
@@ -42,17 +45,22 @@ import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 public class RobotContainer {
   // Subsystems
   private final Drive drive;
+  private final ShooterSubsystem shooter;
   private final Vision vision;
 
   // Controller
   final Joystick driverRightJoystick = new Joystick(1);
   final Joystick driverLeftJoystick = new Joystick(0);
+  final Joystick operatorJoystick = new Joystick(3);
 
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
+
+    shooter = new ShooterSubsystem();
+
     switch (Constants.currentMode) {
       case REAL:
         // Real robot, instantiate hardware IO implementations
@@ -157,6 +165,7 @@ public class RobotContainer {
 
     final JoystickButton resetGyro = new JoystickButton(driverRightJoystick, 7);
     final JoystickButton lockToZero = new JoystickButton(driverRightJoystick, 9);
+    final JoystickButton shoot = new JoystickButton(operatorJoystick, 1);
 
     // Default command, normal field-relative drive
     drive.setDefaultCommand(
@@ -180,6 +189,16 @@ public class RobotContainer {
                 () -> drive.setPose(new Pose2d(drive.getPose().getTranslation(), Rotation2d.kZero)),
                 drive)
             .ignoringDisable(true));
+
+    // Shooter
+    shoot.whileTrue(
+        new Shoot(
+            shooter,
+            // Flywheel Speed:
+            () -> operatorJoystick.getZ(),
+            // Hood Speed:
+            // Keep at 0.0 (stationary)
+            () -> 0.0));
   }
 
   /**

@@ -195,7 +195,7 @@ public class RobotContainer {
         new Shoot(
             shooter,
             // Flywheel Speed:
-            () -> operatorJoystick.getZ(),
+            () -> -operatorJoystick.getZ(),
             // Hood Speed:
             // Keep at 0.0 (stationary)
             () -> 0.0));

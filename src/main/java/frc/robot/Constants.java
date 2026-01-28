@@ -43,13 +43,22 @@ public final class Constants {
     public static final double KICKER_GEAR_RATIO = 1.0; // NEED TO INSERT
   }
 
+  // Harvester
   public static final class Harvester {
     public static final int DEPLOY_MOTOR_ID = 40;
     public static final int SPIN_MOTOR_ID = 41;
     public static final double DEPLOY_GEAR_RATIO = 1.0; // NEED TO INSERT
     public static final double SPIN_GEAR_RATIO = 1.0; // NEED TO INSERT
-    public static final double DEPLOY_TARGET_POSITION = 10.0; // NEED TO INSERT
+    public static final double DEPLOY_TARGET_POSITION = 10.0; // NEED TO INSERT (position in rotations)
     public static final double SPIN_TARGET_RPS = 20.0; // NEED TO INSERT
+  }
+
+  // Indexer
+public static final class Indexer {
+    public static final int MOTOR_ID = 50;
+    public static final double GEAR_RATIO = 1.0; // NEED TO INSERT
+    public static final double TARGET_RPS = 10.0; // NEED TO INSERT
+    public static final double[] POSITIONS = {0.0, 2.0, 4.0, 6.0}; // NEED TO INSERT (positions in rotations)
 }
 
 }

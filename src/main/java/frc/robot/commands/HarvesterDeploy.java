@@ -2,7 +2,7 @@ package frc.robot.commands;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.harvester.HarvesterSubsystem;
-import frc.robot.Constants;
+import frc.robot.Constants.Harvester;;
 
 public class HarvesterDeploy extends Command {
     private final HarvesterSubsystem harvester;
@@ -14,7 +14,7 @@ public class HarvesterDeploy extends Command {
 
     @Override
     public void execute() {
-        harvester.setDeployPosition(Constants.Harvester.DEPLOY_TARGET_POSITION);
+        harvester.setDeployPosition(Harvester.DEPLOY_TARGET_POSITION);
     }
 
     @Override

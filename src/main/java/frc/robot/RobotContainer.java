@@ -16,6 +16,9 @@ import frc.robot.subsystems.harvester.HarvesterSubsystem;
 import frc.robot.commands.HarvesterDeploy;
 import frc.robot.commands.HarvesterSpin;
 
+import frc.robot.subsystems.indexer.IndexerSubsystem;
+import frc.robot.commands.IndexerSpin;
+
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -55,6 +58,7 @@ public class RobotContainer {
   private final Vision vision;
   private final KickerSubsystem kicker;
   private final HarvesterSubsystem harvester;
+  private final IndexerSubsystem indexer;
 
   // Controller
   final Joystick driverRightJoystick = new Joystick(1);
@@ -71,6 +75,7 @@ public class RobotContainer {
     shooter = new ShooterSubsystem();
     kicker = new KickerSubsystem();
     harvester = new HarvesterSubsystem();
+    indexer = new IndexerSubsystem();
 
     switch (Constants.currentMode) {
       case REAL:
@@ -181,7 +186,7 @@ public class RobotContainer {
     final JoystickButton kick = new JoystickButton(operatorJoystick, 2);
     final JoystickButton harvesterDeploy = new JoystickButton(operatorJoystick, 3);
     final JoystickButton harvesterSpin = new JoystickButton(operatorJoystick, 4);
-
+    final JoystickButton indexerSpin = new JoystickButton(operatorJoystick, 5);
 
 
     // Default command, normal field-relative drive
@@ -228,6 +233,11 @@ public class RobotContainer {
     // Harvester Spin
     harvesterSpin.whileTrue(
         new HarvesterSpin(harvester));
+
+    // Indexer Spin
+    indexerSpin.whileTrue(
+        new IndexerSpin(indexer));
+
   }
 
   /**

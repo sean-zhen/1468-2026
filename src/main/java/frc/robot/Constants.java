@@ -28,4 +28,18 @@ public final class Constants {
     /** Replaying from a log file. */
     REPLAY
   }
+
+  // Shooter 
+  public static final class Shooter {
+      public static final int FLYWHEEL_LEAD_ID = 20;
+      public static final int FLYWHEEL_FOLLOWER_ID = 21;
+      public static final int HOOD_MOTOR_ID = 22;
+  }
+
+  // Kicker
+  public static final class Kicker {
+    public static final int KICKER_MOTOR_ID = 30;
+    public static final double KICKER_TARGET_RPS = 30.0;
+  }
+
 }

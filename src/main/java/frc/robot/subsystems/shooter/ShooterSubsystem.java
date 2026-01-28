@@ -7,12 +7,14 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.Constants.Shooter;
+  
 
 public class ShooterSubsystem extends SubsystemBase {
 
-  private final TalonFX flywheelLead = new TalonFX(20);
-  private final TalonFX flywheelFollower = new TalonFX(21);
-  private final TalonFX hoodMotor = new TalonFX(22);
+  private final TalonFX flywheelLead = new TalonFX(Shooter.FLYWHEEL_LEAD_ID);
+  private final TalonFX flywheelFollower = new TalonFX(Shooter.FLYWHEEL_FOLLOWER_ID);
+  private final TalonFX hoodMotor = new TalonFX(Shooter.HOOD_MOTOR_ID);
 
   // Create separate requests for every motor
   //   private final DutyCycleOut leadRequest = new DutyCycleOut(0);
@@ -55,7 +57,7 @@ public class ShooterSubsystem extends SubsystemBase {
 
   public void setFlywheel(double velocityRPS) {
     // multiply velocity (rotations per second)
-    velocityRPS = velocityRPS * 50;
+    velocityRPS = velocityRPS * 100;
     // Control both motors
     flywheelLead.setControl(leadRequest.withVelocity(velocityRPS));
     flywheelFollower.setControl(followerRequest.withVelocity(velocityRPS));

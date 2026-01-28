@@ -9,6 +9,8 @@ package frc.robot;
 
 import static frc.robot.subsystems.shooter.ShooterSubsystem.*;
 import static frc.robot.subsystems.vision.VisionConstants.*;
+import frc.robot.subsystems.kicker.KickerSubsystem;
+import frc.robot.commands.Kick;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -47,11 +49,13 @@ public class RobotContainer {
   private final Drive drive;
   private final ShooterSubsystem shooter;
   private final Vision vision;
+  private final KickerSubsystem kicker;
 
   // Controller
   final Joystick driverRightJoystick = new Joystick(1);
   final Joystick driverLeftJoystick = new Joystick(0);
   final Joystick operatorJoystick = new Joystick(3);
+
 
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
@@ -60,6 +64,7 @@ public class RobotContainer {
   public RobotContainer() {
 
     shooter = new ShooterSubsystem();
+    kicker = new KickerSubsystem();
 
     switch (Constants.currentMode) {
       case REAL:
@@ -166,6 +171,7 @@ public class RobotContainer {
     final JoystickButton resetGyro = new JoystickButton(driverRightJoystick, 7);
     final JoystickButton lockToZero = new JoystickButton(driverRightJoystick, 9);
     final JoystickButton shoot = new JoystickButton(operatorJoystick, 1);
+    final JoystickButton kick = new JoystickButton(operatorJoystick, 2);
 
     // Default command, normal field-relative drive
     drive.setDefaultCommand(
@@ -199,6 +205,10 @@ public class RobotContainer {
             // Hood Speed:
             // Keep at 0.0 (stationary)
             () -> 0.0));
+
+    // Kicker
+    kick.whileTrue(
+        new Kick(kicker));
   }
 
   /**

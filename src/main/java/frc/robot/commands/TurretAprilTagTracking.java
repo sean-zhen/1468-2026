@@ -1,5 +1,5 @@
-//HAVE TO BIND TO BUTTON
-//THIS IS AI GENERATED. WE REALLY NEED TO TEST THIS TO SEE HOW IT WORKDS WITH THE TURRET
+// HAVE TO BIND TO BUTTON
+// THIS IS AI GENERATED. WE REALLY NEED TO TEST THIS TO SEE HOW IT WORKDS WITH THE TURRET
 
 package frc.robot.commands;
 
@@ -20,8 +20,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Command that tracks alliance-specific AprilTags with the turret.
- * Automatically selects hub tags based on alliance color and aims at the closest one.
+ * Command that tracks alliance-specific AprilTags with the turret. Automatically selects hub tags
+ * based on alliance color and aims at the closest one.
  */
 public class TurretAprilTagTracking extends Command {
   private final ShooterSubsystem shooter;

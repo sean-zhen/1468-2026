@@ -1,5 +1,5 @@
-//HAVE TO BIND TO BUTTON
-//NEED TO ADD INTAKE SYSTEM TOO
+// HAVE TO BIND TO BUTTON
+// NEED TO ADD INTAKE SYSTEM TOO
 package frc.robot.commands;
 
 import edu.wpi.first.wpilibj2.command.Command;
@@ -20,8 +20,7 @@ public class ShootSequence extends Command {
    * @param kicker The kicker subsystem
    * @param targetVelocityRPS Target shooter velocity in RPS
    */
-  public ShootSequence(
-      ShooterSubsystem shooter, KickerSubsystem kicker, double targetVelocityRPS) {
+  public ShootSequence(ShooterSubsystem shooter, KickerSubsystem kicker, double targetVelocityRPS) {
     this.shooter = shooter;
     this.kicker = kicker;
     this.targetVelocityRPS = targetVelocityRPS;

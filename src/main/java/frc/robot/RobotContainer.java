@@ -28,6 +28,7 @@ import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.HarvesterSubsystem;
 import frc.robot.subsystems.IndexerSubsystem;
 import frc.robot.subsystems.KickerSubsystem;
+import frc.robot.subsystems.LEDSubsystem;
 import frc.robot.subsystems.ShooterSubsystem;
 import frc.robot.subsystems.VisionSubsystem;
 import frc.robot.subsystems.drive.Drive;
@@ -52,6 +53,7 @@ public class RobotContainer {
   private final KickerSubsystem kicker;
   private final HarvesterSubsystem harvester;
   private final IndexerSubsystem indexer;
+  private final LEDSubsystem led;
 
   // Controller
   final Joystick driverRightJoystick = new Joystick(1);
@@ -68,6 +70,7 @@ public class RobotContainer {
     kicker = new KickerSubsystem();
     harvester = new HarvesterSubsystem();
     indexer = new IndexerSubsystem();
+    led = new LEDSubsystem();
 
     switch (Constants.currentMode) {
       case REAL:

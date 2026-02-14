@@ -7,6 +7,7 @@
 
 package frc.robot;
 
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.RobotBase;
 
@@ -30,8 +31,6 @@ public final class Constants {
     REPLAY
   }
 
-  public static final double VELOCITY_TOLERANCE_RPS = 2.0;
-
   //////////////////////////    VISION / AUTO ALIGNMENT
   // /////////////////////////////////////////
 
@@ -50,20 +49,38 @@ public final class Constants {
 
     // Target distances
     public static final double HUB_DISTANCE_METERS = Units.feetToMeters(10.0);
-    public static final double VISION_DISTANCE_THRESHOLD_METERS = Units.feetToMeters(15.0);
+    public static final double VISION_DISTANCE_THRESHOLD_METERS =
+        Units.feetToMeters(15.0); // TODO: TA - 15ft seems far
   }
 
   //////////////////////////    SHOOTER     /////////////////////////////////////////
 
   public static final class Shooter {
-    public static final int FLYWHEEL_LEAD_ID = 20;
-    public static final int FLYWHEEL_FOLLOWER_ID = 21;
-    public static final int HOOD_MOTOR_ID = 22;
-    public static final int TURRET_MOTOR_ID = 23;
+    public static final int FLYWHEEL_LEAD_ID = 51;
+    public static final int FLYWHEEL_FOLLOWER_ID = 52;
+    public static final int HOOD_MOTOR_ID = 53;
+    public static final int TURRET_MOTOR_ID = 54;
 
     // TODO: Gear ratios need to be determined
     public static final double HOOD_GEAR_RATIO = 1.0;
     public static final double TURRET_GEAR_RATIO = 1.0;
+
+    public static final double FIELD_LENGTH = 16.54; // meters
+    // 2026 Hub Centers (Verify exact X from official CAD/Drawings)
+    public static final Translation2d BLUE_HUB_POS = new Translation2d(4.625, 4.035);
+    public static final Translation2d RED_HUB_POS = new Translation2d(11.915, 4.035);
+    public static final Translation2d BLUE_DEPOT_POS = new Translation2d(1.0, 6.0);
+    public static final Translation2d RED_DEPOT_POS = new Translation2d(15.0, 2.0);
+    public static final Translation2d BLUE_OUTPOST_POS = new Translation2d(1.0, 1.0);
+    public static final Translation2d RED_OUTPOST_POS = new Translation2d(15.0, 7.0);
+    // Turret Offset from Robot Center (Inches to Meters)
+    public static final double TURRET_OFFSET_X = 5.0 * 0.0254;
+    public static final double TURRET_OFFSET_Y = 0.0 * 0.0254;
+    public static final Translation2d TURRET_TO_ROBOT =
+        new Translation2d(TURRET_OFFSET_X, TURRET_OFFSET_Y);
+
+    // Vision
+    public static final String CAMERA_NAME = "ShooterCam";
 
     //////////////////////////    FLYWHEEL     /////////////////////////////////////////
     // TODO: Tune these values (flywheel)
@@ -74,7 +91,8 @@ public final class Constants {
     public static final double SHOOT_kV = 0.37;
     public static final double SHOOT_kA = 0.43;
 
-    public static final double FLYWHEEL_TARGET_RPS = 50.0; // NEED TO INSERT
+    // public static final double FLYWHEEL_TARGET_RPS = 50.0; // NEED TO INSERT
+    public static final double VELOCITY_TOLERANCE_RPS = 2.0;
 
     //////////////////////////    HOOD     /////////////////////////////////////////
     // Hood PID and soft stops (hood)
@@ -85,6 +103,8 @@ public final class Constants {
     public static final double HOOD_kV = 0.0;
     public static final double HOOD_TOP_SOFT_LIMIT_ROT = 10.0;
     public static final double HOOD_BOTTOM_SOFT_LIMIT_ROT = 0.0;
+    public static final double HOOD_TRACKING_TOLERANCE_DEG = 1.0; // DEGREE TOLERANCE
+    public static final double HOOD_DEG_PER_ROTATION = 360.0; // DEGREE TOLERANCE
 
     //////////////////////////    TURRET     /////////////////////////////////////////
     // Turret PID and soft stops (Turret)
@@ -96,14 +116,16 @@ public final class Constants {
     public static final double TURRET_RIGHT_SOFT_LIMIT_ROT = 5.0;
     public static final double TURRET_LEFT_SOFT_LIMIT_ROT = -5.0;
 
-    public static final double TURRET_TRACKING_TOLERANCE_DEG = 5.0; // DEGREE TOLERANCE
+    public static final double TURRET_TRACKING_TOLERANCE_DEG = 1.0; // DEGREE TOLERANCE
     public static final double TURRET_MAX_VELOCITY_RPS = 5.0; // Max turret rotation speed
+
+    public static final double TURRET_LIMIT_ROT = 135.0 / 360.0; // +/- 135 degrees
   }
 
   //////////////////////////    KICKER     /////////////////////////////////////////
 
   public static final class Kicker {
-    public static final int KICKER_MOTOR_ID = 30;
+    public static final int KICKER_MOTOR_ID = 42;
     public static final double KICKER_TARGET_RPS = 30.0;
     public static final double KICKER_GEAR_RATIO = 1.0; // NEED TO INSERT
 
@@ -113,13 +135,15 @@ public final class Constants {
     public static final double kD = 0.0;
     public static final double kV = 0.37;
     public static final double kA = 0.43;
+
+    public static final double VELOCITY_TOLERANCE_RPS = 5.0;
   }
 
   //////////////////////////    HARVESTER     /////////////////////////////////////////
 
   public static final class Harvester {
-    public static final int DEPLOY_MOTOR_ID = 40;
-    public static final int SPIN_MOTOR_ID = 41;
+    public static final int DEPLOY_MOTOR_ID = 31;
+    public static final int SPIN_MOTOR_ID = 32;
     public static final double DEPLOY_GEAR_RATIO = 1.0; // NEED TO INSERT
     public static final double SPIN_GEAR_RATIO = 1.0; // NEED TO INSERT
     public static final double DEPLOY_TARGET_POSITION =
@@ -141,7 +165,7 @@ public final class Constants {
   //////////////////////////    INDEXER     /////////////////////////////////////////
 
   public static final class Indexer {
-    public static final int MOTOR_ID = 50;
+    public static final int MOTOR_ID = 41;
     public static final double GEAR_RATIO = 1.0; // NEED TO INSERT
     public static final double TARGET_RPS = 10.0; // NEED TO INSERT
     public static final double[] POSITIONS = {
@@ -158,8 +182,8 @@ public final class Constants {
   //////////////////////////    CLIMBER     /////////////////////////////////////////'
 
   public static final class Climber {
-    public static final int LEFT_MOTOR_ID = 60;
-    public static final int RIGHT_MOTOR_ID = 61;
+    public static final int LEFT_MOTOR_ID = 61;
+    //   public static final int RIGHT_MOTOR_ID = 62;  //TA TODO: 1 or 2 Clmbr Motors???
 
     public static final double FORWARD_SOFT_LIMIT_ROT = 20.0; // rotations
     public static final double REVERSE_SOFT_LIMIT_ROT = 0.0; // rotations

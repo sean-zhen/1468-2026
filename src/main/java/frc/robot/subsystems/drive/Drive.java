@@ -290,7 +290,7 @@ public class Drive extends SubsystemBase {
 
   /** Returns the measured chassis speeds of the robot. */
   @AutoLogOutput(key = "SwerveChassisSpeeds/Measured")
-  private ChassisSpeeds getChassisSpeeds() {
+  public ChassisSpeeds getChassisSpeeds() {
     return kinematics.toChassisSpeeds(getModuleStates());
   }
 
@@ -355,5 +355,23 @@ public class Drive extends SubsystemBase {
       new Translation2d(TunerConstants.BackLeft.LocationX, TunerConstants.BackLeft.LocationY),
       new Translation2d(TunerConstants.BackRight.LocationX, TunerConstants.BackRight.LocationY)
     };
+  }
+
+  // Inside Drive.java
+
+  /** Adds measurements to the WPILib Pose Estimator */
+  // public void addVisionMeasurement(Pose2d pose, double time, Matrix<N3, N1> stds) {
+  //   // m_poseEstimator is your SwerveDrivePoseEstimator
+  //   m_poseEstimator.addVisionMeasurement(pose, time, stds);
+  // }
+
+  /** Returns the robot's current velocity */
+  public ChassisSpeeds getActualChassisSpeeds() {
+    return kinematics.toChassisSpeeds(getModuleStates());
+  }
+
+  /** Hard reset of the robot position */
+  public void resetPose(Pose2d pose) {
+    poseEstimator.resetPosition(getRotation(), getModulePositions(), pose);
   }
 }

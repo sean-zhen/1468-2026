@@ -61,5 +61,6 @@ public class IndexerSubsystem extends SubsystemBase {
     SmartDashboard.putNumber(
         "Indexer Velocity (RPS, output)",
         motor.getVelocity().getValueAsDouble() / Indexer.GEAR_RATIO);
+    SmartDashboard.putNumber("Indexer Temp", motor.getDeviceTemp().getValueAsDouble());
   }
 }

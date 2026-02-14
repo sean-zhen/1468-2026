@@ -83,10 +83,12 @@ public class HarvesterSubsystem extends SubsystemBase {
     SmartDashboard.putNumber(
         "Harvester Deploy Velocity (RPS, output)",
         deployMotor.getVelocity().getValueAsDouble() / Harvester.DEPLOY_GEAR_RATIO);
+    SmartDashboard.putNumber("HarvDeploy Temp", deployMotor.getDeviceTemp().getValueAsDouble());
 
     // Spin motor logging
     SmartDashboard.putNumber(
         "Harvester Spin Velocity (RPS, output)",
         spinMotor.getVelocity().getValueAsDouble() / Harvester.SPIN_GEAR_RATIO);
+    SmartDashboard.putNumber("HarvSpin Temp", spinMotor.getDeviceTemp().getValueAsDouble());
   }
 }

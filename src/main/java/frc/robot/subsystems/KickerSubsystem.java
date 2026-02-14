@@ -7,7 +7,6 @@ import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.Constants;
 import frc.robot.Constants.Kicker;
 
 public class KickerSubsystem extends SubsystemBase {
@@ -53,7 +52,7 @@ public class KickerSubsystem extends SubsystemBase {
 
   public boolean isAtVelocity() {
     double currentVelocity = kickerMotor.getVelocity().getValueAsDouble();
-    return Math.abs(currentVelocity - Kicker.KICKER_TARGET_RPS) < Constants.VELOCITY_TOLERANCE_RPS;
+    return Math.abs(currentVelocity - Kicker.KICKER_TARGET_RPS) < Kicker.VELOCITY_TOLERANCE_RPS;
   }
 
   public void stop() {
@@ -64,5 +63,6 @@ public class KickerSubsystem extends SubsystemBase {
     SmartDashboard.putNumber(
         "Kicker Velocity (RPS)",
         kickerMotor.getVelocity().getValueAsDouble() / Kicker.KICKER_GEAR_RATIO);
+    SmartDashboard.putNumber("Kicker Temp", kickerMotor.getDeviceTemp().getValueAsDouble());
   }
 }

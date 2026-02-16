@@ -35,6 +35,7 @@ import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.units.measure.Voltage;
 import frc.robot.generated.TunerConstants;
+import java.util.List;
 import java.util.Queue;
 
 /**
@@ -222,6 +223,15 @@ public class ModuleIOTalonFX implements ModuleIO {
     timestampQueue.clear();
     drivePositionQueue.clear();
     turnPositionQueue.clear();
+
+    // Refresh your signals as we did for the shooter
+    BaseStatusSignal.refreshAll(
+        driveTalon.getPosition(), turnTalon.getPosition(), cancoder.getAbsolutePosition());
+
+    // Update the boolean connection status
+    // inputs.driveConnected = driveTalon.getPosition().getStatus().isOK();
+    // inputs.turnConnected = turnTalon.getPosition().getStatus().isOK();
+    inputs.encoderConnected = cancoder.getAbsolutePosition().getStatus().isOK();
   }
 
   @Override
@@ -260,5 +270,14 @@ public class ModuleIOTalonFX implements ModuleIO {
           case TorqueCurrentFOC -> positionTorqueCurrentRequest.withPosition(
               rotation.getRotations());
         });
+  }
+
+  // TA For better shooting on the fly accuracy
+  @Override
+  public List<BaseStatusSignal> getSignals() {
+    return List.of(
+        (BaseStatusSignal) driveTalon.getPosition(),
+        (BaseStatusSignal) turnTalon.getPosition(),
+        (BaseStatusSignal) cancoder.getAbsolutePosition());
   }
 }

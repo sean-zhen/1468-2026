@@ -198,4 +198,12 @@ public final class Constants {
     public static final double kD = 0.0;
     public static final double kV = 0.37;
   }
+
+  /////////////////////////// LED Constants
+  public static class Climb {
+    public static final double TOWER_LEFT_X = 8.27;
+    public static final double TOWER_LEFT_Y = 1.2;
+    public static final double TOWER_RIGHT_X = 8.27;
+    public static final double TOWER_RIGHT_Y = 7.0;
+  }
 }

@@ -5,6 +5,7 @@ import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
+import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.Kicker;
@@ -14,6 +15,8 @@ public class KickerSubsystem extends SubsystemBase {
   private final TalonFX kickerMotor = new TalonFX(Kicker.KICKER_MOTOR_ID);
 
   private final VelocityVoltage velocityRequest = new VelocityVoltage(0);
+
+  private final com.ctre.phoenix6.StatusSignal<Angle> kickerVeloSignal;
 
   public KickerSubsystem() {
     // Configure motor
@@ -32,6 +35,8 @@ public class KickerSubsystem extends SubsystemBase {
 
     // Brake mode for kicker
     kickerMotor.setNeutralMode(NeutralModeValue.Brake);
+
+    kickerVeloSignal = kickerMotor.getPosition();
   }
 
   @Override
@@ -61,8 +66,16 @@ public class KickerSubsystem extends SubsystemBase {
 
   public void log() {
     SmartDashboard.putNumber(
-        "Kicker Velocity (RPS)",
+        "Kicker Velo (RPS)",
         kickerMotor.getVelocity().getValueAsDouble() / Kicker.KICKER_GEAR_RATIO);
     SmartDashboard.putNumber("Kicker Temp", kickerMotor.getDeviceTemp().getValueAsDouble());
+
+    boolean kickerOK = kickerVeloSignal.getStatus().isOK();
+    SmartDashboard.putBoolean("Kicker CAN OK", kickerOK);
+  }
+
+  public boolean isKickerConnected() {
+    // Uses the checks we already built using getStatus().isOK()
+    return kickerVeloSignal.getStatus().isOK();
   }
 }

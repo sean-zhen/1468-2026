@@ -1,5 +1,6 @@
 package frc.robot.subsystems;
 
+import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.*;
@@ -12,10 +13,12 @@ import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
+import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.Shooter;
-import org.photonvision.PhotonCamera;
+import java.util.List;
 
 public class ShooterSubsystem extends SubsystemBase {
 
@@ -23,8 +26,6 @@ public class ShooterSubsystem extends SubsystemBase {
   private final TalonFX flywheelFollower = new TalonFX(Shooter.FLYWHEEL_FOLLOWER_ID);
   private final TalonFX hoodMotor = new TalonFX(Shooter.HOOD_MOTOR_ID);
   private final TalonFX turretMotor = new TalonFX(Shooter.TURRET_MOTOR_ID);
-
-  private final PhotonCamera camera = new PhotonCamera(Shooter.CAMERA_NAME);
 
   private final VelocityVoltage leadRequest = new VelocityVoltage(0);
   private final PositionVoltage hoodPositionRequest = new PositionVoltage(0);
@@ -44,6 +45,10 @@ public class ShooterSubsystem extends SubsystemBase {
   private final InterpolatingDoubleTreeMap hoodOpposition = new InterpolatingDoubleTreeMap();
 
   private double targetTurretRot = 0;
+
+  private final com.ctre.phoenix6.StatusSignal<Angle> turretPositionSignal;
+  private final com.ctre.phoenix6.StatusSignal<AngularVelocity> flywheelVelocitySignal;
+  private final com.ctre.phoenix6.StatusSignal<Angle> hoodPositionSignal;
 
   public ShooterSubsystem() {
     // Flywheel config
@@ -98,6 +103,10 @@ public class ShooterSubsystem extends SubsystemBase {
     turretMotor.setNeutralMode(NeutralModeValue.Brake);
 
     setupTables();
+
+    turretPositionSignal = turretMotor.getPosition();
+    flywheelVelocitySignal = flywheelLead.getVelocity();
+    hoodPositionSignal = hoodMotor.getPosition();
   }
 
   @Override
@@ -180,36 +189,46 @@ public class ShooterSubsystem extends SubsystemBase {
   public void log() {
 
     // Display green/red boolean indicators for drive team
-    SmartDashboard.putBoolean("Is Shtr At Spd", isAtVelocity());
-    SmartDashboard.putBoolean("Is Trrt At Pos", isTurretAtPosition());
-    SmartDashboard.putBoolean("Is Hood At Pos", isHoodAtPosition());
+    SmartDashboard.putBoolean("Shtr Is At Spd", isAtVelocity());
+    SmartDashboard.putBoolean("Trrt Is At Pos", isTurretAtPosition());
+    SmartDashboard.putBoolean("Hood Is At Pos", isHoodAtPosition());
+
+    // Check CAN health for the dashboard
+    // Since these signals are refreshed in the Command via waitForAll,
+    // getStatus() returns the StatusCode enum
+    boolean shooterOK = flywheelVelocitySignal.getStatus().isOK();
+    boolean turretOK = turretPositionSignal.getStatus().isOK();
+    boolean hoodOK = hoodPositionSignal.getStatus().isOK();
+
+    SmartDashboard.putBoolean("Shtr CAN OK", shooterOK && turretOK && hoodOK);
+    SmartDashboard.putBoolean("FlyWh CAN OK", shooterOK);
+    SmartDashboard.putBoolean("Trrt CAN OK", turretOK);
+    SmartDashboard.putBoolean("Hood CAN OK", hoodOK);
 
     // Flywheel
+    SmartDashboard.putNumber("Shtr Lead Velo (RPS)", flywheelLead.getVelocity().getValueAsDouble());
     SmartDashboard.putNumber(
-        "Shooter Lead Velocity (RPS)", flywheelLead.getVelocity().getValueAsDouble());
-    SmartDashboard.putNumber(
-        "Shooter Follower Velocity (RPS)", flywheelFollower.getVelocity().getValueAsDouble());
-    SmartDashboard.putNumber("Shooter Lead Output", flywheelLead.get());
-    SmartDashboard.putNumber("Shooter Follower Output", flywheelFollower.get());
-    SmartDashboard.putNumber("Shooter Lead Temp", flywheelLead.getDeviceTemp().getValueAsDouble());
-    SmartDashboard.putNumber(
-        "Shooter Follower Temp", flywheelFollower.getDeviceTemp().getValueAsDouble());
+        "Shtr Flwr Velo (RPS)", flywheelFollower.getVelocity().getValueAsDouble());
+    SmartDashboard.putNumber("Shtr Lead Cmd", flywheelLead.get());
+    SmartDashboard.putNumber("Shtr Flwr Cmd", flywheelFollower.get());
+    SmartDashboard.putNumber("Shtr Lead Temp", flywheelLead.getDeviceTemp().getValueAsDouble());
+    SmartDashboard.putNumber("Shtr Flwr Temp", flywheelFollower.getDeviceTemp().getValueAsDouble());
 
     // Hood
     SmartDashboard.putNumber(
-        "Shooter Hood Position (rot, output)",
+        "Shtr Hood Pos (rot, output)",
         hoodMotor.getPosition().getValueAsDouble() / Shooter.HOOD_GEAR_RATIO);
     SmartDashboard.putNumber(
-        "Shooter Hood Velocity (RPS, output)",
+        "Shtr Hood Velo (RPS, output)",
         hoodMotor.getVelocity().getValueAsDouble() / Shooter.HOOD_GEAR_RATIO);
     SmartDashboard.putNumber("Hood Temp", hoodMotor.getDeviceTemp().getValueAsDouble());
 
     // Turret
     SmartDashboard.putNumber(
-        "Shooter Turret Position (rot, output)",
+        "Shtr Turret Pos (rot, output)",
         turretMotor.getPosition().getValueAsDouble() / Shooter.TURRET_GEAR_RATIO);
     SmartDashboard.putNumber(
-        "Shooter Turret Velocity (RPS, output)",
+        "Shtr Turret Velo (RPS, output)",
         turretMotor.getVelocity().getValueAsDouble() / Shooter.TURRET_GEAR_RATIO);
     SmartDashboard.putNumber("Turret Temp", turretMotor.getDeviceTemp().getValueAsDouble());
   }
@@ -291,12 +310,18 @@ public class ShooterSubsystem extends SubsystemBase {
         new PositionVoltage(clamped * Shooter.TURRET_GEAR_RATIO).withFeedForward(ffVolts));
   }
 
-  public double getVisionCorrectedRotation(double odoRot) {
-    var result = camera.getLatestResult();
-    if (result.hasTargets()) {
-      return (turretMotor.getPosition().getValueAsDouble() / Shooter.TURRET_GEAR_RATIO)
-          + (result.getBestTarget().getYaw() / 360.0);
-    }
-    return odoRot;
+  public List<BaseStatusSignal> getSignals() {
+    // Explicitly define the list type to avoid generic mismatch
+    return List.of(
+        (BaseStatusSignal) turretPositionSignal,
+        (BaseStatusSignal) flywheelVelocitySignal,
+        (BaseStatusSignal) hoodPositionSignal);
+  }
+
+  public boolean isShooterConnected() {
+    // Uses the checks we already built using getStatus().isOK()
+    return flywheelVelocitySignal.getStatus().isOK()
+        && turretPositionSignal.getStatus().isOK()
+        && hoodPositionSignal.getStatus().isOK();
   }
 }

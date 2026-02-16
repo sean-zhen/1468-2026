@@ -6,46 +6,160 @@ import static edu.wpi.first.units.Units.*;
 import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.controls.SingleFadeAnimation;
 import com.ctre.phoenix6.controls.SolidColor;
+import com.ctre.phoenix6.controls.StrobeAnimation;
 import com.ctre.phoenix6.hardware.CANdle;
 import com.ctre.phoenix6.signals.RGBWColor;
-import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.subsystems.drive.Drive;
 
-/** Subsystem that controls an addressable LED strip using a CANdle. */
 public class LEDSubsystem extends SubsystemBase {
   private final CANBus kCANBus = new CANBus("rio");
   private final CANdle m_candle = new CANdle(60, kCANBus);
 
-  private final SingleFadeAnimation m_slot0Animation =
-      new SingleFadeAnimation(8, 300)
-          .withSlot(0)
+  private final int START_IDX = 8;
+  private final int LED_COUNT = 30;
+
+  private ShooterSubsystem m_shooter;
+  private Drive m_drive;
+  private VisionSubsystem m_vision;
+
+  // Pre-defined animations for states
+  private final SingleFadeAnimation m_fadeOrange =
+      new SingleFadeAnimation(START_IDX, LED_COUNT)
           .withColor(new RGBWColor(255, 50, 0, 0))
+          .withFrameRate(Hertz.of(10));
+
+  private final StrobeAnimation m_strobeWhite =
+      new StrobeAnimation(START_IDX, LED_COUNT)
+          .withColor(new RGBWColor(255, 255, 255, 255))
           .withFrameRate(Hertz.of(100));
 
-  private final SolidColor[] m_colors =
-      new SolidColor[] {
-        new SolidColor(0, 7).withColor(new RGBWColor(255, 255, 255, 0)),
-      };
+  private final StrobeAnimation m_strobeGold =
+      new StrobeAnimation(START_IDX, LED_COUNT)
+          .withColor(new RGBWColor(255, 200, 0, 0))
+          .withFrameRate(Hertz.of(500));
 
-  public LEDSubsystem() {
-    setDefaultCommand(updateLEDs());
+  private final SolidColor m_off =
+      new SolidColor(START_IDX, LED_COUNT).withColor(new RGBWColor(0, 0, 0, 0));
+
+  private boolean m_ledEnabled = true;
+
+  public LEDSubsystem(ShooterSubsystem shooter, Drive drive, VisionSubsystem vision) {
+    this.m_shooter = shooter;
+    this.m_drive = drive;
+    this.m_vision = vision;
   }
 
-  /**
-   * Updates the animations and LEDs of the CANdle.
-   *
-   * @return Command to run
-   */
-  public Command updateLEDs() {
-    return run(
-        () -> {
-          for (var solidColor : m_colors) {
-            m_candle.setControl(solidColor);
-          }
-          m_candle.setControl(m_slot0Animation);
-        });
+  public void toggleLeds() {
+    m_ledEnabled = !m_ledEnabled;
+  }
+
+  @Override
+  public void periodic() {
+    // Priority 1: Kill Switch
+    if (!m_ledEnabled) {
+      m_candle.setControl(m_off);
+      return;
+    }
+
+    // Priority 2: Disabled State
+    if (DriverStation.isDisabled()) {
+      m_candle.setControl(m_fadeOrange);
+    } else {
+      handleEnabledLogic();
+    }
+
+    SmartDashboard.putBoolean("LEDs Active", m_ledEnabled);
+    SmartDashboard.putBoolean("CANdle CAN OK", isCanDleConnected());
+  }
+
+  private void handleEnabledLogic() {
+    double matchTime = DriverStation.getMatchTime();
+
+    // Priority 3: Endgame Climber Alignment (Last 5 seconds)
+    if (matchTime > 0 && matchTime <= 5.0) {
+      // Check distance to Tower Uprights
+      double dist = getClimberDistance();
+
+      if (dist < 0.5) { // 0.5 meter threshold
+        // Calculate GB values to turn Red -> White
+        double whiteRatio = Math.max(0, 1.0 - (dist / 0.5));
+        int gbValue = (int) (255 * whiteRatio);
+
+        m_candle.setControl(
+            new StrobeAnimation(START_IDX, LED_COUNT)
+                .withColor(new RGBWColor(255, gbValue, gbValue, 0))
+                .withFrameRate(Hertz.of(20)));
+        return; // Exit so we don't show shooter status
+      }
+    }
+
+    // Priority 4: Shooter Feedback
+    boolean flyOk = m_shooter.isAtVelocity();
+    boolean turretOk = m_shooter.isTurretAtPosition();
+    boolean hoodOk = m_shooter.isHoodAtPosition();
+
+    if (flyOk && turretOk && hoodOk) {
+
+      if (m_vision.getTagCount() >= 3) {
+        m_candle.setControl(m_strobeGold);
+      }
+      m_candle.setControl(m_strobeWhite);
+
+    } else {
+      // RGB Mix: Red(Fly), Green(Hood), Blue(Turret)
+      int r = flyOk ? 255 : 0;
+      int g = hoodOk ? 255 : 0;
+      int b = turretOk ? 255 : 0;
+      m_candle.setControl(
+          new SolidColor(START_IDX, LED_COUNT).withColor(new RGBWColor(r, g, b, 0)));
+    }
+  }
+
+  /** Calculates distance from climber to the closest tower upright of your alliance */
+  private double getClimberDistance() {
+    // 2026 REBUILT Field Constants (Meters)
+    final double FIELD_LENGTH = 16.54;
+    final double FIELD_WIDTH_CENTER = 4.11; // Center of field width (Y)
+
+    // Convert Inch Constants to Meters
+    final double WALL_OFFSET = 43.25 * 0.0254; // 1.098m from Alliance Wall
+    final double TOWER_Y_OFFSET = 11.42 * 0.0254; // 0.290m shift from center
+    final double UPRIGHT_HALF_GAP = 16.125 * 0.0254; // Half of 32.25" gap (0.409m)
+
+    // --- NEW: Climber Physical Offset (13" back, 5" left) ---// TODO: TA - final climber offset
+    final double CLIMBER_X = -13.0 * 0.0254; // -0.3302m
+    final double CLIMBER_Y = 5.0 * 0.0254; // 0.127m
+    final Translation2d CLIMBER_OFFSET = new Translation2d(CLIMBER_X, CLIMBER_Y);
+
+    var alliance = DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue);
+    boolean isRed = (alliance == DriverStation.Alliance.Red);
+
+    // 1. Determine Tower Center (X and Y)
+    // Blue: 45" in from Blue Wall, 11.42" LESS than center Y
+    // Red: 45" in from Red Wall, 11.42" MORE than center Y
+    double towerX = isRed ? (FIELD_LENGTH - WALL_OFFSET) : WALL_OFFSET;
+    double towerY =
+        isRed ? (FIELD_WIDTH_CENTER + TOWER_Y_OFFSET) : (FIELD_WIDTH_CENTER - TOWER_Y_OFFSET);
+
+    // 2. Define Upright Positions (Left and Right relative to the Tower Center)
+    final Translation2d LEFT_UPRIGHT = new Translation2d(towerX, towerY - UPRIGHT_HALF_GAP);
+    final Translation2d RIGHT_UPRIGHT = new Translation2d(towerX, towerY + UPRIGHT_HALF_GAP);
+
+    // 3. Calculate Climber Field Position
+    // Rotate the climber's offset relative to the robot's heading then add to robot pose
+    var robotPose = m_drive.getPose();
+    var climberPos =
+        robotPose.getTranslation().plus(CLIMBER_OFFSET.rotateBy(robotPose.getRotation()));
+
+    // 4. Return distance to the closest upright of your alliance's tower
+    return Math.min(climberPos.getDistance(LEFT_UPRIGHT), climberPos.getDistance(RIGHT_UPRIGHT));
+  }
+
+  public boolean isCanDleConnected() {
+    return m_candle.getDeviceTemp().refresh().getStatus().isOK();
   }
 }
-
-// TODO: LEDs turn on when robot is enabled and stay on when robot is disabled, find a way to turn
-// on/off LEDs when robot is enabled/disabled

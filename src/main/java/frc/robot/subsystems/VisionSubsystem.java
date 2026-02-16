@@ -2,8 +2,10 @@ package frc.robot.subsystems;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
+import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
@@ -45,6 +47,7 @@ public class VisionSubsystem extends SubsystemBase {
   private final Drive drive;
 
   private double lastMeasurementTimestamp = 0;
+  private int lastTagCount = 0;
 
   // Data Cache Class
   private static class CameraData {
@@ -100,23 +103,83 @@ public class VisionSubsystem extends SubsystemBase {
         if (dist > MAX_SINGLE_TAG_DIST) continue;
       }
 
-      est.update(res)
+      // 1. Use the 2026.2.2 Strategy Method
+      est.estimateCoprocMultiTagPose(res)
           .ifPresent(
               estPose -> {
-                if (isPoseValid(estPose.estimatedPose.toPose2d())) {
-                  data.pose = Optional.of(estPose);
-                  var stds =
-                      res.getTargets().size() > 1
-                          ? MULTI_TAG
-                          : (DriverStation.isAutonomous() ? SINGLE_TAG_AUTO : SINGLE_TAG_TELEOP);
+                // Convert 3D estimated pose to 2D for the Swerve Drive
+                var estPose2d = estPose.estimatedPose.toPose2d();
 
-                  drive.addVisionMeasurement(
-                      estPose.estimatedPose.toPose2d(), estPose.timestampSeconds, stds);
+                // 2. Validate the pose is physically on the field
+                if (isPoseValid(estPose2d)) {
+                  data.pose = Optional.of(estPose);
+
+                  // 3. Calculate Average Distance to all visible targets
+                  double avgDistance =
+                      res.getTargets().stream()
+                          .mapToDouble(t -> t.getBestCameraToTarget().getTranslation().getNorm())
+                          .average()
+                          .orElse(4.0);
+
+                  // 4. Determine Dynamic Trust (Standard Deviations)
+                  int tagCount = res.getTargets().size();
+                  Vector<N3> dynamicStds;
+
+                  if (tagCount > 1) {
+                    // MULTI-TAG: High confidence that increases with more tags
+                    // 2 tags = 0.025 base, 3 tags = 0.016 base, 4 tags = 0.0125 base
+                    double trustFactor = 0.05 / tagCount;
+                    double xyStdDev = trustFactor * Math.pow(avgDistance, 2);
+
+                    // Rotation trust also increases with tag count
+                    dynamicStds = VecBuilder.fill(xyStdDev, xyStdDev, 0.5 / tagCount);
+                  } else {
+                    // SINGLE-TAG: Low confidence (penalty multiplier of 2.0)
+                    // This ensures we rely more on Swerve/Gyro when only 1 tag is seen
+                    double xyStdDev = 2.0 * Math.pow(avgDistance, 2);
+                    dynamicStds = VecBuilder.fill(xyStdDev, xyStdDev, 5.0);
+                  }
+
+                  // 5. Apply the measurement to the Drive Subsystem
+                  // Uses the synchronized timestamp from the PhotonLib result
+                  drive.addVisionMeasurement(estPose2d, estPose.timestampSeconds, dynamicStds);
+
+                  // Update the timestamp for dashboard/logging
                   lastMeasurementTimestamp = Timer.getFPGATimestamp();
                 }
+                lastTagCount = res.getTargets().size();
               });
     }
     data.loopTimeNanos = System.nanoTime() - start;
+  }
+
+  // public int getTagCount() {
+  //     // If the last measurement is too old (e.g., > 0.5s), return 0
+  //     if (Timer.getFPGATimestamp() - lastMeasurementTimestamp > 0.5) {
+  //         return 0;
+  //     }
+  //     return lastTagCount;
+  // }
+
+  public int getTagCount() {
+    // 1. Get current robot velocity (linear magnitude)
+    // We use the drive subsystem speeds we set up earlier
+    var speeds = drive.getChassisSpeeds();
+    double velocity =
+        Math.sqrt(Math.pow(speeds.vxMetersPerSecond, 2) + Math.pow(speeds.vyMetersPerSecond, 2));
+
+    // 2. Calculate a Dynamic Timeout
+    // If stopped (0m/s), timeout is 0.8s.
+    // If sprinting (5m/s), timeout drops to 0.1s.
+    double dynamicTimeout = MathUtil.clamp(0.8 - (velocity * 0.14), 0.1, 0.8);
+
+    // 3. Check if the data is "stale" based on that timeout
+    double timeSinceLastTag = Timer.getFPGATimestamp() - lastMeasurementTimestamp;
+
+    if (timeSinceLastTag > dynamicTimeout) {
+      return 0; // Data is too old for our current speed
+    }
+    return lastTagCount;
   }
 
   public void forceOdometryToVision() {
@@ -135,11 +198,23 @@ public class VisionSubsystem extends SubsystemBase {
     }
   }
 
-  private boolean isPoseValid(Pose2d p) {
-    return p.getX() >= 0
-        && p.getX() <= fieldLayout.getFieldLength()
-        && p.getY() >= 0
-        && p.getY() <= fieldLayout.getFieldWidth();
+  private boolean isPoseValid(Pose2d estPose) {
+    // 1. Field Boundary Check: 2026 REBUILT field is ~16.5m x 8.2m
+    if (estPose.getX() < -0.5
+        || estPose.getX() > 17.0
+        || estPose.getY() < -0.5
+        || estPose.getY() > 8.7) {
+      return false;
+    }
+
+    // 2. Velocity Delta Check: Vision should not jump significantly from current odometry
+    // If the jump is > 1.0m, it's likely a "ghost" detection
+    double poseJump = estPose.getTranslation().getDistance(drive.getPose().getTranslation());
+    if (poseJump > 1.0) {
+      return false;
+    }
+
+    return true;
   }
 
   private Transform3d createTrf(double x, double y, double z, double r, double p, double yw) {

@@ -7,12 +7,14 @@
 
 package frc.robot;
 
+import com.ctre.phoenix6.CANBus;
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
@@ -77,7 +79,6 @@ public class RobotContainer {
     harvester = new HarvesterSubsystem();
     indexer = new IndexerSubsystem();
     climber = new ClimberSubsystem();
-    led = new LEDSubsystem();
 
     switch (Constants.currentMode) {
       case REAL:
@@ -141,6 +142,8 @@ public class RobotContainer {
         break;
     }
 
+    led = new LEDSubsystem(shooter, drive, vision);
+
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
 
@@ -177,6 +180,7 @@ public class RobotContainer {
     final JoystickButton lockToZero = new JoystickButton(driverRightJoystick, 9);
     final JoystickButton resetOdom = new JoystickButton(driverRightJoystick, 8);
     final JoystickButton faceHubButton = new JoystickButton(driverRightJoystick, 1);
+    final JoystickButton turnLEDsOff = new JoystickButton(driverLeftJoystick, 11);
 
     final JoystickButton flyWheel = new JoystickButton(operatorManualJoystick, 1);
     final JoystickButton kick = new JoystickButton(operatorManualJoystick, 2);
@@ -216,6 +220,9 @@ public class RobotContainer {
                 () -> drive.setPose(new Pose2d(drive.getPose().getTranslation(), Rotation2d.kZero)),
                 drive)
             .ignoringDisable(true));
+
+    // Reset gyro to 0° when 7 on right joystick button is pressed
+    turnLEDsOff.onTrue(new InstantCommand(led::toggleLeds));
 
     // Shooter
     flyWheel.whileTrue(
@@ -294,5 +301,48 @@ public class RobotContainer {
    */
   public Command getAutonomousCommand() {
     return autoChooser.get();
+  }
+
+  public void updateGlobalHealth() {
+    // 1. Get RoboRio CAN Health
+    boolean shooterHealthy = shooter.isShooterConnected();
+    boolean climberHealthy = climber.isClimberConnected();
+    boolean kickerHealthy = kicker.isKickerConnected();
+    boolean indexerHealthy = indexer.isIndexerConnected();
+    boolean harvesterHealthy = harvester.isHarvesterConnected();
+    boolean ledHealthy = led.isCanDleConnected();
+
+    // 2. Get Swerve Health
+    boolean canCoderHealthy = drive.isSwerveConnected();
+
+    // 3. The Master Status
+    boolean robotCanOk =
+        harvesterHealthy
+            && indexerHealthy
+            && kickerHealthy
+            && shooterHealthy
+            && climberHealthy
+            && ledHealthy;
+
+    // Use a 2 "Master" widgets for the Main Dashboard
+    SmartDashboard.putBoolean("RoboRio CAN STATUS", robotCanOk);
+    SmartDashboard.putBoolean("CanCoder CAN STATUS", canCoderHealthy);
+
+    // 1. Get RIO Bus Utilization
+    var rioStatus = CANBus.roboRIO().getStatus();
+    double rioUsage = rioStatus.BusUtilization * 100.0; // Convert 0.0-1.0 to %
+
+    // 2. Get CANivore/CANcoder Bus Utilization
+    // Replace "canivore1" with the name assigned in Phoenix Tuner X
+    var canivoreStatus = new CANBus("1468_CANivore").getStatus();
+    double canivoreUsage = canivoreStatus.BusUtilization * 100.0;
+
+    // 3. Display on Dashboard
+    SmartDashboard.putNumber("CAN RIO Usage %", rioUsage);
+    SmartDashboard.putNumber("CAN CANivore Usage %", canivoreUsage);
+
+    // Warning: FRC best practice is to keep utilization below 90%
+    SmartDashboard.putBoolean("RIO CAN High Load Warning", rioUsage > 90);
+    SmartDashboard.putBoolean("CANivore High Load Warning", canivoreUsage > 90);
   }
 }

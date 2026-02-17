@@ -7,19 +7,19 @@
 
 package frc.robot.subsystems.drive;
 
+import com.ctre.phoenix6.BaseStatusSignal;
 import edu.wpi.first.math.geometry.Rotation2d;
+import java.util.List;
 import org.littletonrobotics.junction.AutoLog;
 
 public interface ModuleIO {
   @AutoLog
   public static class ModuleIOInputs {
-    public boolean driveConnected = false;
     public double drivePositionRad = 0.0;
     public double driveVelocityRadPerSec = 0.0;
     public double driveAppliedVolts = 0.0;
     public double driveCurrentAmps = 0.0;
 
-    public boolean turnConnected = false;
     public boolean turnEncoderConnected = false;
     public Rotation2d turnAbsolutePosition = Rotation2d.kZero;
     public Rotation2d turnPosition = Rotation2d.kZero;
@@ -30,6 +30,10 @@ public interface ModuleIO {
     public double[] odometryTimestamps = new double[] {};
     public double[] odometryDrivePositionsRad = new double[] {};
     public Rotation2d[] odometryTurnPositions = new Rotation2d[] {};
+
+    public boolean driveConnected = false;
+    public boolean turnConnected = false;
+    public boolean encoderConnected = false;
   }
 
   /** Updates the set of loggable inputs. */
@@ -46,4 +50,10 @@ public interface ModuleIO {
 
   /** Run the turn motor to the specified rotation. */
   public default void setTurnPosition(Rotation2d rotation) {}
+
+  // TA For better shooting on the fly accuracy
+  /** Returns the CTRE signals for this module's motors. */
+  public default List<BaseStatusSignal> getSignals() {
+    return List.of();
+  }
 }

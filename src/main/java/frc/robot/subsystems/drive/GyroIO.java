@@ -21,4 +21,12 @@ public interface GyroIO {
   }
 
   public default void updateInputs(GyroIOInputs inputs) {}
+
+  public default GyroIOInputsAutoLogged getInputs() {
+    return new GyroIOInputsAutoLogged();
+  }
+
+  public default java.util.List<com.ctre.phoenix6.BaseStatusSignal> getSignals() {
+    return java.util.List.of();
+  }
 }

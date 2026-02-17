@@ -2,13 +2,12 @@ package frc.robot.subsystems;
 
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
-import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
+import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.Climber;
@@ -16,10 +15,12 @@ import frc.robot.Constants.Climber;
 public class ClimberSubsystem extends SubsystemBase {
 
   private final TalonFX leftClimberMotor = new TalonFX(Climber.LEFT_MOTOR_ID);
-  private final TalonFX rightClimberMotor = new TalonFX(Climber.RIGHT_MOTOR_ID);
+  // private final TalonFX rightClimberMotor = new TalonFX(Climber.RIGHT_MOTOR_ID);
 
   private final PositionVoltage positionRequest = new PositionVoltage(0);
   private final VelocityVoltage velocityRequest = new VelocityVoltage(0);
+
+  private final com.ctre.phoenix6.StatusSignal<Angle> climberPositionSignal;
 
   public ClimberSubsystem() {
     // Configure left motor
@@ -38,10 +39,12 @@ public class ClimberSubsystem extends SubsystemBase {
     leftClimberMotor.getConfigurator().apply(config);
     leftClimberMotor.setNeutralMode(NeutralModeValue.Brake);
 
+    climberPositionSignal = leftClimberMotor.getPosition();
+
     // Configure right motor to follow left
-    rightClimberMotor.setControl(
-        new Follower(leftClimberMotor.getDeviceID(), MotorAlignmentValue.Opposed));
-    rightClimberMotor.setNeutralMode(NeutralModeValue.Brake);
+    //    rightClimberMotor.setControl(
+    //        new Follower(leftClimberMotor.getDeviceID(), MotorAlignmentValue.Opposed));
+    //    rightClimberMotor.setNeutralMode(NeutralModeValue.Brake);
   }
 
   @Override
@@ -51,12 +54,12 @@ public class ClimberSubsystem extends SubsystemBase {
 
   public void setCoastMode() {
     leftClimberMotor.setNeutralMode(NeutralModeValue.Coast);
-    rightClimberMotor.setNeutralMode(NeutralModeValue.Coast);
+    //    rightClimberMotor.setNeutralMode(NeutralModeValue.Coast);
   }
 
   public void setBrakeMode() {
     leftClimberMotor.setNeutralMode(NeutralModeValue.Brake);
-    rightClimberMotor.setNeutralMode(NeutralModeValue.Brake);
+    //    rightClimberMotor.setNeutralMode(NeutralModeValue.Brake);
   }
 
   public void setMotorSpeed(double speed) {
@@ -111,19 +114,22 @@ public class ClimberSubsystem extends SubsystemBase {
   }
 
   public void log() {
-    SmartDashboard.putNumber("Climber Encoder Rot", getEncoderRotations());
+    SmartDashboard.putNumber("Climber Pos (Rot)", getEncoderRotations());
     SmartDashboard.putNumber("Climber Speed", leftClimberMotor.get());
-    SmartDashboard.putNumber("Climber Lt motor temperature", getLeftClimberTemp());
-    SmartDashboard.putNumber("Climber Rt motor temperature", getRightClimberTemp());
+    SmartDashboard.putNumber("Climber Temp", getLeftClimberTemp());
     SmartDashboard.putBoolean("Climber Is At Top", isAtTop());
     SmartDashboard.putBoolean("Climber Is At Bot", isAtBot());
+
+    boolean climberOK = climberPositionSignal.getStatus().isOK();
+    SmartDashboard.putBoolean("Clmbr CAN OK", climberOK);
   }
 
   public double getLeftClimberTemp() {
     return leftClimberMotor.getDeviceTemp().getValueAsDouble();
   }
 
-  public double getRightClimberTemp() {
-    return rightClimberMotor.getDeviceTemp().getValueAsDouble();
+  public boolean isClimberConnected() {
+    // Uses the checks we already built using getStatus().isOK()
+    return climberPositionSignal.getStatus().isOK();
   }
 }

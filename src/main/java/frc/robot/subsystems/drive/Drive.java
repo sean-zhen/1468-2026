@@ -9,6 +9,7 @@ package frc.robot.subsystems.drive;
 
 import static edu.wpi.first.units.Units.*;
 
+import com.ctre.phoenix6.BaseStatusSignal;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.config.ModuleConfig;
 import com.pathplanner.lib.config.PIDConstants;
@@ -36,6 +37,7 @@ import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
@@ -43,6 +45,8 @@ import frc.robot.Constants;
 import frc.robot.Constants.Mode;
 import frc.robot.generated.TunerConstants;
 import frc.robot.util.LocalADStarAK;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.littletonrobotics.junction.AutoLogOutput;
@@ -206,6 +210,8 @@ public class Drive extends SubsystemBase {
 
     // Update gyro alert
     gyroDisconnectedAlert.set(!gyroInputs.connected && Constants.currentMode != Mode.SIM);
+
+    logCanStatus();
   }
 
   /**
@@ -290,7 +296,7 @@ public class Drive extends SubsystemBase {
 
   /** Returns the measured chassis speeds of the robot. */
   @AutoLogOutput(key = "SwerveChassisSpeeds/Measured")
-  private ChassisSpeeds getChassisSpeeds() {
+  public ChassisSpeeds getChassisSpeeds() {
     return kinematics.toChassisSpeeds(getModuleStates());
   }
 
@@ -355,5 +361,61 @@ public class Drive extends SubsystemBase {
       new Translation2d(TunerConstants.BackLeft.LocationX, TunerConstants.BackLeft.LocationY),
       new Translation2d(TunerConstants.BackRight.LocationX, TunerConstants.BackRight.LocationY)
     };
+  }
+
+  // Inside Drive.java
+
+  /** Adds measurements to the WPILib Pose Estimator */
+  // public void addVisionMeasurement(Pose2d pose, double time, Matrix<N3, N1> stds) {
+  //   // m_poseEstimator is your SwerveDrivePoseEstimator
+  //   m_poseEstimator.addVisionMeasurement(pose, time, stds);
+  // }
+
+  /** Returns the robot's current velocity */
+  public ChassisSpeeds getActualChassisSpeeds() {
+    return kinematics.toChassisSpeeds(getModuleStates());
+  }
+
+  /** Hard reset of the robot position */
+  public void resetPose(Pose2d pose) {
+    poseEstimator.resetPosition(getRotation(), getModulePositions(), pose);
+  }
+
+  // TA For better shooting on the fly accuracy
+  public List<BaseStatusSignal> getSignals() {
+    List<BaseStatusSignal> signals = new ArrayList<>();
+    for (var module : modules) {
+      signals.addAll(module.getSignals()); // Calls Module.java -> ModuleIO.java
+    }
+    signals.addAll(gyroIO.getSignals());
+    return signals;
+  }
+
+  public void logCanStatus() {
+    // Assuming modules are stored in an array: modules[0] = FL, [1] = FR, [2] = BL, [3] = BR
+    String[] moduleNames = {"FL", "FR", "BL", "BR"};
+
+    for (int i = 0; i < modules.length; i++) {
+      var data = modules[i].getInputs(); // Fetch the logged IO data
+
+      SmartDashboard.putBoolean(moduleNames[i] + " Drive CAN", data.driveConnected);
+      SmartDashboard.putBoolean(moduleNames[i] + " Turn CAN", data.turnConnected);
+      SmartDashboard.putBoolean(moduleNames[i] + " Encoder CAN", data.encoderConnected);
+    }
+  }
+
+  public boolean isSwerveConnected() {
+    boolean allOk = true;
+    for (var module : modules) {
+      var data = module.getInputs();
+      // Check all 3 devices per module
+      if (!data.driveConnected || !data.turnConnected || !data.encoderConnected) {
+        allOk = false;
+      }
+    }
+    // Also check the Gyro
+    if (!gyroIO.getInputs().connected) allOk = false;
+
+    return allOk;
   }
 }

@@ -2,8 +2,11 @@ package frc.robot.subsystems;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
+import edu.wpi.first.math.Vector;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
@@ -11,6 +14,7 @@ import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.subsystems.drive.Drive;
@@ -21,412 +25,324 @@ import org.photonvision.PhotonPoseEstimator;
 import org.photonvision.targeting.PhotonPipelineResult;
 
 public class VisionSubsystem extends SubsystemBase {
-  // Camera names - must match PhotonVision configuration
-  private static final String FRONT_CAMERA_NAME = "frontCamera";
-  private static final String BACK_CAMERA_NAME = "backCamera";
+  // Camera Names
+  private static final String FRONT_NAME = "frontCamera";
+  private static final String BACK_NAME = "backCamera";
+  private static final String LEFT_NAME = "leftCamera";
+  private static final String RIGHT_NAME = "rightCamera";
 
-  // Front Camera mount position and rotation
-  private static final double FRONT_CAM_X = 13.6; // inches forward
-  private static final double FRONT_CAM_Y = -10.5; // inches
-  private static final double FRONT_CAM_Z = 12.125; // inches up
-  private static final double FRONT_CAM_ROLL = 0.0; // degrees
-  private static final double FRONT_CAM_PITCH = 0.50; // degrees
-  private static final double FRONT_CAM_YAW = 22.8; // degrees
+  // Constants
+  private static final double MAX_SINGLE_TAG_DIST = 3.0; // Meters
+  private static final double MAX_RESET_VELOCITY = 0.5; // M/s
+  private static final double VISION_TIMEOUT = 0.5; // Seconds
 
-  // Back Camera mount position and rotation
-  private static final double BACK_CAM_X = 13.6; // inches forward
-  private static final double BACK_CAM_Y = 10.5; // inches
-  private static final double BACK_CAM_Z = 12.125; // inches up
-  private static final double BACK_CAM_ROLL = -0.440; // degrees
-  private static final double BACK_CAM_PITCH = -0.5; // degrees
-  private static final double BACK_CAM_YAW = -22.8; // degrees
+  // Confidence Matrices
+  private static final Matrix<N3, N1> SINGLE_TAG_TELEOP = VecBuilder.fill(0.1, 0.1, 4.0);
+  private static final Matrix<N3, N1> SINGLE_TAG_AUTO = VecBuilder.fill(4.0, 4.0, 8.0);
+  private static final Matrix<N3, N1> MULTI_TAG = VecBuilder.fill(0.1, 0.1, 0.25);
 
-  // Standard Deviations Explanation:
-  // These represent uncertainty in the vision measurements [X, Y, Theta]
-  // Lower values = trust vision more, higher values = trust odometry more
-
-  // TELEOP SINGLE TAG: More conservative since driver is controlling
-  // X/Y: 0.1m = trust position within 10cm
-  // Theta: 4.0 rad = low confidence in rotation (single tag is poor for rotation)
-  private static final Matrix<N3, N1> SINGLE_TAG_TELEOP_STD_DEVS = VecBuilder.fill(0.1, 0.1, 4.0);
-
-  // AUTO SINGLE TAG: Very conservative since auto needs reliability
-  // X/Y: 4.0m = very low confidence in position
-  // Theta: 8.0 rad = very low confidence in rotation
-  private static final Matrix<N3, N1> SINGLE_TAG_AUTO_STD_DEVS = VecBuilder.fill(4.0, 4.0, 8.0);
-
-  // MULTI TAG: High confidence because multiple tags = better triangulation
-  // X/Y: 0.1m = trust position within 10cm
-  // Theta: 0.25 rad = good confidence in rotation (~14 degrees)
-  private static final Matrix<N3, N1> MULTI_TAG_STD_DEVS = VecBuilder.fill(0.1, 0.1, 0.25);
-
-  // Reject single tags beyond this distance (they're too inaccurate)
-  private static final double MAX_SINGLE_TAG_DISTANCE = 3.0; // meters
-
-  // Transform from robot center to cameras
-  private final Transform3d robotToFrontCamera =
-      new Transform3d(
-          new Translation3d(
-              Units.inchesToMeters(FRONT_CAM_X),
-              Units.inchesToMeters(FRONT_CAM_Y),
-              Units.inchesToMeters(FRONT_CAM_Z)),
-          new Rotation3d(
-              Units.degreesToRadians(FRONT_CAM_ROLL),
-              Units.degreesToRadians(FRONT_CAM_PITCH),
-              Units.degreesToRadians(FRONT_CAM_YAW)));
-
-  private final Transform3d robotToBackCamera =
-      new Transform3d(
-          new Translation3d(
-              Units.inchesToMeters(BACK_CAM_X),
-              Units.inchesToMeters(BACK_CAM_Y),
-              Units.inchesToMeters(BACK_CAM_Z)),
-          new Rotation3d(
-              Units.degreesToRadians(BACK_CAM_ROLL),
-              Units.degreesToRadians(BACK_CAM_PITCH),
-              Units.degreesToRadians(BACK_CAM_YAW)));
-
-  // PhotonVision components
-  private final PhotonCamera frontCamera;
-  private final PhotonCamera backCamera;
-  private final PhotonPoseEstimator frontPoseEstimator;
-  private final PhotonPoseEstimator backPoseEstimator;
+  private final PhotonCamera frontCam, backCam, leftCam, rightCam;
+  private final PhotonPoseEstimator frontEst, backEst, leftEst, rightEst;
   private final AprilTagFieldLayout fieldLayout;
-
-  // Drive subsystem reference for pose updates
   private final Drive drive;
 
-  // Cache for fast access - updated every loop
-  private PhotonPipelineResult lastFrontResult = new PhotonPipelineResult();
-  private PhotonPipelineResult lastBackResult = new PhotonPipelineResult();
-  private Optional<EstimatedRobotPose> lastFrontEstimatedPose = Optional.empty();
-  private Optional<EstimatedRobotPose> lastBackEstimatedPose = Optional.empty();
-  private Matrix<N3, N1> lastFrontStdDevs = SINGLE_TAG_AUTO_STD_DEVS;
-  private Matrix<N3, N1> lastBackStdDevs = SINGLE_TAG_AUTO_STD_DEVS;
+  private double lastMeasurementTimestamp = 0;
+  private int lastTagCount = 0;
 
-  // Performance tracking
-  private long lastFrontUpdateTimeNanos = 0;
-  private long lastBackUpdateTimeNanos = 0;
+  // Data Cache Class
+  private static class CameraData {
+    public PhotonPipelineResult result = new PhotonPipelineResult();
+    public Optional<EstimatedRobotPose> pose = Optional.empty();
+    public long loopTimeNanos = 0;
+  }
 
-  /**
-   * Creates a new VisionSubsystem.
-   *
-   * @param drive The drive subsystem to send vision measurements to
-   */
+  private final CameraData fData = new CameraData(),
+      bData = new CameraData(),
+      lData = new CameraData(),
+      rData = new CameraData();
+
   public VisionSubsystem(Drive drive) {
     this.drive = drive;
-
-    // Load the official 2026 Rebuilt Andymark field layout
     fieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltAndymark);
 
-    // Initialize cameras
-    frontCamera = new PhotonCamera(FRONT_CAMERA_NAME);
-    backCamera = new PhotonCamera(BACK_CAMERA_NAME);
+    frontCam = new PhotonCamera(FRONT_NAME);
+    backCam = new PhotonCamera(BACK_NAME);
+    leftCam = new PhotonCamera(LEFT_NAME);
+    rightCam = new PhotonCamera(RIGHT_NAME);
 
-    // Create pose estimators with field layout and camera transforms
-    frontPoseEstimator = new PhotonPoseEstimator(fieldLayout, robotToFrontCamera);
-    backPoseEstimator = new PhotonPoseEstimator(fieldLayout, robotToBackCamera);
-
-    // Log camera configuration to SmartDashboard (once at startup)
-    SmartDashboard.putString("Vision/FieldLayout", "2026 Rebuilt Andymark");
-    SmartDashboard.putString("Vision/FrontCamera/Name", FRONT_CAMERA_NAME);
-    SmartDashboard.putString(
-        "Vision/FrontCamera/Position",
-        String.format("X=%.1f\" Y=%.1f\" Z=%.1f\"", FRONT_CAM_X, FRONT_CAM_Y, FRONT_CAM_Z));
-    SmartDashboard.putString(
-        "Vision/FrontCamera/Rotation",
-        String.format(
-            "Roll=%.2f° Pitch=%.2f° Yaw=%.2f°", FRONT_CAM_ROLL, FRONT_CAM_PITCH, FRONT_CAM_YAW));
-
-    SmartDashboard.putString("Vision/BackCamera/Name", BACK_CAMERA_NAME);
-    SmartDashboard.putString(
-        "Vision/BackCamera/Position",
-        String.format("X=%.1f\" Y=%.1f\" Z=%.1f\"", BACK_CAM_X, BACK_CAM_Y, BACK_CAM_Z));
-    SmartDashboard.putString(
-        "Vision/BackCamera/Rotation",
-        String.format(
-            "Roll=%.2f° Pitch=%.2f° Yaw=%.2f°", BACK_CAM_ROLL, BACK_CAM_PITCH, BACK_CAM_YAW));
+    // 2026 API Constructor: (Layout, RobotToCameraTransform)
+    frontEst = new PhotonPoseEstimator(fieldLayout, createTrf(13.6, -10.5, 12.125, 0, 0.5, 22.8));
+    backEst =
+        new PhotonPoseEstimator(fieldLayout, createTrf(13.6, 10.5, 12.125, -0.44, -0.5, -22.8));
+    leftEst = new PhotonPoseEstimator(fieldLayout, createTrf(0.0, 12.0, 12.0, 0, 0, 90.0));
+    rightEst = new PhotonPoseEstimator(fieldLayout, createTrf(0.0, -12.0, 12.0, 0, 0, -90.0));
   }
 
   @Override
   public void periodic() {
-    // Each camera update is independent and fast
-    long startTime = System.nanoTime();
-    updateCamera(frontCamera, frontPoseEstimator, "FrontCamera", true);
-    lastFrontUpdateTimeNanos = System.nanoTime() - startTime;
-
-    startTime = System.nanoTime();
-    updateCamera(backCamera, backPoseEstimator, "BackCamera", false);
-    lastBackUpdateTimeNanos = System.nanoTime() - startTime;
-
-    // Log to SmartDashboard (once per periodic cycle)
+    updateCam(frontCam, frontEst, fData);
+    updateCam(backCam, backEst, bData);
+    updateCam(leftCam, leftEst, lData);
+    updateCam(rightCam, rightEst, rData);
     log();
   }
 
-  /**
-   * Process all unread camera results for accurate pose estimation. Uses multi-tag strategy with
-   * fallback to single-tag lowest ambiguity.
-   */
-  private void updateCamera(
-      PhotonCamera camera,
-      PhotonPoseEstimator poseEstimator,
-      String cameraName,
-      boolean isFrontCamera) {
-
-    try {
-      // Get all unread results to process every frame
-      var results = camera.getAllUnreadResults();
-
-      for (var result : results) {
-        // Cache latest result for getter methods
-        if (isFrontCamera) {
-          lastFrontResult = result;
-        } else {
-          lastBackResult = result;
-        }
-
-        // Check if we have targets
-        if (!result.hasTargets()) {
-          if (isFrontCamera) {
-            lastFrontEstimatedPose = Optional.empty();
-          } else {
-            lastBackEstimatedPose = Optional.empty();
-          }
-          continue;
-        }
-
-        // Try multi-tag estimation first (most accurate)
-        var estimatedPose = poseEstimator.estimateCoprocMultiTagPose(result);
-
-        // If multi-tag fails, fall back to lowest ambiguity single-tag
-        if (estimatedPose.isEmpty()) {
-          estimatedPose = poseEstimator.estimateLowestAmbiguityPose(result);
-        }
-
-        // Cache estimated pose
-        if (isFrontCamera) {
-          lastFrontEstimatedPose = estimatedPose;
-        } else {
-          lastBackEstimatedPose = estimatedPose;
-        }
-
-        // Process the pose if we got one
-        estimatedPose.ifPresent(
-            pose -> {
-              // Calculate standard deviations based on tag count and distance
-              var stdDevs = calculateStdDevs(pose, result);
-
-              // Cache std devs
-              if (isFrontCamera) {
-                lastFrontStdDevs = stdDevs;
-              } else {
-                lastBackStdDevs = stdDevs;
-              }
-
-              // Send to drive if valid (not rejected)
-              if (stdDevs.get(0, 0) < Double.MAX_VALUE) {
-                drive.addVisionMeasurement(
-                    pose.estimatedPose.toPose2d(), pose.timestampSeconds, stdDevs);
-              }
-            });
+  private void updateCam(PhotonCamera cam, PhotonPoseEstimator est, CameraData data) {
+    long start = System.nanoTime();
+    var results = cam.getAllUnreadResults();
+    for (var res : results) {
+      data.result = res;
+      if (!res.hasTargets()) {
+        data.pose = Optional.empty();
+        continue;
       }
-    } catch (Exception e) {
-      DriverStation.reportError(
-          "Error processing " + cameraName + " results: " + e.getMessage(), e.getStackTrace());
+
+      // Distance Filter
+      if (res.getTargets().size() == 1) {
+        double dist = res.getBestTarget().getBestCameraToTarget().getTranslation().getNorm();
+        if (dist > MAX_SINGLE_TAG_DIST) continue;
+      }
+
+      // 1. Use the 2026.2.2 Strategy Method
+      est.estimateCoprocMultiTagPose(res)
+          .ifPresent(
+              estPose -> {
+                // Convert 3D estimated pose to 2D for the Swerve Drive
+                var estPose2d = estPose.estimatedPose.toPose2d();
+
+                // 2. Validate the pose is physically on the field
+                if (isPoseValid(estPose2d)) {
+                  data.pose = Optional.of(estPose);
+
+                  // 3. Calculate Average Distance to all visible targets
+                  double avgDistance =
+                      res.getTargets().stream()
+                          .mapToDouble(t -> t.getBestCameraToTarget().getTranslation().getNorm())
+                          .average()
+                          .orElse(4.0);
+
+                  // 4. Determine Dynamic Trust (Standard Deviations)
+                  int tagCount = res.getTargets().size();
+                  Vector<N3> dynamicStds;
+
+                  if (tagCount > 1) {
+                    // MULTI-TAG: High confidence that increases with more tags
+                    // 2 tags = 0.025 base, 3 tags = 0.016 base, 4 tags = 0.0125 base
+                    double trustFactor = 0.05 / tagCount;
+                    double xyStdDev = trustFactor * Math.pow(avgDistance, 2);
+
+                    // Rotation trust also increases with tag count
+                    dynamicStds = VecBuilder.fill(xyStdDev, xyStdDev, 0.5 / tagCount);
+                  } else {
+                    // SINGLE-TAG: Low confidence (penalty multiplier of 2.0)
+                    // This ensures we rely more on Swerve/Gyro when only 1 tag is seen
+                    double xyStdDev = 2.0 * Math.pow(avgDistance, 2);
+                    dynamicStds = VecBuilder.fill(xyStdDev, xyStdDev, 5.0);
+                  }
+
+                  // 5. Apply the measurement to the Drive Subsystem
+                  // Uses the synchronized timestamp from the PhotonLib result
+                  drive.addVisionMeasurement(estPose2d, estPose.timestampSeconds, dynamicStds);
+
+                  // Update the timestamp for dashboard/logging
+                  lastMeasurementTimestamp = Timer.getFPGATimestamp();
+                }
+                lastTagCount = res.getTargets().size();
+              });
+    }
+    data.loopTimeNanos = System.nanoTime() - start;
+  }
+
+  // public int getTagCount() {
+  //     // If the last measurement is too old (e.g., > 0.5s), return 0
+  //     if (Timer.getFPGATimestamp() - lastMeasurementTimestamp > 0.5) {
+  //         return 0;
+  //     }
+  //     return lastTagCount;
+  // }
+
+  public int getTagCount() {
+    // 1. Get current robot velocity (linear magnitude)
+    // We use the drive subsystem speeds we set up earlier
+    var speeds = drive.getChassisSpeeds();
+    double velocity =
+        Math.sqrt(Math.pow(speeds.vxMetersPerSecond, 2) + Math.pow(speeds.vyMetersPerSecond, 2));
+
+    // 2. Calculate a Dynamic Timeout
+    // If stopped (0m/s), timeout is 0.8s.
+    // If sprinting (5m/s), timeout drops to 0.1s.
+    double dynamicTimeout = MathUtil.clamp(0.8 - (velocity * 0.14), 0.1, 0.8);
+
+    // 3. Check if the data is "stale" based on that timeout
+    double timeSinceLastTag = Timer.getFPGATimestamp() - lastMeasurementTimestamp;
+
+    if (timeSinceLastTag > dynamicTimeout) {
+      return 0; // Data is too old for our current speed
+    }
+    return lastTagCount;
+  }
+
+  public void forceOdometryToVision() {
+    double speed =
+        Math.hypot(
+            drive.getActualChassisSpeeds().vxMetersPerSecond,
+            drive.getActualChassisSpeeds().vyMetersPerSecond);
+    if (speed > MAX_RESET_VELOCITY) return;
+
+    CameraData[] all = {fData, bData, lData, rData};
+    for (CameraData d : all) {
+      if (d.pose.isPresent() && d.result.getTargets().size() > 1) {
+        drive.resetPose(d.pose.get().estimatedPose.toPose2d());
+        return;
+      }
     }
   }
 
-  /**
-   * OPTIMIZED: Fast standard deviation calculation. Pre-computed values and minimal branching for
-   * speed.
-   */
-  private Matrix<N3, N1> calculateStdDevs(
-      EstimatedRobotPose estimatedPose, PhotonPipelineResult result) {
-
-    int numTags = estimatedPose.targetsUsed.size();
-
-    // SPEED: Early return for no tags
-    if (numTags == 0) {
-      return VecBuilder.fill(Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE);
+  private boolean isPoseValid(Pose2d estPose) {
+    // 1. Field Boundary Check: 2026 REBUILT field is ~16.5m x 8.2m
+    if (estPose.getX() < -0.5
+        || estPose.getX() > 17.0
+        || estPose.getY() < -0.5
+        || estPose.getY() > 8.7) {
+      return false;
     }
 
-    // SPEED: Pre-select std devs based on mode and tag count
-    Matrix<N3, N1> baseStdDevs;
-    if (numTags > 1) {
-      baseStdDevs = MULTI_TAG_STD_DEVS; // Best accuracy
+    // 2. Velocity Delta Check: Vision should not jump significantly from current odometry
+    // If the jump is > 1.0m, it's likely a "ghost" detection
+    double poseJump = estPose.getTranslation().getDistance(drive.getPose().getTranslation());
+    if (poseJump > 1.0) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private Transform3d createTrf(double x, double y, double z, double r, double p, double yw) {
+    return new Transform3d(
+        new Translation3d(
+            Units.inchesToMeters(x), Units.inchesToMeters(y), Units.inchesToMeters(z)),
+        new Rotation3d(
+            Units.degreesToRadians(r), Units.degreesToRadians(p), Units.degreesToRadians(yw)));
+  }
+
+  private void log() {
+    boolean healthy = (Timer.getFPGATimestamp() - lastMeasurementTimestamp) < VISION_TIMEOUT;
+    SmartDashboard.putBoolean("Vision/Healthy", healthy);
+
+    logBestCameraSummary();
+  }
+
+  private void logBestCameraSummary() {
+    CameraData[] allCams = {fData, bData, lData, rData};
+    String[] names = {"Front", "Back", "Left", "Right"};
+
+    int bestCamIdx = -1;
+    int maxTags = 0;
+
+    // Find the camera seeing the most tags
+    for (int i = 0; i < allCams.length; i++) {
+      int tagCount = allCams[i].result.getTargets().size();
+      if (tagCount > maxTags) {
+        maxTags = tagCount;
+        bestCamIdx = i;
+      }
+    }
+
+    if (bestCamIdx != -1) {
+      SmartDashboard.putString("Vision/Summary/ActiveSource", names[bestCamIdx]);
+      SmartDashboard.putNumber("Vision/Summary/TagsVisible", maxTags);
+
+      // Get distance of the best target from the best camera
+      double dist =
+          allCams[bestCamIdx]
+              .result
+              .getBestTarget()
+              .getBestCameraToTarget()
+              .getTranslation()
+              .getNorm();
+      SmartDashboard.putNumber("Vision/Summary/BestTargetDist", dist);
     } else {
-      baseStdDevs =
-          DriverStation.isAutonomous() ? SINGLE_TAG_AUTO_STD_DEVS : SINGLE_TAG_TELEOP_STD_DEVS;
+      SmartDashboard.putString("Vision/Summary/ActiveSource", "None");
+      SmartDashboard.putNumber("Vision/Summary/TagsVisible", 0);
     }
-
-    // SPEED: Fast distance calculation
-    double avgDistance = 0;
-    int validTags = 0;
-    for (var target : estimatedPose.targetsUsed) {
-      var tagPose = fieldLayout.getTagPose(target.getFiducialId());
-      if (tagPose.isPresent()) {
-        avgDistance +=
-            tagPose
-                .get()
-                .toPose2d()
-                .getTranslation()
-                .getDistance(estimatedPose.estimatedPose.toPose2d().getTranslation());
-        validTags++;
-      }
-    }
-
-    if (validTags == 0) {
-      return VecBuilder.fill(Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE);
-    }
-
-    avgDistance /= validTags;
-
-    // SPEED: Reject far single tags quickly
-    if (numTags == 1 && avgDistance > MAX_SINGLE_TAG_DISTANCE) {
-      return VecBuilder.fill(Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE);
-    }
-
-    // SPEED: Simple scaling formula (pre-computed constant 1/30)
-    return baseStdDevs.times(1.0 + (avgDistance * avgDistance * 0.03333));
   }
 
-  /**
-   * Log vision data to SmartDashboard (called once per periodic cycle to avoid duplicate logging)
-   */
-  public void log() {
-    // Front Camera - Connection and basic status
-    SmartDashboard.putBoolean("Vision Front Connected", frontCamera.isConnected());
-    SmartDashboard.putBoolean("Vision Front Has Targets", lastFrontResult.hasTargets());
-    SmartDashboard.putNumber("Vision Front Target Count", lastFrontResult.getTargets().size());
-
-    // Front Camera - Target details (only if targets exist)
-    if (lastFrontResult.hasTargets()) {
-      var bestTarget = lastFrontResult.getBestTarget();
-      SmartDashboard.putNumber("Vision Front Best Target ID", bestTarget.getFiducialId());
-      SmartDashboard.putNumber("Vision Front Best Target Area", bestTarget.getArea());
-      SmartDashboard.putNumber("Vision Front Best Target Yaw", bestTarget.getYaw());
-    }
-
-    // Front Camera - Estimated pose (only if pose exists)
-    lastFrontEstimatedPose.ifPresent(
-        pose -> {
-          SmartDashboard.putString(
-              "Vision Front Estimated Pose",
-              String.format(
-                  "X=%.2f Y=%.2f θ=%.1f°",
-                  pose.estimatedPose.toPose2d().getX(),
-                  pose.estimatedPose.toPose2d().getY(),
-                  pose.estimatedPose.toPose2d().getRotation().getDegrees()));
-          SmartDashboard.putNumber("Vision Front Tags Used", pose.targetsUsed.size());
-          SmartDashboard.putBoolean(
-              "Vision Front Valid", lastFrontStdDevs.get(0, 0) < Double.MAX_VALUE);
-          SmartDashboard.putBoolean(
-              "Vision Front Sent to Drive", lastFrontStdDevs.get(0, 0) < Double.MAX_VALUE);
-        });
-
-    // Back Camera - Connection and basic status
-    SmartDashboard.putBoolean("Vision Back Connected", backCamera.isConnected());
-    SmartDashboard.putBoolean("Vision Back Has Targets", lastBackResult.hasTargets());
-    SmartDashboard.putNumber("Vision Back Target Count", lastBackResult.getTargets().size());
-
-    // Back Camera - Target details (only if targets exist)
-    if (lastBackResult.hasTargets()) {
-      var bestTarget = lastBackResult.getBestTarget();
-      SmartDashboard.putNumber("Vision Back Best Target ID", bestTarget.getFiducialId());
-      SmartDashboard.putNumber("Vision Back Best Target Area", bestTarget.getArea());
-      SmartDashboard.putNumber("Vision Back Best Target Yaw", bestTarget.getYaw());
-    }
-
-    // Back Camera - Estimated pose (only if pose exists)
-    lastBackEstimatedPose.ifPresent(
-        pose -> {
-          SmartDashboard.putString(
-              "Vision Back Estimated Pose",
-              String.format(
-                  "X=%.2f Y=%.2f θ=%.1f°",
-                  pose.estimatedPose.toPose2d().getX(),
-                  pose.estimatedPose.toPose2d().getY(),
-                  pose.estimatedPose.toPose2d().getRotation().getDegrees()));
-          SmartDashboard.putNumber("Vision Back Tags Used", pose.targetsUsed.size());
-          SmartDashboard.putBoolean(
-              "Vision Back Valid", lastBackStdDevs.get(0, 0) < Double.MAX_VALUE);
-          SmartDashboard.putBoolean(
-              "Vision Back Sent to Drive", lastBackStdDevs.get(0, 0) < Double.MAX_VALUE);
-        });
-
-    // Performance metrics
-    SmartDashboard.putNumber("Vision Front Update Time (μs)", lastFrontUpdateTimeNanos / 1000.0);
-    SmartDashboard.putNumber("Vision Back Update Time (μs)", lastBackUpdateTimeNanos / 1000.0);
-  }
-
-  // FAST GETTERS - No computation, just return cached values
+  // --- FAST GETTERS (Updated for 4-Camera Data Structure) ---
 
   public boolean frontCameraHasTargets() {
-    return lastFrontResult.hasTargets();
+    return fData.result.hasTargets();
   }
 
   public boolean backCameraHasTargets() {
-    return lastBackResult.hasTargets();
+    return bData.result.hasTargets();
+  }
+
+  public boolean leftCameraHasTargets() {
+    return lData.result.hasTargets();
+  }
+
+  public boolean rightCameraHasTargets() {
+    return rData.result.hasTargets();
   }
 
   public int getFrontCameraBestTargetId() {
-    return lastFrontResult.hasTargets() ? lastFrontResult.getBestTarget().getFiducialId() : -1;
+    return fData.result.hasTargets() ? fData.result.getBestTarget().getFiducialId() : -1;
   }
 
   public int getBackCameraBestTargetId() {
-    return lastBackResult.hasTargets() ? lastBackResult.getBestTarget().getFiducialId() : -1;
+    return bData.result.hasTargets() ? bData.result.getBestTarget().getFiducialId() : -1;
   }
 
   public double getFrontCameraBestTargetArea() {
-    return lastFrontResult.hasTargets() ? lastFrontResult.getBestTarget().getArea() : 0.0;
+    return fData.result.hasTargets() ? fData.result.getBestTarget().getArea() : 0.0;
   }
 
   public double getBackCameraBestTargetArea() {
-    return lastBackResult.hasTargets() ? lastBackResult.getBestTarget().getArea() : 0.0;
+    return bData.result.hasTargets() ? bData.result.getBestTarget().getArea() : 0.0;
   }
 
   public PhotonPipelineResult getLastFrontResult() {
-    return lastFrontResult;
+    return fData.result;
   }
 
   public PhotonPipelineResult getLastBackResult() {
-    return lastBackResult;
+    return bData.result;
   }
 
   public Optional<EstimatedRobotPose> getLastFrontEstimatedPose() {
-    return lastFrontEstimatedPose;
+    return fData.pose;
   }
 
   public Optional<EstimatedRobotPose> getLastBackEstimatedPose() {
-    return lastBackEstimatedPose;
+    return bData.pose;
   }
 
+  // These can be calculated based on the result count stored in the cache
   public Matrix<N3, N1> getLastFrontStdDevs() {
-    return lastFrontStdDevs;
-  }
-
-  public Matrix<N3, N1> getLastBackStdDevs() {
-    return lastBackStdDevs;
+    return fData.result.getTargets().size() > 1
+        ? MULTI_TAG
+        : (DriverStation.isAutonomous() ? SINGLE_TAG_AUTO : SINGLE_TAG_TELEOP);
   }
 
   public AprilTagFieldLayout getFieldLayout() {
     return fieldLayout;
   }
 
+  // Getters for the Transforms (using the estimators)
   public Transform3d getRobotToFrontCamera() {
-    return robotToFrontCamera;
+    return frontEst.getRobotToCameraTransform();
   }
 
   public Transform3d getRobotToBackCamera() {
-    return robotToBackCamera;
+    return backEst.getRobotToCameraTransform();
   }
 
   /** Get the last update time in microseconds for performance monitoring. */
   public double getFrontCameraUpdateTimeMicros() {
-    return lastFrontUpdateTimeNanos / 1000.0;
+    return fData.loopTimeNanos / 1000.0;
   }
 
   public double getBackCameraUpdateTimeMicros() {
-    return lastBackUpdateTimeNanos / 1000.0;
+    return bData.loopTimeNanos / 1000.0;
   }
 }

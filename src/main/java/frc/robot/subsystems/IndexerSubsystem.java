@@ -6,6 +6,7 @@ import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
+import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.Indexer;
@@ -15,6 +16,8 @@ public class IndexerSubsystem extends SubsystemBase {
 
   private final PositionVoltage positionRequest = new PositionVoltage(0);
   private final VelocityVoltage velocityRequest = new VelocityVoltage(0);
+
+  private final com.ctre.phoenix6.StatusSignal<Angle> indexerVeloSignal;
 
   public IndexerSubsystem() {
     var config = new com.ctre.phoenix6.configs.TalonFXConfiguration();
@@ -27,6 +30,8 @@ public class IndexerSubsystem extends SubsystemBase {
     config.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
     motor.getConfigurator().apply(config);
     motor.setNeutralMode(NeutralModeValue.Brake);
+
+    indexerVeloSignal = motor.getPosition();
   }
 
   @Override
@@ -56,10 +61,17 @@ public class IndexerSubsystem extends SubsystemBase {
 
   public void log() {
     SmartDashboard.putNumber(
-        "Indexer Position (rotations, output)",
+        "Indxr Pos (rotations, output)",
         motor.getPosition().getValueAsDouble() / Indexer.GEAR_RATIO);
     SmartDashboard.putNumber(
-        "Indexer Velocity (RPS, output)",
-        motor.getVelocity().getValueAsDouble() / Indexer.GEAR_RATIO);
+        "Indxr Velo (RPS, output)", motor.getVelocity().getValueAsDouble() / Indexer.GEAR_RATIO);
+    SmartDashboard.putNumber("Indxr Temp", motor.getDeviceTemp().getValueAsDouble());
+    boolean indexerOK = indexerVeloSignal.getStatus().isOK();
+    SmartDashboard.putBoolean("Indxr CAN OK", indexerOK);
+  }
+
+  public boolean isIndexerConnected() {
+    // Uses the checks we already built using getStatus().isOK()
+    return indexerVeloSignal.getStatus().isOK();
   }
 }

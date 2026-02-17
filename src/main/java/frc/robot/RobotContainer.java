@@ -7,24 +7,31 @@
 
 package frc.robot;
 
+import com.ctre.phoenix6.CANBus;
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
+import edu.wpi.first.wpilibj2.command.button.POVButton;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.DriveCommands;
+import frc.robot.commands.DriveToHubCommandPP;
 import frc.robot.commands.FaceTagsCommand;
 import frc.robot.commands.HarvesterDeploy;
 import frc.robot.commands.HarvesterSpin;
 import frc.robot.commands.IndexerSpin;
 import frc.robot.commands.Kick;
+import frc.robot.commands.PrepareShooterCmd;
 import frc.robot.commands.Shoot;
 import frc.robot.generated.TunerConstants;
+import frc.robot.subsystems.ClimberSubsystem;
 import frc.robot.subsystems.HarvesterSubsystem;
 import frc.robot.subsystems.IndexerSubsystem;
 import frc.robot.subsystems.KickerSubsystem;
@@ -53,12 +60,14 @@ public class RobotContainer {
   private final KickerSubsystem kicker;
   private final HarvesterSubsystem harvester;
   private final IndexerSubsystem indexer;
+  private final ClimberSubsystem climber;
   private final LEDSubsystem led;
 
   // Controller
-  final Joystick driverRightJoystick = new Joystick(1);
   final Joystick driverLeftJoystick = new Joystick(0);
-  final Joystick operatorJoystick = new Joystick(3);
+  final Joystick driverRightJoystick = new Joystick(1);
+  final Joystick operatorManualJoystick = new Joystick(2);
+  final Joystick operatorAutoJoystick = new Joystick(3);
 
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
@@ -70,7 +79,7 @@ public class RobotContainer {
     kicker = new KickerSubsystem();
     harvester = new HarvesterSubsystem();
     indexer = new IndexerSubsystem();
-    led = new LEDSubsystem();
+    climber = new ClimberSubsystem();
 
     switch (Constants.currentMode) {
       case REAL:
@@ -134,6 +143,8 @@ public class RobotContainer {
         break;
     }
 
+    led = new LEDSubsystem(shooter, drive, vision);
+
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
 
@@ -166,13 +177,24 @@ public class RobotContainer {
   private void configureButtonBindings() {
 
     // TODO: Decide on final button mappings
+    final JoystickButton driveToHub = new JoystickButton(driverLeftJoystick, 5);
+
     final JoystickButton resetGyro = new JoystickButton(driverRightJoystick, 7);
     final JoystickButton lockToZero = new JoystickButton(driverRightJoystick, 9);
-    final JoystickButton shoot = new JoystickButton(operatorJoystick, 1);
-    final JoystickButton kick = new JoystickButton(operatorJoystick, 2);
-    final JoystickButton harvesterDeploy = new JoystickButton(operatorJoystick, 3);
-    final JoystickButton harvesterSpin = new JoystickButton(operatorJoystick, 4);
-    final JoystickButton indexerSpin = new JoystickButton(operatorJoystick, 5);
+    final JoystickButton resetOdom = new JoystickButton(driverRightJoystick, 8);
+    final JoystickButton faceHubButton = new JoystickButton(driverRightJoystick, 1);
+    final JoystickButton turnLEDsOff = new JoystickButton(driverLeftJoystick, 11);
+
+    final JoystickButton flyWheel = new JoystickButton(operatorManualJoystick, 1);
+    final JoystickButton kick = new JoystickButton(operatorManualJoystick, 2);
+    final JoystickButton harvesterDeploy = new JoystickButton(operatorManualJoystick, 3);
+    final JoystickButton harvesterSpin = new JoystickButton(operatorManualJoystick, 4);
+    final JoystickButton indexerSpin = new JoystickButton(operatorManualJoystick, 5);
+
+    final JoystickButton fire = new JoystickButton(operatorAutoJoystick, 1);
+    final JoystickButton aim = new JoystickButton(operatorAutoJoystick, 2);
+    final JoystickButton climberUp = new JoystickButton(operatorAutoJoystick, 9);
+    final JoystickButton climberDown = new JoystickButton(operatorAutoJoystick, 10);
 
     // Default command, normal field-relative drive
     drive.setDefaultCommand(
@@ -190,9 +212,10 @@ public class RobotContainer {
             () -> -driverLeftJoystick.getX(),
             () -> new Rotation2d()));
 
+    driveToHub.onTrue(new DriveToHubCommandPP(drive));
+
     // Drive facing april tag
-    final JoystickButton faceProcessorButton = new JoystickButton(driverRightJoystick, 7);
-    faceProcessorButton.whileTrue(
+    faceHubButton.whileTrue(
         new FaceTagsCommand(
             drive, vision, () -> -driverLeftJoystick.getY(), () -> -driverLeftJoystick.getX()));
 
@@ -203,12 +226,15 @@ public class RobotContainer {
                 drive)
             .ignoringDisable(true));
 
+    // Reset gyro to 0° when 7 on right joystick button is pressed
+    turnLEDsOff.onTrue(new InstantCommand(led::toggleLeds));
+
     // Shooter
-    shoot.whileTrue(
+    flyWheel.whileTrue(
         new Shoot(
             shooter,
-            // Flywheel Speed:
-            () -> -operatorJoystick.getZ()));
+            // Flywheel Speed: Scale Z axis from 0 to 1
+            () -> (-operatorManualJoystick.getZ() + 1) / 2.0));
 
     // Kicker
     kick.whileTrue(new Kick(kicker));
@@ -221,6 +247,56 @@ public class RobotContainer {
 
     // Indexer Spin
     indexerSpin.whileTrue(new IndexerSpin(indexer));
+
+    // Vision Reset
+    resetOdom.onTrue(new InstantCommand(vision::forceOdometryToVision, vision));
+
+    aim.whileTrue(new PrepareShooterCmd(shooter, drive));
+    // fire.whileTrue(
+    //     new PrepareShooterCmd(shooter, drive)
+    //         .alongWith(Commands.waitSeconds(0.1).andThen(new Kick(kicker)))
+    //         .alongWith(Commands.waitSeconds(0.2).andThen(new IndexerSpin(indexer))));
+
+    // Prepare to shoot from Hub // TODO: TA - All parameters must be fixed
+    new POVButton(operatorAutoJoystick, 0)
+        .debounce(0.10)
+        .onTrue(
+            new Shoot(shooter, () -> (0.50))
+                .alongWith(new InstantCommand(() -> shooter.setTurretPosition(0.1)))
+                .alongWith(new InstantCommand(() -> shooter.setHoodPosition((.1)))));
+
+    // Prepare to shoot from Tower // TODO: TA - All parameters must be fixed
+    new POVButton(operatorAutoJoystick, 180)
+        .debounce(0.10)
+        .onTrue(
+            new Shoot(shooter, () -> (0.50))
+                .alongWith(new InstantCommand(() -> shooter.setTurretPosition(0.1)))
+                .alongWith(new InstantCommand(() -> shooter.setHoodPosition((.1)))));
+
+    // Prepare to shoot from Depot // TODO: TA - All parameters must be fixed
+    new POVButton(operatorAutoJoystick, 90)
+        .debounce(0.10)
+        .onTrue(
+            new Shoot(shooter, () -> (0.50))
+                .alongWith(new InstantCommand(() -> shooter.setTurretPosition(0.1)))
+                .alongWith(new InstantCommand(() -> shooter.setHoodPosition((.1)))));
+
+    // Prepare to shoot from Outpost // TODO: TA - All parameters must be fixed
+    new POVButton(operatorAutoJoystick, 270)
+        .debounce(0.10)
+        .onTrue(
+            new Shoot(shooter, () -> (0.50))
+                .alongWith(new InstantCommand(() -> shooter.setTurretPosition(0.1)))
+                .alongWith(new InstantCommand(() -> shooter.setHoodPosition((.1)))));
+
+    fire.whileTrue(
+        (new Kick(kicker)).alongWith(Commands.waitSeconds(0.2).andThen(new IndexerSpin(indexer))));
+
+    // Moves to 4 rotations when button 9 is pressed
+    climberUp.onTrue(new InstantCommand(() -> climber.setPosition(4.0), climber));
+
+    // Returns to 0 rotations when button 10 is pressed
+    climberDown.onTrue(new InstantCommand(() -> climber.setPosition(0.0), climber));
   }
 
   /**
@@ -230,5 +306,48 @@ public class RobotContainer {
    */
   public Command getAutonomousCommand() {
     return autoChooser.get();
+  }
+
+  public void updateGlobalHealth() {
+    // 1. Get RoboRio CAN Health
+    boolean shooterHealthy = shooter.isShooterConnected();
+    boolean climberHealthy = climber.isClimberConnected();
+    boolean kickerHealthy = kicker.isKickerConnected();
+    boolean indexerHealthy = indexer.isIndexerConnected();
+    boolean harvesterHealthy = harvester.isHarvesterConnected();
+    boolean ledHealthy = led.isCanDleConnected();
+
+    // 2. Get Swerve Health
+    boolean canCoderHealthy = drive.isSwerveConnected();
+
+    // 3. The Master Status
+    boolean robotCanOk =
+        harvesterHealthy
+            && indexerHealthy
+            && kickerHealthy
+            && shooterHealthy
+            && climberHealthy
+            && ledHealthy;
+
+    // Use a 2 "Master" widgets for the Main Dashboard
+    SmartDashboard.putBoolean("RoboRio CAN STATUS", robotCanOk);
+    SmartDashboard.putBoolean("CanCoder CAN STATUS", canCoderHealthy);
+
+    // 1. Get RIO Bus Utilization
+    var rioStatus = CANBus.roboRIO().getStatus();
+    double rioUsage = rioStatus.BusUtilization * 100.0; // Convert 0.0-1.0 to %
+
+    // 2. Get CANivore/CANcoder Bus Utilization
+    // Replace "canivore1" with the name assigned in Phoenix Tuner X
+    var canivoreStatus = new CANBus("1468_CANivore").getStatus();
+    double canivoreUsage = canivoreStatus.BusUtilization * 100.0;
+
+    // 3. Display on Dashboard
+    SmartDashboard.putNumber("CAN RIO Usage %", rioUsage);
+    SmartDashboard.putNumber("CAN CANivore Usage %", canivoreUsage);
+
+    // Warning: FRC best practice is to keep utilization below 90%
+    SmartDashboard.putBoolean("RIO CAN High Load Warning", rioUsage > 90);
+    SmartDashboard.putBoolean("CANivore High Load Warning", canivoreUsage > 90);
   }
 }

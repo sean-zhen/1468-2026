@@ -11,6 +11,7 @@ import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.util.Units;
 
 public class VisionConstants {
   // AprilTag layout
@@ -18,15 +19,29 @@ public class VisionConstants {
       AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
 
   // Camera names, must match names configured on coprocessor
-  public static String camera0Name = "camera_0";
-  public static String camera1Name = "camera_1";
+  public static String camera0Name = "Camera_1";
+  public static String camera1Name = "Camera_2";
+
+  public static double cam1_x = Units.inchesToMeters(13);
+  public static double cam1_y = Units.inchesToMeters(-12);
+  public static double cam1_z = Units.inchesToMeters(43.5);
+  public static double cam1_roll = Units.inchesToMeters(0.0);
+  public static double cam1_pitch = Units.inchesToMeters(0.0);
+  public static double cam1_yaw = Units.inchesToMeters(0.0);
+
+  public static double cam2_x = Units.inchesToMeters(13);
+  public static double cam2_y = Units.inchesToMeters(-6);
+  public static double cam2_z = Units.inchesToMeters(43.5);
+  public static double cam2_roll = Units.inchesToMeters(0.0);
+  public static double cam2_pitch = Units.inchesToMeters(0.0);
+  public static double cam2_yaw = Units.inchesToMeters(0.0);
 
   // Robot to camera transforms
   // (Not used by Limelight, configure in web UI instead)
   public static Transform3d robotToCamera0 =
-      new Transform3d(0.2, 0.0, 0.2, new Rotation3d(0.0, -0.4, 0.0));
+      new Transform3d(cam1_x, cam1_y, cam1_z, new Rotation3d(cam1_roll, cam1_pitch, cam1_yaw));
   public static Transform3d robotToCamera1 =
-      new Transform3d(-0.2, 0.0, 0.2, new Rotation3d(0.0, -0.4, Math.PI));
+      new Transform3d(cam2_x, cam2_y, cam2_z, new Rotation3d(cam2_roll, cam2_pitch, cam2_yaw));
 
   // Basic filtering thresholds
   public static double maxAmbiguity = 0.3;

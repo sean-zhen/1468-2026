@@ -19,8 +19,11 @@ public class LEDSubsystem extends SubsystemBase {
   private final CANBus kCANBus = new CANBus("rio");
   private final CANdle m_candle = new CANdle(60, kCANBus);
 
-  private final int START_IDX = 8;
-  private final int LED_COUNT = 30;
+  //  private final int START_IDX = 8;
+  //  private final int LED_COUNT = 30;
+  // TODO: TA: Update LED Indexes
+  private final int START_IDX = 0;
+  private final int LED_COUNT = 8;
 
   // How many seconds left in match to start climber feedback
   // Set to 150.0 for practice to have it always active
@@ -108,7 +111,7 @@ public class LEDSubsystem extends SubsystemBase {
     }
 
     // Priority 4: Shooter Feedback
-    boolean flyOk = m_shooter.isAtVelocity();
+    boolean flyOk = m_shooter.isFLywheelAtVelocity();
     boolean turretOk = m_shooter.isTurretAtPosition();
     boolean hoodOk = m_shooter.isHoodAtPosition();
 

@@ -29,7 +29,7 @@ public class KickerSubsystem extends SubsystemBase {
     slot0Configs.kD = Kicker.kD; // Derivative gain
 
     config.Slot0 = slot0Configs;
-    config.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+    config.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
 
     kickerMotor.getConfigurator().apply(config);
 

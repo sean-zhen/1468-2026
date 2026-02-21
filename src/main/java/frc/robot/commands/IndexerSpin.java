@@ -22,8 +22,9 @@ public class IndexerSpin extends Command {
 
     // Find nearest position
     double currentPosition = indexer.getPosition();
+    double modPosition = currentPosition % 9;
     double nearest = Indexer.POSITIONS[0];
-    double minDiff = Math.abs(currentPosition - nearest);
+    double minDiff = Math.abs(modPosition - nearest);
 
     for (double pos : Indexer.POSITIONS) {
       double diff = Math.abs(currentPosition - pos);
@@ -32,7 +33,7 @@ public class IndexerSpin extends Command {
         nearest = pos;
       }
     }
-    indexer.setPosition(nearest);
+    indexer.setPosition(currentPosition - modPosition);
   }
 
   @Override

@@ -27,7 +27,7 @@ public class IndexerSubsystem extends SubsystemBase {
     slot0.kD = Indexer.kD;
     slot0.kV = Indexer.kV;
     config.Slot0 = slot0;
-    config.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+    config.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
     motor.getConfigurator().apply(config);
     motor.setNeutralMode(NeutralModeValue.Brake);
 

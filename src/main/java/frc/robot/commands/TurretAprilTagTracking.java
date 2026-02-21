@@ -8,9 +8,9 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
-import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
@@ -73,20 +73,104 @@ public class TurretAprilTagTracking extends Command {
     turretController.setTolerance(Units.degreesToRadians(Shooter.TURRET_TRACKING_TOLERANCE_DEG));
 
     // Create persistent Shooter tab entries
-    allianceEntry = shooterTab.add("TurretTracking/Alliance", "UNKNOWN").withWidget(BuiltInWidgets.kTextView).withPosition(0, 5).withSize(2, 1).getEntry();
-    statusEntry = shooterTab.add("TurretTracking/Status", "IDLE").withWidget(BuiltInWidgets.kTextView).withPosition(2, 5).withSize(2, 1).getEntry();
-    targetTagIdEntry = shooterTab.add("TurretTracking/TargetTagID", -1).withWidget(BuiltInWidgets.kTextView).withPosition(4, 5).withSize(2, 1).getEntry();
-    distanceToTagEntry = shooterTab.add("TurretTracking/DistanceToTag", 0.0).withWidget(BuiltInWidgets.kTextView).withPosition(6, 5).withSize(2, 1).getEntry();
-    robotXEntry = shooterTab.add("TurretTracking/RobotX", 0.0).withWidget(BuiltInWidgets.kTextView).withPosition(0, 6).withSize(2, 1).getEntry();
-    robotYEntry = shooterTab.add("TurretTracking/RobotY", 0.0).withWidget(BuiltInWidgets.kTextView).withPosition(2, 6).withSize(2, 1).getEntry();
-    robotHeadingEntry = shooterTab.add("TurretTracking/RobotHeading", 0.0).withWidget(BuiltInWidgets.kTextView).withPosition(4, 6).withSize(2, 1).getEntry();
-    tagXEntry = shooterTab.add("TurretTracking/TagX", 0.0).withWidget(BuiltInWidgets.kTextView).withPosition(0, 7).withSize(2, 1).getEntry();
-    tagYEntry = shooterTab.add("TurretTracking/TagY", 0.0).withWidget(BuiltInWidgets.kTextView).withPosition(2, 7).withSize(2, 1).getEntry();
-    angleToTagEntry = shooterTab.add("TurretTracking/AngleToTag", 0.0).withWidget(BuiltInWidgets.kTextView).withPosition(4, 7).withSize(2, 1).getEntry();
-    turretTargetAngleEntry = shooterTab.add("TurretTracking/TurretTargetAngle", 0.0).withWidget(BuiltInWidgets.kTextView).withPosition(0, 8).withSize(2, 1).getEntry();
-    turretCurrentAngleEntry = shooterTab.add("TurretTracking/TurretCurrentAngle", 0.0).withWidget(BuiltInWidgets.kTextView).withPosition(2, 8).withSize(2, 1).getEntry();
-    turretVelocityEntry = shooterTab.add("TurretTracking/TurretVelocity", 0.0).withWidget(BuiltInWidgets.kTextView).withPosition(4, 8).withSize(2, 1).getEntry();
-    atTargetEntry = shooterTab.add("TurretTracking/AtTarget", false).withWidget(BuiltInWidgets.kBooleanBox).withPosition(6, 8).withSize(2, 1).getEntry();
+    allianceEntry =
+        shooterTab
+            .add("TurretTracking/Alliance", "UNKNOWN")
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(0, 5)
+            .withSize(2, 1)
+            .getEntry();
+    statusEntry =
+        shooterTab
+            .add("TurretTracking/Status", "IDLE")
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(2, 5)
+            .withSize(2, 1)
+            .getEntry();
+    targetTagIdEntry =
+        shooterTab
+            .add("TurretTracking/TargetTagID", -1)
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(4, 5)
+            .withSize(2, 1)
+            .getEntry();
+    distanceToTagEntry =
+        shooterTab
+            .add("TurretTracking/DistanceToTag", 0.0)
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(6, 5)
+            .withSize(2, 1)
+            .getEntry();
+    robotXEntry =
+        shooterTab
+            .add("TurretTracking/RobotX", 0.0)
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(0, 6)
+            .withSize(2, 1)
+            .getEntry();
+    robotYEntry =
+        shooterTab
+            .add("TurretTracking/RobotY", 0.0)
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(2, 6)
+            .withSize(2, 1)
+            .getEntry();
+    robotHeadingEntry =
+        shooterTab
+            .add("TurretTracking/RobotHeading", 0.0)
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(4, 6)
+            .withSize(2, 1)
+            .getEntry();
+    tagXEntry =
+        shooterTab
+            .add("TurretTracking/TagX", 0.0)
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(0, 7)
+            .withSize(2, 1)
+            .getEntry();
+    tagYEntry =
+        shooterTab
+            .add("TurretTracking/TagY", 0.0)
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(2, 7)
+            .withSize(2, 1)
+            .getEntry();
+    angleToTagEntry =
+        shooterTab
+            .add("TurretTracking/AngleToTag", 0.0)
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(4, 7)
+            .withSize(2, 1)
+            .getEntry();
+    turretTargetAngleEntry =
+        shooterTab
+            .add("TurretTracking/TurretTargetAngle", 0.0)
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(0, 8)
+            .withSize(2, 1)
+            .getEntry();
+    turretCurrentAngleEntry =
+        shooterTab
+            .add("TurretTracking/TurretCurrentAngle", 0.0)
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(2, 8)
+            .withSize(2, 1)
+            .getEntry();
+    turretVelocityEntry =
+        shooterTab
+            .add("TurretTracking/TurretVelocity", 0.0)
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(4, 8)
+            .withSize(2, 1)
+            .getEntry();
+    atTargetEntry =
+        shooterTab
+            .add("TurretTracking/AtTarget", false)
+            .withWidget(BuiltInWidgets.kBooleanBox)
+            .withPosition(6, 8)
+            .withSize(2, 1)
+            .getEntry();
   }
 
   @Override
@@ -95,8 +179,8 @@ public class TurretAprilTagTracking extends Command {
 
     var alliance = DriverStation.getAlliance();
     String allianceColor = alliance.isPresent() ? alliance.get().toString() : "UNKNOWN";
-  allianceEntry.setString(allianceColor);
-  statusEntry.setString("TRACKING");
+    allianceEntry.setString(allianceColor);
+    statusEntry.setString("TRACKING");
   }
 
   @Override
@@ -166,20 +250,20 @@ public class TurretAprilTagTracking extends Command {
     // Apply velocity to turret
     shooter.setTurretVelocity(turretVelocity);
 
-  // Update existing entries
-  statusEntry.setString("TRACKING");
-  targetTagIdEntry.setDouble(closestTagId);
-  distanceToTagEntry.setDouble(closestDistance);
-  robotXEntry.setDouble(robotPosition.getX());
-  robotYEntry.setDouble(robotPosition.getY());
-  robotHeadingEntry.setDouble(robotHeading.getDegrees());
-  tagXEntry.setDouble(closestTagPosition.get().getX());
-  tagYEntry.setDouble(closestTagPosition.get().getY());
-  angleToTagEntry.setDouble(angleToTag.getDegrees());
-  turretTargetAngleEntry.setDouble(turretTargetAngle.getDegrees());
-  turretCurrentAngleEntry.setDouble(Units.radiansToDegrees(currentTurretAngle));
-  turretVelocityEntry.setDouble(turretVelocity);
-  atTargetEntry.setBoolean(turretController.atSetpoint());
+    // Update existing entries
+    statusEntry.setString("TRACKING");
+    targetTagIdEntry.setDouble(closestTagId);
+    distanceToTagEntry.setDouble(closestDistance);
+    robotXEntry.setDouble(robotPosition.getX());
+    robotYEntry.setDouble(robotPosition.getY());
+    robotHeadingEntry.setDouble(robotHeading.getDegrees());
+    tagXEntry.setDouble(closestTagPosition.get().getX());
+    tagYEntry.setDouble(closestTagPosition.get().getY());
+    angleToTagEntry.setDouble(angleToTag.getDegrees());
+    turretTargetAngleEntry.setDouble(turretTargetAngle.getDegrees());
+    turretCurrentAngleEntry.setDouble(Units.radiansToDegrees(currentTurretAngle));
+    turretVelocityEntry.setDouble(turretVelocity);
+    atTargetEntry.setBoolean(turretController.atSetpoint());
   }
 
   /**

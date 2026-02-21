@@ -10,8 +10,8 @@ import com.ctre.phoenix6.controls.StrobeAnimation;
 import com.ctre.phoenix6.hardware.CANdle;
 import com.ctre.phoenix6.signals.RGBWColor;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.networktables.GenericEntry;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
@@ -72,18 +72,20 @@ public class LEDSubsystem extends SubsystemBase {
     this.m_shooter = shooter;
     this.m_drive = drive;
     this.m_vision = vision;
-  ledsActiveEntry =
-    canTab.add("LEDs Active", m_ledEnabled)
-      .withWidget(BuiltInWidgets.kBooleanBox)
-      .withPosition(5, 5)
-      .withSize(1, 1)
-      .getEntry();
-  candLeCanOkEntry =
-    canTab.add("CANdle CAN OK", isCanDleConnected())
-      .withWidget(BuiltInWidgets.kBooleanBox)
-      .withPosition(6, 5)
-      .withSize(1, 1)
-      .getEntry();
+    ledsActiveEntry =
+        canTab
+            .add("LEDs Active", m_ledEnabled)
+            .withWidget(BuiltInWidgets.kBooleanBox)
+            .withPosition(5, 5)
+            .withSize(1, 1)
+            .getEntry();
+    candLeCanOkEntry =
+        canTab
+            .add("CANdle CAN OK", isCanDleConnected())
+            .withWidget(BuiltInWidgets.kBooleanBox)
+            .withPosition(6, 5)
+            .withSize(1, 1)
+            .getEntry();
   }
 
   public void toggleLeds() {

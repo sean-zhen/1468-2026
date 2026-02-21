@@ -33,11 +33,11 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
-import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
@@ -153,7 +153,7 @@ public class Drive extends SubsystemBase {
         (targetPose) -> {
           Logger.recordOutput("Odometry/TrajectorySetpoint", targetPose);
         });
-    
+
     // Initialize Shuffleboard entries used by Drive
     cam1XEntry = visionTab.add("C1 X", 0.0).withPosition(6, 0).withSize(1, 1).getEntry();
     cam1YEntry = visionTab.add("C1 Y", 0.0).withPosition(7, 0).withSize(1, 1).getEntry();
@@ -163,9 +163,27 @@ public class Drive extends SubsystemBase {
     String[] moduleNames = {"FL", "FR", "BL", "BR"};
     for (int i = 0; i < 4; i++) {
       int col = i * 3;
-      moduleCanEntries[i][0] = canTab.add(moduleNames[i] + " Drive CAN", false).withWidget(BuiltInWidgets.kBooleanBox).withPosition(col, 3).withSize(1, 1).getEntry();
-      moduleCanEntries[i][1] = canTab.add(moduleNames[i] + " Turn CAN", false).withWidget(BuiltInWidgets.kBooleanBox).withPosition(col + 1, 3).withSize(1, 1).getEntry();
-      moduleCanEntries[i][2] = canTab.add(moduleNames[i] + " Encoder CAN", false).withWidget(BuiltInWidgets.kBooleanBox).withPosition(col + 2, 3).withSize(1, 1).getEntry();
+      moduleCanEntries[i][0] =
+          canTab
+              .add(moduleNames[i] + " Drive CAN", false)
+              .withWidget(BuiltInWidgets.kBooleanBox)
+              .withPosition(col, 3)
+              .withSize(1, 1)
+              .getEntry();
+      moduleCanEntries[i][1] =
+          canTab
+              .add(moduleNames[i] + " Turn CAN", false)
+              .withWidget(BuiltInWidgets.kBooleanBox)
+              .withPosition(col + 1, 3)
+              .withSize(1, 1)
+              .getEntry();
+      moduleCanEntries[i][2] =
+          canTab
+              .add(moduleNames[i] + " Encoder CAN", false)
+              .withWidget(BuiltInWidgets.kBooleanBox)
+              .withPosition(col + 2, 3)
+              .withSize(1, 1)
+              .getEntry();
     }
 
     // Configure SysId

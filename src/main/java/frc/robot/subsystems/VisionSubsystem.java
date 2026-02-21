@@ -13,9 +13,9 @@ import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
@@ -99,12 +99,42 @@ public class VisionSubsystem extends SubsystemBase {
 
     SmartDashboard.putData("Vision/Field", m_field);
 
-  // Persistent Shuffleboard widgets
-  backPresentEntry = visionTab.add("BACK PRESENT", false).withWidget(BuiltInWidgets.kBooleanBox).withPosition(0, 0).withSize(2, 1).getEntry();
-  visionHealthyEntry = visionTab.add("Vision Healthy", false).withWidget(BuiltInWidgets.kBooleanBox).withPosition(2, 0).withSize(2, 1).getEntry();
-  activeSourceEntry = visionTab.add("ActiveSource", "None").withWidget(BuiltInWidgets.kTextView).withPosition(0, 1).withSize(2, 1).getEntry();
-  tagsVisibleEntry = visionTab.add("TagsVisible", 0).withWidget(BuiltInWidgets.kTextView).withPosition(2, 1).withSize(1, 1).getEntry();
-  bestTargetDistEntry = visionTab.add("BestTargetDist", 0.0).withWidget(BuiltInWidgets.kTextView).withPosition(3, 1).withSize(2, 1).getEntry();
+    // Persistent Shuffleboard widgets
+    backPresentEntry =
+        visionTab
+            .add("BACK PRESENT", false)
+            .withWidget(BuiltInWidgets.kBooleanBox)
+            .withPosition(0, 0)
+            .withSize(2, 1)
+            .getEntry();
+    visionHealthyEntry =
+        visionTab
+            .add("Vision Healthy", false)
+            .withWidget(BuiltInWidgets.kBooleanBox)
+            .withPosition(2, 0)
+            .withSize(2, 1)
+            .getEntry();
+    activeSourceEntry =
+        visionTab
+            .add("ActiveSource", "None")
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(0, 1)
+            .withSize(2, 1)
+            .getEntry();
+    tagsVisibleEntry =
+        visionTab
+            .add("TagsVisible", 0)
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(2, 1)
+            .withSize(1, 1)
+            .getEntry();
+    bestTargetDistEntry =
+        visionTab
+            .add("BestTargetDist", 0.0)
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(3, 1)
+            .withSize(2, 1)
+            .getEntry();
 
     frontCam = new PhotonCamera(FRONT_NAME);
     backCam = new PhotonCamera(BACK_NAME);
@@ -288,13 +318,13 @@ public class VisionSubsystem extends SubsystemBase {
       m_field.getObject("Back Cam Pose").setPoses();
     }
 
-  boolean healthy = (Timer.getFPGATimestamp() - lastMeasurementTimestamp) < VISION_TIMEOUT;
-  visionHealthyEntry.setBoolean(healthy);
+    boolean healthy = (Timer.getFPGATimestamp() - lastMeasurementTimestamp) < VISION_TIMEOUT;
+    visionHealthyEntry.setBoolean(healthy);
 
-  // Field2d widget (robot + camera poses) - only update value, don't re-put the widget
-  SmartDashboard.putData("Field", m_field);
+    // Field2d widget (robot + camera poses) - only update value, don't re-put the widget
+    SmartDashboard.putData("Field", m_field);
 
-  logBestCameraSummary();
+    logBestCameraSummary();
   }
 
   private void logBestCameraSummary() {

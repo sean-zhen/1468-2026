@@ -5,8 +5,8 @@ import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
-import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.networktables.GenericEntry;
+import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
@@ -44,30 +44,34 @@ public class KickerSubsystem extends SubsystemBase {
     // Brake mode for kicker
     kickerMotor.setNeutralMode(NeutralModeValue.Brake);
 
-  kickerVeloSignal = kickerMotor.getPosition();
+    kickerVeloSignal = kickerMotor.getPosition();
 
-  // Persistent Shuffleboard widgets
-  kickerVeloEntry =
-    kickTab
-      .add("Kicker Velo (RPS)", kickerMotor.getVelocity().getValueAsDouble() / Kicker.KICKER_GEAR_RATIO)
-      .withWidget(BuiltInWidgets.kTextView)
-      .withPosition(0, 0)
-      .withSize(2, 1)
-      .getEntry();
-  kickerTempEntry =
-    kickTab.add("Kicker Temp", kickerMotor.getDeviceTemp().getValueAsDouble())
-      .withWidget(BuiltInWidgets.kTextView)
-      .withPosition(2, 0)
-      .withSize(2, 1)
-      .getEntry();
+    // Persistent Shuffleboard widgets
+    kickerVeloEntry =
+        kickTab
+            .add(
+                "Kicker Velo (RPS)",
+                kickerMotor.getVelocity().getValueAsDouble() / Kicker.KICKER_GEAR_RATIO)
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(0, 0)
+            .withSize(2, 1)
+            .getEntry();
+    kickerTempEntry =
+        kickTab
+            .add("Kicker Temp", kickerMotor.getDeviceTemp().getValueAsDouble())
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(2, 0)
+            .withSize(2, 1)
+            .getEntry();
 
-  var canTab = Shuffleboard.getTab("CAN Status");
-  kickerCanOkEntry =
-    canTab.add("Kicker CAN OK", kickerVeloSignal.getStatus().isOK())
-      .withWidget(BuiltInWidgets.kBooleanBox)
-      .withPosition(3, 5)
-      .withSize(1, 1)
-      .getEntry();
+    var canTab = Shuffleboard.getTab("CAN Status");
+    kickerCanOkEntry =
+        canTab
+            .add("Kicker CAN OK", kickerVeloSignal.getStatus().isOK())
+            .withWidget(BuiltInWidgets.kBooleanBox)
+            .withPosition(3, 5)
+            .withSize(1, 1)
+            .getEntry();
   }
 
   @Override
@@ -96,12 +100,13 @@ public class KickerSubsystem extends SubsystemBase {
   }
 
   public void log() {
-  // Update persistent entries
-  kickerVeloEntry.setDouble(kickerMotor.getVelocity().getValueAsDouble() / Kicker.KICKER_GEAR_RATIO);
-  kickerTempEntry.setDouble(kickerMotor.getDeviceTemp().getValueAsDouble());
+    // Update persistent entries
+    kickerVeloEntry.setDouble(
+        kickerMotor.getVelocity().getValueAsDouble() / Kicker.KICKER_GEAR_RATIO);
+    kickerTempEntry.setDouble(kickerMotor.getDeviceTemp().getValueAsDouble());
 
-  boolean kickerOK = kickerVeloSignal.getStatus().isOK();
-  kickerCanOkEntry.setBoolean(kickerOK);
+    boolean kickerOK = kickerVeloSignal.getStatus().isOK();
+    kickerCanOkEntry.setBoolean(kickerOK);
   }
 
   public boolean isKickerConnected() {

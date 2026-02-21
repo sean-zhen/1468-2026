@@ -13,10 +13,10 @@ import com.ctre.phoenix6.CANBus;
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.XboxController;
-import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
@@ -74,14 +74,14 @@ public class RobotContainer {
 
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
-    // CAN Status Shuffleboard entries
-    private final ShuffleboardTab canTab = Shuffleboard.getTab("CAN Status");
-    private final GenericEntry roboRioCanStatusEntry;
-    private final GenericEntry canCoderCanStatusEntry;
-    private final GenericEntry rioUsageEntry;
-    private final GenericEntry canivoreUsageEntry;
-    private final GenericEntry rioHighLoadEntry;
-    private final GenericEntry canivoreHighLoadEntry;
+  // CAN Status Shuffleboard entries
+  private final ShuffleboardTab canTab = Shuffleboard.getTab("CAN Status");
+  private final GenericEntry roboRioCanStatusEntry;
+  private final GenericEntry canCoderCanStatusEntry;
+  private final GenericEntry rioUsageEntry;
+  private final GenericEntry canivoreUsageEntry;
+  private final GenericEntry rioHighLoadEntry;
+  private final GenericEntry canivoreHighLoadEntry;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -126,13 +126,49 @@ public class RobotContainer {
     // Configure the button bindings
     configureButtonBindings();
 
-        // Initialize persistent CAN Status dashboard entries
-        roboRioCanStatusEntry = canTab.add("RoboRio CAN STATUS", false).withWidget(BuiltInWidgets.kBooleanBox).withPosition(0, 0).withSize(2, 1).getEntry();
-        canCoderCanStatusEntry = canTab.add("CanCoder CAN STATUS", false).withWidget(BuiltInWidgets.kBooleanBox).withPosition(2, 0).withSize(2, 1).getEntry();
-        rioUsageEntry = canTab.add("CAN RIO Usage %", 0.0).withWidget(BuiltInWidgets.kNumberBar).withPosition(0, 1).withSize(3, 1).getEntry();
-        canivoreUsageEntry = canTab.add("CAN CANivore Usage %", 0.0).withWidget(BuiltInWidgets.kNumberBar).withPosition(3, 1).withSize(3, 1).getEntry();
-        rioHighLoadEntry = canTab.add("RIO CAN High Load Warning", false).withWidget(BuiltInWidgets.kBooleanBox).withPosition(0, 2).withSize(2, 1).getEntry();
-        canivoreHighLoadEntry = canTab.add("CANivore High Load Warning", false).withWidget(BuiltInWidgets.kBooleanBox).withPosition(2, 2).withSize(2, 1).getEntry();
+    // Initialize persistent CAN Status dashboard entries
+    roboRioCanStatusEntry =
+        canTab
+            .add("RoboRio CAN STATUS", false)
+            .withWidget(BuiltInWidgets.kBooleanBox)
+            .withPosition(0, 0)
+            .withSize(2, 1)
+            .getEntry();
+    canCoderCanStatusEntry =
+        canTab
+            .add("CanCoder CAN STATUS", false)
+            .withWidget(BuiltInWidgets.kBooleanBox)
+            .withPosition(2, 0)
+            .withSize(2, 1)
+            .getEntry();
+    rioUsageEntry =
+        canTab
+            .add("CAN RIO Usage %", 0.0)
+            .withWidget(BuiltInWidgets.kNumberBar)
+            .withPosition(0, 1)
+            .withSize(3, 1)
+            .getEntry();
+    canivoreUsageEntry =
+        canTab
+            .add("CAN CANivore Usage %", 0.0)
+            .withWidget(BuiltInWidgets.kNumberBar)
+            .withPosition(3, 1)
+            .withSize(3, 1)
+            .getEntry();
+    rioHighLoadEntry =
+        canTab
+            .add("RIO CAN High Load Warning", false)
+            .withWidget(BuiltInWidgets.kBooleanBox)
+            .withPosition(0, 2)
+            .withSize(2, 1)
+            .getEntry();
+    canivoreHighLoadEntry =
+        canTab
+            .add("CANivore High Load Warning", false)
+            .withWidget(BuiltInWidgets.kBooleanBox)
+            .withPosition(2, 2)
+            .withSize(2, 1)
+            .getEntry();
   }
 
   /**

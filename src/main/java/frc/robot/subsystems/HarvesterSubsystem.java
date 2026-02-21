@@ -14,9 +14,9 @@ import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
+import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
-import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
@@ -112,55 +112,65 @@ public class HarvesterSubsystem extends SubsystemBase {
 
     spinVelocitySignal = spinMotor.getVelocity();
     deployPositionSignal = deployMotor.getPosition();
-  // Persistent Shuffleboard widgets
-  harvDeployPosEntry =
-    harvTab
-      .add("Harv Deploy Pos (deg)", deployMotor.getPosition().getValueAsDouble() / DEPLOY_DEGREES_TO_ROTATIONS)
-      .withWidget(BuiltInWidgets.kTextView)
-      .withPosition(0, 0)
-      .withSize(2, 1)
-      .getEntry();
-  harvDeployVeloEntry =
-    harvTab
-      .add("Harv Deploy Velo (RPS, output)", deployMotor.getVelocity().getValueAsDouble() / Harvester.DEPLOY_GEAR_RATIO)
-      .withWidget(BuiltInWidgets.kTextView)
-      .withPosition(2, 0)
-      .withSize(2, 1)
-      .getEntry();
-  harvDeployTempEntry =
-    harvTab.add("Harv Deploy Temp", deployMotor.getDeviceTemp().getValueAsDouble())
-      .withWidget(BuiltInWidgets.kTextView)
-      .withPosition(4, 0)
-      .withSize(2, 1)
-      .getEntry();
+    // Persistent Shuffleboard widgets
+    harvDeployPosEntry =
+        harvTab
+            .add(
+                "Harv Deploy Pos (deg)",
+                deployMotor.getPosition().getValueAsDouble() / DEPLOY_DEGREES_TO_ROTATIONS)
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(0, 0)
+            .withSize(2, 1)
+            .getEntry();
+    harvDeployVeloEntry =
+        harvTab
+            .add(
+                "Harv Deploy Velo (RPS, output)",
+                deployMotor.getVelocity().getValueAsDouble() / Harvester.DEPLOY_GEAR_RATIO)
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(2, 0)
+            .withSize(2, 1)
+            .getEntry();
+    harvDeployTempEntry =
+        harvTab
+            .add("Harv Deploy Temp", deployMotor.getDeviceTemp().getValueAsDouble())
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(4, 0)
+            .withSize(2, 1)
+            .getEntry();
 
-  harvSpinVeloEntry =
-    harvTab
-      .add("Harv Spin Velo (RPS, output)", spinMotor.getVelocity().getValueAsDouble() / Harvester.SPIN_GEAR_RATIO)
-      .withWidget(BuiltInWidgets.kTextView)
-      .withPosition(0, 1)
-      .withSize(2, 1)
-      .getEntry();
-  harvSpinTempEntry =
-    harvTab.add("Harv Spin Temp", spinMotor.getDeviceTemp().getValueAsDouble())
-      .withWidget(BuiltInWidgets.kTextView)
-      .withPosition(2, 1)
-      .withSize(2, 1)
-      .getEntry();
+    harvSpinVeloEntry =
+        harvTab
+            .add(
+                "Harv Spin Velo (RPS, output)",
+                spinMotor.getVelocity().getValueAsDouble() / Harvester.SPIN_GEAR_RATIO)
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(0, 1)
+            .withSize(2, 1)
+            .getEntry();
+    harvSpinTempEntry =
+        harvTab
+            .add("Harv Spin Temp", spinMotor.getDeviceTemp().getValueAsDouble())
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(2, 1)
+            .withSize(2, 1)
+            .getEntry();
 
-  var canTab = Shuffleboard.getTab("CAN Status");
-  harvDeployCanOkEntry =
-    canTab.add("Deply CAN OK", deployPositionSignal.getStatus().isOK())
-      .withWidget(BuiltInWidgets.kBooleanBox)
-      .withPosition(0, 5)
-      .withSize(1, 1)
-      .getEntry();
-  harvSpinCanOkEntry =
-    canTab.add("Spin CAN OK", spinVelocitySignal.getStatus().isOK())
-      .withWidget(BuiltInWidgets.kBooleanBox)
-      .withPosition(1, 5)
-      .withSize(1, 1)
-      .getEntry();
+    var canTab = Shuffleboard.getTab("CAN Status");
+    harvDeployCanOkEntry =
+        canTab
+            .add("Deply CAN OK", deployPositionSignal.getStatus().isOK())
+            .withWidget(BuiltInWidgets.kBooleanBox)
+            .withPosition(0, 5)
+            .withSize(1, 1)
+            .getEntry();
+    harvSpinCanOkEntry =
+        canTab
+            .add("Spin CAN OK", spinVelocitySignal.getStatus().isOK())
+            .withWidget(BuiltInWidgets.kBooleanBox)
+            .withPosition(1, 5)
+            .withSize(1, 1)
+            .getEntry();
   }
 
   @Override
@@ -207,18 +217,21 @@ public class HarvesterSubsystem extends SubsystemBase {
   }
 
   public void log() {
-  // Update persistent entries
-  harvDeployPosEntry.setDouble(deployMotor.getPosition().getValueAsDouble() / DEPLOY_DEGREES_TO_ROTATIONS);
-  harvDeployVeloEntry.setDouble(deployMotor.getVelocity().getValueAsDouble() / Harvester.DEPLOY_GEAR_RATIO);
-  harvDeployTempEntry.setDouble(deployMotor.getDeviceTemp().getValueAsDouble());
+    // Update persistent entries
+    harvDeployPosEntry.setDouble(
+        deployMotor.getPosition().getValueAsDouble() / DEPLOY_DEGREES_TO_ROTATIONS);
+    harvDeployVeloEntry.setDouble(
+        deployMotor.getVelocity().getValueAsDouble() / Harvester.DEPLOY_GEAR_RATIO);
+    harvDeployTempEntry.setDouble(deployMotor.getDeviceTemp().getValueAsDouble());
 
-  harvSpinVeloEntry.setDouble(spinMotor.getVelocity().getValueAsDouble() / Harvester.SPIN_GEAR_RATIO);
-  harvSpinTempEntry.setDouble(spinMotor.getDeviceTemp().getValueAsDouble());
+    harvSpinVeloEntry.setDouble(
+        spinMotor.getVelocity().getValueAsDouble() / Harvester.SPIN_GEAR_RATIO);
+    harvSpinTempEntry.setDouble(spinMotor.getDeviceTemp().getValueAsDouble());
 
-  boolean deployOK = deployPositionSignal.getStatus().isOK();
-  boolean spinOK = spinVelocitySignal.getStatus().isOK();
-  harvDeployCanOkEntry.setBoolean(deployOK);
-  harvSpinCanOkEntry.setBoolean(spinOK);
+    boolean deployOK = deployPositionSignal.getStatus().isOK();
+    boolean spinOK = spinVelocitySignal.getStatus().isOK();
+    harvDeployCanOkEntry.setBoolean(deployOK);
+    harvSpinCanOkEntry.setBoolean(spinOK);
   }
 
   public boolean isHarvesterConnected() {

@@ -22,11 +22,11 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
-import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants.AutoAlign;
 import frc.robot.subsystems.VisionSubsystem;
@@ -67,23 +67,23 @@ public class FaceTagsCommand extends Command {
   private Translation2d hubPosition;
   private List<Integer> currentTagList;
   private boolean hasInitialized = false;
-    // Persistent Shuffleboard entries (created once in constructor)
-    private final GenericEntry faceStatusEntry;
-    private final GenericEntry faceAllianceEntry;
-    private final GenericEntry faceHubPosEntry;
-    private final GenericEntry faceAutoDrivingEntry;
-    private final GenericEntry faceAutoXSpeedEntry;
-    private final GenericEntry faceCurrentDistanceEntry;
-    private final GenericEntry faceTargetDistanceEntry;
-    private final GenericEntry faceDesiredHeadingEntry;
-    private final GenericEntry faceCurrentHeadingEntry;
-    private final GenericEntry faceHeadingErrorEntry;
-    private final GenericEntry faceRotationSpeedEntry;
-    private final GenericEntry faceVisibleHubTagsEntry;
-    private final GenericEntry faceSeesHubTagsEntry;
-    private final GenericEntry faceWithinAutoDriveRangeEntry;
-    private final GenericEntry faceAtTargetDistanceEntry;
-    private final GenericEntry faceAtTargetHeadingEntry;
+  // Persistent Shuffleboard entries (created once in constructor)
+  private final GenericEntry faceStatusEntry;
+  private final GenericEntry faceAllianceEntry;
+  private final GenericEntry faceHubPosEntry;
+  private final GenericEntry faceAutoDrivingEntry;
+  private final GenericEntry faceAutoXSpeedEntry;
+  private final GenericEntry faceCurrentDistanceEntry;
+  private final GenericEntry faceTargetDistanceEntry;
+  private final GenericEntry faceDesiredHeadingEntry;
+  private final GenericEntry faceCurrentHeadingEntry;
+  private final GenericEntry faceHeadingErrorEntry;
+  private final GenericEntry faceRotationSpeedEntry;
+  private final GenericEntry faceVisibleHubTagsEntry;
+  private final GenericEntry faceSeesHubTagsEntry;
+  private final GenericEntry faceWithinAutoDriveRangeEntry;
+  private final GenericEntry faceAtTargetDistanceEntry;
+  private final GenericEntry faceAtTargetHeadingEntry;
 
   public FaceTagsCommand(
       Drive drive,
@@ -228,11 +228,11 @@ public class FaceTagsCommand extends Command {
 
     // Determine which hub to target based on alliance
     Optional<Alliance> alliance = DriverStation.getAlliance();
-        if (alliance.isEmpty()) {
-            faceStatusEntry.setString("NO ALLIANCE");
-            cancel();
-            return;
-        }
+    if (alliance.isEmpty()) {
+      faceStatusEntry.setString("NO ALLIANCE");
+      cancel();
+      return;
+    }
 
     // Select hub position and tag list based on alliance
     if (alliance.get() == Alliance.Red) {
@@ -353,7 +353,7 @@ public class FaceTagsCommand extends Command {
   @Override
   public void end(boolean interrupted) {
     drive.stop();
-        faceStatusEntry.setString(interrupted ? "INTERRUPTED" : "FINISHED");
+    faceStatusEntry.setString(interrupted ? "INTERRUPTED" : "FINISHED");
   }
 
   @Override

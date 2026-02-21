@@ -22,12 +22,10 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
-import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants.AutoAlign;
 import frc.robot.subsystems.VisionSubsystem;
@@ -69,57 +67,6 @@ public class FaceTagsCommand extends Command {
   private List<Integer> currentTagList;
   private boolean hasInitialized = false;
 
-  // Shuffleboard entries — created once, updated every loop
-  private final ShuffleboardTab driveTab = Shuffleboard.getTab("Drive");
-  private final GenericEntry entryStatus =
-      driveTab.add("FaceTags/Status", "IDLE")
-          .withWidget(BuiltInWidgets.kTextView).withPosition(0, 0).withSize(2, 1).getEntry();
-  private final GenericEntry entryAlliance =
-      driveTab.add("FaceTags/Alliance", "")
-          .withWidget(BuiltInWidgets.kTextView).withPosition(2, 0).withSize(2, 1).getEntry();
-  private final GenericEntry entryHubPosition =
-      driveTab.add("FaceTags/HubPosition", "")
-          .withWidget(BuiltInWidgets.kTextView).withPosition(4, 0).withSize(3, 1).getEntry();
-  private final GenericEntry entryAutoDriving =
-      driveTab.add("FaceTags/AutoDriving", false)
-          .withWidget(BuiltInWidgets.kBooleanBox).withPosition(0, 2).withSize(2, 1).getEntry();
-  private final GenericEntry entryAutoXSpeed =
-      driveTab.add("FaceTags/AutoXSpeed", 0.0)
-          .withWidget(BuiltInWidgets.kTextView).withPosition(2, 2).withSize(2, 1).getEntry();
-  private final GenericEntry entryCurrentDistance =
-      driveTab.add("FaceTags/CurrentDistance", 0.0)
-          .withWidget(BuiltInWidgets.kTextView).withPosition(0, 3).withSize(2, 1).getEntry();
-  private final GenericEntry entryTargetDistance =
-      driveTab.add("FaceTags/TargetDistance", AutoAlign.HUB_DISTANCE_METERS)
-          .withWidget(BuiltInWidgets.kTextView).withPosition(2, 3).withSize(2, 1).getEntry();
-  private final GenericEntry entryDesiredHeading =
-      driveTab.add("FaceTags/DesiredHeading", 0.0)
-          .withWidget(BuiltInWidgets.kTextView).withPosition(0, 4).withSize(2, 1).getEntry();
-  private final GenericEntry entryCurrentHeading =
-      driveTab.add("FaceTags/CurrentHeading", 0.0)
-          .withWidget(BuiltInWidgets.kTextView).withPosition(2, 4).withSize(2, 1).getEntry();
-  private final GenericEntry entryHeadingError =
-      driveTab.add("FaceTags/HeadingError", 0.0)
-          .withWidget(BuiltInWidgets.kTextView).withPosition(4, 4).withSize(2, 1).getEntry();
-  private final GenericEntry entryRotationSpeed =
-      driveTab.add("FaceTags/RotationSpeed", 0.0)
-          .withWidget(BuiltInWidgets.kTextView).withPosition(6, 4).withSize(2, 1).getEntry();
-  private final GenericEntry entryVisibleHubTags =
-      driveTab.add("FaceTags/VisibleHubTags", "[]")
-          .withWidget(BuiltInWidgets.kTextView).withPosition(0, 5).withSize(3, 1).getEntry();
-  private final GenericEntry entrySeesHubTags =
-      driveTab.add("FaceTags/SeesHubTags", false)
-          .withWidget(BuiltInWidgets.kBooleanBox).withPosition(3, 5).withSize(2, 1).getEntry();
-  private final GenericEntry entryWithinRange =
-      driveTab.add("FaceTags/WithinAutoDriveRange", false)
-          .withWidget(BuiltInWidgets.kBooleanBox).withPosition(5, 5).withSize(2, 1).getEntry();
-  private final GenericEntry entryAtTargetDistance =
-      driveTab.add("FaceTags/AtTargetDistance", false)
-          .withWidget(BuiltInWidgets.kBooleanBox).withPosition(0, 6).withSize(2, 1).getEntry();
-  private final GenericEntry entryAtTargetHeading =
-      driveTab.add("FaceTags/AtTargetHeading", false)
-          .withWidget(BuiltInWidgets.kBooleanBox).withPosition(2, 6).withSize(2, 1).getEntry();
-
   public FaceTagsCommand(
       Drive drive,
       VisionSubsystem vision,
@@ -147,7 +94,11 @@ public class FaceTagsCommand extends Command {
     // Determine which hub to target based on alliance
     Optional<Alliance> alliance = DriverStation.getAlliance();
     if (alliance.isEmpty()) {
-      entryStatus.setString("NO ALLIANCE");
+      Shuffleboard.getTab("Drive")
+          .add("FaceTags/Status", "NO ALLIANCE")
+          .withWidget(BuiltInWidgets.kTextView)
+          .withPosition(0, 0)
+          .withSize(2, 1);
       cancel();
       return;
     }
@@ -166,10 +117,24 @@ public class FaceTagsCommand extends Command {
     distanceController.reset();
 
     hasInitialized = true;
-    entryStatus.setString("ACTIVE");
-    entryAlliance.setString(alliance.get().toString());
-    entryHubPosition.setString(
-        String.format("X=%.2fm Y=%.2fm", hubPosition.getX(), hubPosition.getY()));
+    var driveTab = Shuffleboard.getTab("Drive");
+    driveTab
+        .add("FaceTags/Status", "ACTIVE")
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(0, 0)
+        .withSize(2, 1);
+    driveTab
+        .add("FaceTags/Alliance", alliance.get().toString())
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(2, 0)
+        .withSize(2, 1);
+    driveTab
+        .add(
+            "FaceTags/HubPosition",
+            String.format("X=%.2fm Y=%.2fm", hubPosition.getX(), hubPosition.getY()))
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(4, 0)
+        .withSize(3, 1);
   }
 
   @Override
@@ -217,11 +182,22 @@ public class FaceTagsCommand extends Command {
 
       xSpeed = autoXSpeed;
 
-      entryAutoDriving.setBoolean(true);
-      entryAutoXSpeed.setDouble(autoXSpeed);
+      Shuffleboard.getTab("Drive")
+          .add("FaceTags/AutoDriving", true)
+          .withWidget(BuiltInWidgets.kBooleanBox)
+          .withPosition(0, 2)
+          .withSize(2, 1);
+      Shuffleboard.getTab("Drive")
+          .add("FaceTags/AutoXSpeed", autoXSpeed)
+          .withWidget(BuiltInWidgets.kTextView)
+          .withPosition(2, 2)
+          .withSize(2, 1);
     } else {
-      entryAutoDriving.setBoolean(false);
-      entryAutoXSpeed.setDouble(0.0);
+      Shuffleboard.getTab("Drive")
+          .add("FaceTags/AutoDriving", false)
+          .withWidget(BuiltInWidgets.kBooleanBox)
+          .withPosition(0, 2)
+          .withSize(2, 1);
     }
 
     // Limit rotation speed
@@ -234,20 +210,70 @@ public class FaceTagsCommand extends Command {
 
     drive.runVelocity(fieldRelativeSpeeds);
 
-    // ── Update all Drive-tab entries every loop ───────────────────────────────
-    entryCurrentDistance.setDouble(currentDistance);
-    entryTargetDistance.setDouble(AutoAlign.HUB_DISTANCE_METERS);
-    entryDesiredHeading.setDouble(desiredHeading.getDegrees());
-    entryCurrentHeading.setDouble(currentPose.getRotation().getDegrees());
-    entryHeadingError.setDouble(desiredHeading.minus(currentPose.getRotation()).getDegrees());
-    entryRotationSpeed.setDouble(rotationSpeed);
-    entryVisibleHubTags.setString(visibleHubTags.toString());
-    entrySeesHubTags.setBoolean(seesHubTags);
-    entryWithinRange.setBoolean(currentDistance < AutoAlign.VISION_DISTANCE_THRESHOLD_METERS);
-    entryAtTargetDistance.setBoolean(
-        Math.abs(currentDistance - AutoAlign.HUB_DISTANCE_METERS)
-            < AutoAlign.DISTANCE_TOLERANCE_METERS);
-    entryAtTargetHeading.setBoolean(rotationController.atSetpoint());
+    // ── Logging on the Drive tab ──────────────────────────────────────────────
+    var driveTab = Shuffleboard.getTab("Drive");
+    driveTab
+        .add("FaceTags/CurrentDistance", currentDistance)
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(0, 3)
+        .withSize(2, 1);
+    driveTab
+        .add("FaceTags/TargetDistance", AutoAlign.HUB_DISTANCE_METERS)
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(2, 3)
+        .withSize(2, 1);
+    driveTab
+        .add("FaceTags/DesiredHeading", desiredHeading.getDegrees())
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(0, 4)
+        .withSize(2, 1);
+    driveTab
+        .add("FaceTags/CurrentHeading", currentPose.getRotation().getDegrees())
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(2, 4)
+        .withSize(2, 1);
+    driveTab
+        .add(
+            "FaceTags/HeadingError",
+            desiredHeading.minus(currentPose.getRotation()).getDegrees())
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(4, 4)
+        .withSize(2, 1);
+    driveTab
+        .add("FaceTags/RotationSpeed", rotationSpeed)
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(6, 4)
+        .withSize(2, 1);
+    driveTab
+        .add("FaceTags/VisibleHubTags", visibleHubTags.toString())
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(0, 5)
+        .withSize(3, 1);
+    driveTab
+        .add("FaceTags/SeesHubTags", seesHubTags)
+        .withWidget(BuiltInWidgets.kBooleanBox)
+        .withPosition(3, 5)
+        .withSize(2, 1);
+    driveTab
+        .add(
+            "FaceTags/WithinAutoDriveRange",
+            currentDistance < AutoAlign.VISION_DISTANCE_THRESHOLD_METERS)
+        .withWidget(BuiltInWidgets.kBooleanBox)
+        .withPosition(5, 5)
+        .withSize(2, 1);
+    driveTab
+        .add(
+            "FaceTags/AtTargetDistance",
+            Math.abs(currentDistance - AutoAlign.HUB_DISTANCE_METERS)
+                < AutoAlign.DISTANCE_TOLERANCE_METERS)
+        .withWidget(BuiltInWidgets.kBooleanBox)
+        .withPosition(0, 6)
+        .withSize(2, 1);
+    driveTab
+        .add("FaceTags/AtTargetHeading", rotationController.atSetpoint())
+        .withWidget(BuiltInWidgets.kBooleanBox)
+        .withPosition(2, 6)
+        .withSize(2, 1);
   }
 
   /** Get list of visible hub tags (for auto-drive trigger only). */
@@ -271,7 +297,11 @@ public class FaceTagsCommand extends Command {
   @Override
   public void end(boolean interrupted) {
     drive.stop();
-    entryStatus.setString(interrupted ? "INTERRUPTED" : "FINISHED");
+    Shuffleboard.getTab("Drive")
+        .add("FaceTags/Status", interrupted ? "INTERRUPTED" : "FINISHED")
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(0, 0)
+        .withSize(2, 1);
   }
 
   @Override

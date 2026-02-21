@@ -399,8 +399,8 @@ public class ShooterSubsystem extends SubsystemBase {
     // Hood
     shooterTab
         .add(
-            "Shtr Hood Pos (rot, output)",
-            hoodMotor.getPosition().getValueAsDouble() / Shooter.HOOD_GEAR_RATIO)
+            "Shtr Hood Pos (deg, output)",
+            hoodMotor.getPosition().getValueAsDouble() * 360.0 / Shooter.HOOD_GEAR_RATIO)
         .withWidget(BuiltInWidgets.kTextView)
         .withPosition(0, 3)
         .withSize(2, 1);
@@ -420,8 +420,8 @@ public class ShooterSubsystem extends SubsystemBase {
     // Turret
     shooterTab
         .add(
-            "Shtr Turret Pos (rot, output)",
-            turretMotor.getPosition().getValueAsDouble() / Shooter.TURRET_GEAR_RATIO)
+            "Shtr Turret Pos (deg, output)",
+            turretMotor.getPosition().getValueAsDouble() * 360.0 / Shooter.TURRET_GEAR_RATIO)
         .withWidget(BuiltInWidgets.kTextView)
         .withPosition(0, 4)
         .withSize(2, 1);

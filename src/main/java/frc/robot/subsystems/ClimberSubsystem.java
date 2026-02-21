@@ -122,7 +122,7 @@ public class ClimberSubsystem extends SubsystemBase {
     var climbTab = Shuffleboard.getTab("Climber");
 
     climbTab
-        .add("Climber Pos (Rot)", getEncoderRotations())
+        .add("Climber Pos (deg)", getEncoderRotations() * 360.0)
         .withWidget(BuiltInWidgets.kTextView)
         .withPosition(0, 0)
         .withSize(2, 1);

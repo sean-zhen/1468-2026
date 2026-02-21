@@ -66,8 +66,8 @@ public class IndexerSubsystem extends SubsystemBase {
 
     idxTab
         .add(
-            "Indxr Pos (rotations, output)",
-            motor.getPosition().getValueAsDouble() / Indexer.GEAR_RATIO)
+            "Indxr Pos (deg, output)",
+            motor.getPosition().getValueAsDouble() * 360.0 / Indexer.GEAR_RATIO)
         .withWidget(BuiltInWidgets.kTextView)
         .withPosition(0, 0)
         .withSize(2, 1);

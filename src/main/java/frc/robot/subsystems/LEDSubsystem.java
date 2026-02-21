@@ -25,6 +25,16 @@ public class LEDSubsystem extends SubsystemBase {
   private final int START_IDX = 0;
   private final int LED_COUNT = 8;
 
+  // How many seconds left in match to start climber feedback
+  // Set to 150.0 for practice to have it always active
+  public static final double ENDGAME_THRESHOLD_SEC = 5.0;
+
+  // Distance (meters) at which LEDs start turning Red -> White
+  public static final double CLIMBER_PROXIMITY_THRESHOLD_METERS = 0.5;
+
+  // How fast the Red -> White strobe blinks
+  public static final double PROXIMITY_STROBE_HERTZ = 20.0;
+
   private ShooterSubsystem m_shooter;
   private Drive m_drive;
   private VisionSubsystem m_vision;
@@ -82,12 +92,12 @@ public class LEDSubsystem extends SubsystemBase {
   private void handleEnabledLogic() {
     double matchTime = DriverStation.getMatchTime();
 
-    // Priority 3: Endgame Climber Alignment (Last 5 seconds)
-    if (matchTime > 0 && matchTime <= 5.0) {
+    // Priority 3: Endgame Climber Alignment (Last N seconds)
+    if (matchTime > 0 && matchTime <= ENDGAME_THRESHOLD_SEC) {
       // Check distance to Tower Uprights
       double dist = getClimberDistance();
 
-      if (dist < 0.5) { // 0.5 meter threshold
+      if (dist < CLIMBER_PROXIMITY_THRESHOLD_METERS) { // N meter threshold
         // Calculate GB values to turn Red -> White
         double whiteRatio = Math.max(0, 1.0 - (dist / 0.5));
         int gbValue = (int) (255 * whiteRatio);

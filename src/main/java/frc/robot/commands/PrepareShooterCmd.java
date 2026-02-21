@@ -19,6 +19,8 @@ public class PrepareShooterCmd extends Command {
   private final ShooterSubsystem shooter;
   private final Drive drive;
 
+  private final double fuelVelocity = 20.0; // TODO: TA - Empirically Optimize Shooting sp m/sec
+
   private final List<BaseStatusSignal> allSignals = new ArrayList<>();
   private final Field2d field = new Field2d();
 
@@ -68,8 +70,8 @@ public class PrepareShooterCmd extends Command {
     ChassisSpeeds fieldSpeeds =
         ChassisSpeeds.fromRobotRelativeSpeeds(robotSpeeds, robotPose.getRotation());
 
-    double flightTime = turretFieldPos.getDistance(shootingTarget) / 20.0;
-
+    // 4. Velocity Leading (Virtual Target)
+    double flightTime = turretFieldPos.getDistance(shootingTarget) / fuelVelocity;
     Translation2d virtualTarget =
         shootingTarget.minus(
             new Translation2d(

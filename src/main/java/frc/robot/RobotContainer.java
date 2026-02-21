@@ -24,6 +24,7 @@ import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import edu.wpi.first.wpilibj2.command.button.POVButton;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.DriveCommands;
+import frc.robot.commands.DriveToHubCommandPP;
 import frc.robot.commands.FaceTagsCommand;
 import frc.robot.commands.HarvesterDeploy;
 import frc.robot.commands.HarvesterSpin;
@@ -123,6 +124,8 @@ public class RobotContainer {
   private void configureButtonBindings() {
 
     // TODO: Decide on final button mappings
+    final JoystickButton driveToHub = new JoystickButton(driverLeftJoystick, 5);
+
     final JoystickButton resetGyro = new JoystickButton(driverRightJoystick, 7);
     final JoystickButton lockToZero = new JoystickButton(driverRightJoystick, 9);
     final JoystickButton resetOdom = new JoystickButton(driverRightJoystick, 8);
@@ -159,6 +162,8 @@ public class RobotContainer {
             () -> -driverLeftJoystick.getY(),
             () -> -driverLeftJoystick.getX(),
             () -> new Rotation2d()));
+
+    driveToHub.onTrue(new DriveToHubCommandPP(drive));
 
     // Drive facing april tag
     faceHubButton.whileTrue(

@@ -7,8 +7,10 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
+import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.Indexer;
 
@@ -19,6 +21,12 @@ public class IndexerSubsystem extends SubsystemBase {
   private final VelocityVoltage velocityRequest = new VelocityVoltage(0);
 
   private final com.ctre.phoenix6.StatusSignal<Angle> indexerVeloSignal;
+  // Shuffleboard entries
+  private final ShuffleboardTab idxTab = Shuffleboard.getTab("Indexer");
+  private final GenericEntry idxPosEntry;
+  private final GenericEntry idxVeloEntry;
+  private final GenericEntry idxTempEntry;
+  private final GenericEntry idxCanOkEntry;
 
   public IndexerSubsystem() {
     var config = new com.ctre.phoenix6.configs.TalonFXConfiguration();
@@ -32,7 +40,41 @@ public class IndexerSubsystem extends SubsystemBase {
     motor.getConfigurator().apply(config);
     motor.setNeutralMode(NeutralModeValue.Brake);
 
-    indexerVeloSignal = motor.getPosition();
+  indexerVeloSignal = motor.getPosition();
+
+  // Create persistent Shuffleboard widgets (single time)
+  idxPosEntry =
+    idxTab
+      .add(
+        "Indxr Pos (deg, output)",
+        motor.getPosition().getValueAsDouble() * 360.0 / Indexer.GEAR_RATIO)
+      .withWidget(BuiltInWidgets.kTextView)
+      .withPosition(0, 0)
+      .withSize(2, 1)
+      .getEntry();
+  idxVeloEntry =
+    idxTab
+      .add("Indxr Velo (RPS, output)", motor.getVelocity().getValueAsDouble() / Indexer.GEAR_RATIO)
+      .withWidget(BuiltInWidgets.kTextView)
+      .withPosition(2, 0)
+      .withSize(2, 1)
+      .getEntry();
+  idxTempEntry =
+    idxTab
+      .add("Indxr Temp", motor.getDeviceTemp().getValueAsDouble())
+      .withWidget(BuiltInWidgets.kTextView)
+      .withPosition(4, 0)
+      .withSize(2, 1)
+      .getEntry();
+
+  var canTab = Shuffleboard.getTab("CAN Status");
+  idxCanOkEntry =
+    canTab
+      .add("Indxr CAN OK", indexerVeloSignal.getStatus().isOK())
+      .withWidget(BuiltInWidgets.kBooleanBox)
+      .withPosition(2, 5)
+      .withSize(1, 1)
+      .getEntry();
   }
 
   @Override
@@ -61,36 +103,14 @@ public class IndexerSubsystem extends SubsystemBase {
   }
 
   public void log() {
-    // ── Indexer subsystem page ────────────────────────────────────────────────
-    var idxTab = Shuffleboard.getTab("Indexer");
+  // Update entries (called each periodic)
+  idxPosEntry.setDouble(motor.getPosition().getValueAsDouble() * 360.0 / Indexer.GEAR_RATIO);
+  idxVeloEntry.setDouble(motor.getVelocity().getValueAsDouble() / Indexer.GEAR_RATIO);
+  idxTempEntry.setDouble(motor.getDeviceTemp().getValueAsDouble());
 
-    idxTab
-        .add(
-            "Indxr Pos (deg, output)",
-            motor.getPosition().getValueAsDouble() * 360.0 / Indexer.GEAR_RATIO)
-        .withWidget(BuiltInWidgets.kTextView)
-        .withPosition(0, 0)
-        .withSize(2, 1);
-    idxTab
-        .add(
-            "Indxr Velo (RPS, output)",
-            motor.getVelocity().getValueAsDouble() / Indexer.GEAR_RATIO)
-        .withWidget(BuiltInWidgets.kTextView)
-        .withPosition(2, 0)
-        .withSize(2, 1);
-    idxTab
-        .add("Indxr Temp", motor.getDeviceTemp().getValueAsDouble())
-        .withWidget(BuiltInWidgets.kTextView)
-        .withPosition(4, 0)
-        .withSize(2, 1);
-
-    // ── CAN Status page ───────────────────────────────────────────────────────
-    boolean indexerOK = indexerVeloSignal.getStatus().isOK();
-    Shuffleboard.getTab("CAN Status")
-        .add("Indxr CAN OK", indexerOK)
-        .withWidget(BuiltInWidgets.kBooleanBox)
-        .withPosition(2, 5)
-        .withSize(1, 1);
+  // CAN status
+  boolean indexerOK = indexerVeloSignal.getStatus().isOK();
+  idxCanOkEntry.setBoolean(indexerOK);
   }
 
   public boolean isIndexerConnected() {

@@ -16,6 +16,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
@@ -73,6 +74,14 @@ public class RobotContainer {
 
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
+    // CAN Status Shuffleboard entries
+    private final ShuffleboardTab canTab = Shuffleboard.getTab("CAN Status");
+    private final GenericEntry roboRioCanStatusEntry;
+    private final GenericEntry canCoderCanStatusEntry;
+    private final GenericEntry rioUsageEntry;
+    private final GenericEntry canivoreUsageEntry;
+    private final GenericEntry rioHighLoadEntry;
+    private final GenericEntry canivoreHighLoadEntry;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -116,6 +125,14 @@ public class RobotContainer {
 
     // Configure the button bindings
     configureButtonBindings();
+
+        // Initialize persistent CAN Status dashboard entries
+        roboRioCanStatusEntry = canTab.add("RoboRio CAN STATUS", false).withWidget(BuiltInWidgets.kBooleanBox).withPosition(0, 0).withSize(2, 1).getEntry();
+        canCoderCanStatusEntry = canTab.add("CanCoder CAN STATUS", false).withWidget(BuiltInWidgets.kBooleanBox).withPosition(2, 0).withSize(2, 1).getEntry();
+        rioUsageEntry = canTab.add("CAN RIO Usage %", 0.0).withWidget(BuiltInWidgets.kNumberBar).withPosition(0, 1).withSize(3, 1).getEntry();
+        canivoreUsageEntry = canTab.add("CAN CANivore Usage %", 0.0).withWidget(BuiltInWidgets.kNumberBar).withPosition(3, 1).withSize(3, 1).getEntry();
+        rioHighLoadEntry = canTab.add("RIO CAN High Load Warning", false).withWidget(BuiltInWidgets.kBooleanBox).withPosition(0, 2).withSize(2, 1).getEntry();
+        canivoreHighLoadEntry = canTab.add("CANivore High Load Warning", false).withWidget(BuiltInWidgets.kBooleanBox).withPosition(2, 2).withSize(2, 1).getEntry();
   }
 
   /**
@@ -274,7 +291,6 @@ public class RobotContainer {
 
   public void updateGlobalHealth() {
     // ── Grab the CAN Status Shuffleboard tab ──────────────────────────────────
-    ShuffleboardTab canTab = Shuffleboard.getTab("CAN Status");
 
     // 1. Get RoboRio CAN Health
     boolean shooterHealthy = shooter.isShooterConnected();
@@ -296,17 +312,9 @@ public class RobotContainer {
             && climberHealthy
             && ledHealthy;
 
-    // Master CAN indicators on the CAN Status tab
-    canTab
-        .add("RoboRio CAN STATUS", robotCanOk)
-        .withWidget(BuiltInWidgets.kBooleanBox)
-        .withPosition(0, 0)
-        .withSize(2, 1);
-    canTab
-        .add("CanCoder CAN STATUS", canCoderHealthy)
-        .withWidget(BuiltInWidgets.kBooleanBox)
-        .withPosition(2, 0)
-        .withSize(2, 1);
+    // Update master CAN indicators on the CAN Status tab
+    roboRioCanStatusEntry.setBoolean(robotCanOk);
+    canCoderCanStatusEntry.setBoolean(canCoderHealthy);
 
     // 4. Get RIO Bus Utilization
     var rioStatus = CANBus.roboRIO().getStatus();
@@ -318,28 +326,12 @@ public class RobotContainer {
     double canivoreUsage = canivoreStatus.BusUtilization * 100.0;
 
     // 6. Display bus utilization on the CAN Status tab
-    canTab
-        .add("CAN RIO Usage %", rioUsage)
-        .withWidget(BuiltInWidgets.kNumberBar)
-        .withPosition(0, 1)
-        .withSize(3, 1);
-    canTab
-        .add("CAN CANivore Usage %", canivoreUsage)
-        .withWidget(BuiltInWidgets.kNumberBar)
-        .withPosition(3, 1)
-        .withSize(3, 1);
+    rioUsageEntry.setDouble(rioUsage);
+    canivoreUsageEntry.setDouble(canivoreUsage);
 
     // 7. High-load warnings (>90% is FRC best practice threshold)
-    canTab
-        .add("RIO CAN High Load Warning", rioUsage > 90)
-        .withWidget(BuiltInWidgets.kBooleanBox)
-        .withPosition(0, 2)
-        .withSize(2, 1);
-    canTab
-        .add("CANivore High Load Warning", canivoreUsage > 90)
-        .withWidget(BuiltInWidgets.kBooleanBox)
-        .withPosition(2, 2)
-        .withSize(2, 1);
+    rioHighLoadEntry.setBoolean(rioUsage > 90);
+    canivoreHighLoadEntry.setBoolean(canivoreUsage > 90);
 
     // 8. Send an Elastic notification if CAN goes unhealthy
     if (!robotCanOk) {

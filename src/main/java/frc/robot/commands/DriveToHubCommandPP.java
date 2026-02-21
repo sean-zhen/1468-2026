@@ -13,6 +13,7 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
+import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.drive.Drive;
 import java.util.ArrayList;
@@ -23,10 +24,19 @@ public class DriveToHubCommandPP extends Command {
   private double endPtX, endPtY, endPtHoloRotation;
 
   private final Drive m_drive;
+  private final GenericEntry driveToProcessorStatusEntry;
 
   public DriveToHubCommandPP(Drive drive) {
     m_drive = drive;
     addRequirements(m_drive);
+    var driveTab = Shuffleboard.getTab("Drive");
+    driveToProcessorStatusEntry =
+        driveTab
+            .add("DriveToProcessor status", "NOT ACTIVE")
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(0, 0)
+            .withSize(3, 1)
+            .getEntry();
   }
 
   // Called when the command is initially scheduled.
@@ -88,11 +98,7 @@ public class DriveToHubCommandPP extends Command {
   // Called once the command ends or is interrupted.
   @Override
   public void end(boolean interrupted) {
-    Shuffleboard.getTab("Drive")
-        .add("DriveToProcessor status", "NOT ACTIVE")
-        .withWidget(BuiltInWidgets.kTextView)
-        .withPosition(0, 0)
-        .withSize(3, 1);
+    driveToProcessorStatusEntry.setString("NOT ACTIVE");
     m_drive.stop();
   }
 

@@ -15,8 +15,10 @@ import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
+import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -83,11 +85,26 @@ public class VisionSubsystem extends SubsystemBase {
       lData = new CameraData(),
       rData = new CameraData();
 
+  // Shuffleboard entries
+  private final ShuffleboardTab visionTab = Shuffleboard.getTab("Vision");
+  private final GenericEntry backPresentEntry;
+  private final GenericEntry visionHealthyEntry;
+  private final GenericEntry activeSourceEntry;
+  private final GenericEntry tagsVisibleEntry;
+  private final GenericEntry bestTargetDistEntry;
+
   public VisionSubsystem(Drive drive) {
     this.drive = drive;
     fieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltAndymark);
 
     SmartDashboard.putData("Vision/Field", m_field);
+
+  // Persistent Shuffleboard widgets
+  backPresentEntry = visionTab.add("BACK PRESENT", false).withWidget(BuiltInWidgets.kBooleanBox).withPosition(0, 0).withSize(2, 1).getEntry();
+  visionHealthyEntry = visionTab.add("Vision Healthy", false).withWidget(BuiltInWidgets.kBooleanBox).withPosition(2, 0).withSize(2, 1).getEntry();
+  activeSourceEntry = visionTab.add("ActiveSource", "None").withWidget(BuiltInWidgets.kTextView).withPosition(0, 1).withSize(2, 1).getEntry();
+  tagsVisibleEntry = visionTab.add("TagsVisible", 0).withWidget(BuiltInWidgets.kTextView).withPosition(2, 1).withSize(1, 1).getEntry();
+  bestTargetDistEntry = visionTab.add("BestTargetDist", 0.0).withWidget(BuiltInWidgets.kTextView).withPosition(3, 1).withSize(2, 1).getEntry();
 
     frontCam = new PhotonCamera(FRONT_NAME);
     backCam = new PhotonCamera(BACK_NAME);
@@ -249,7 +266,6 @@ public class VisionSubsystem extends SubsystemBase {
 
   private void log() {
     // ── Vision page ────────────────────────────────────────────────────────────
-    var visionTab = Shuffleboard.getTab("Vision");
 
     // 1. Update the main robot pose from your Drive subsystem
     m_field.setRobotPose(drive.getPose());
@@ -262,11 +278,8 @@ public class VisionSubsystem extends SubsystemBase {
       m_field.getObject("Front Cam Pose").setPoses();
     }
 
-    visionTab
-        .add("BACK PRESENT", bData.pose.isPresent())
-        .withWidget(BuiltInWidgets.kBooleanBox)
-        .withPosition(0, 0)
-        .withSize(2, 1);
+    // Update persistent BACK PRESENT
+    backPresentEntry.setBoolean(bData.pose.isPresent());
 
     // 3. Log Back Camera Estimate (if present)
     if (bData.pose.isPresent()) {
@@ -275,21 +288,16 @@ public class VisionSubsystem extends SubsystemBase {
       m_field.getObject("Back Cam Pose").setPoses();
     }
 
-    boolean healthy = (Timer.getFPGATimestamp() - lastMeasurementTimestamp) < VISION_TIMEOUT;
-    visionTab
-        .add("Vision Healthy", healthy)
-        .withWidget(BuiltInWidgets.kBooleanBox)
-        .withPosition(2, 0)
-        .withSize(2, 1);
+  boolean healthy = (Timer.getFPGATimestamp() - lastMeasurementTimestamp) < VISION_TIMEOUT;
+  visionHealthyEntry.setBoolean(healthy);
 
-    // Field2d widget (robot + camera poses)
-    SmartDashboard.putData("Field", m_field);
+  // Field2d widget (robot + camera poses) - only update value, don't re-put the widget
+  SmartDashboard.putData("Field", m_field);
 
-    logBestCameraSummary();
+  logBestCameraSummary();
   }
 
   private void logBestCameraSummary() {
-    var visionTab = Shuffleboard.getTab("Vision");
     CameraData[] allCams = {fData, bData};
     String[] names = {FRONT_NAME, BACK_NAME};
 
@@ -306,16 +314,8 @@ public class VisionSubsystem extends SubsystemBase {
     }
 
     if (bestCamIdx != -1) {
-      visionTab
-          .add("ActiveSource", names[bestCamIdx])
-          .withWidget(BuiltInWidgets.kTextView)
-          .withPosition(0, 1)
-          .withSize(2, 1);
-      visionTab
-          .add("TagsVisible", maxTags)
-          .withWidget(BuiltInWidgets.kTextView)
-          .withPosition(2, 1)
-          .withSize(1, 1);
+      activeSourceEntry.setString(names[bestCamIdx]);
+      tagsVisibleEntry.setDouble(maxTags);
 
       // Get distance of the best target from the best camera
       double dist =
@@ -325,22 +325,11 @@ public class VisionSubsystem extends SubsystemBase {
               .getBestCameraToTarget()
               .getTranslation()
               .getNorm();
-      visionTab
-          .add("BestTargetDist", dist)
-          .withWidget(BuiltInWidgets.kTextView)
-          .withPosition(3, 1)
-          .withSize(2, 1);
+      bestTargetDistEntry.setDouble(dist);
     } else {
-      visionTab
-          .add("ActiveSource", "None")
-          .withWidget(BuiltInWidgets.kTextView)
-          .withPosition(0, 1)
-          .withSize(2, 1);
-      visionTab
-          .add("TagsVisible", 0)
-          .withWidget(BuiltInWidgets.kTextView)
-          .withPosition(2, 1)
-          .withSize(1, 1);
+      activeSourceEntry.setString("None");
+      tagsVisibleEntry.setDouble(0);
+      bestTargetDistEntry.setDouble(0.0);
     }
   }
 

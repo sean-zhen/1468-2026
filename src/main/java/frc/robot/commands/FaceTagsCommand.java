@@ -26,6 +26,7 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
+import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants.AutoAlign;
 import frc.robot.subsystems.VisionSubsystem;
@@ -66,6 +67,23 @@ public class FaceTagsCommand extends Command {
   private Translation2d hubPosition;
   private List<Integer> currentTagList;
   private boolean hasInitialized = false;
+    // Persistent Shuffleboard entries (created once in constructor)
+    private final GenericEntry faceStatusEntry;
+    private final GenericEntry faceAllianceEntry;
+    private final GenericEntry faceHubPosEntry;
+    private final GenericEntry faceAutoDrivingEntry;
+    private final GenericEntry faceAutoXSpeedEntry;
+    private final GenericEntry faceCurrentDistanceEntry;
+    private final GenericEntry faceTargetDistanceEntry;
+    private final GenericEntry faceDesiredHeadingEntry;
+    private final GenericEntry faceCurrentHeadingEntry;
+    private final GenericEntry faceHeadingErrorEntry;
+    private final GenericEntry faceRotationSpeedEntry;
+    private final GenericEntry faceVisibleHubTagsEntry;
+    private final GenericEntry faceSeesHubTagsEntry;
+    private final GenericEntry faceWithinAutoDriveRangeEntry;
+    private final GenericEntry faceAtTargetDistanceEntry;
+    private final GenericEntry faceAtTargetHeadingEntry;
 
   public FaceTagsCommand(
       Drive drive,
@@ -85,6 +103,123 @@ public class FaceTagsCommand extends Command {
 
     // Configure distance controller
     distanceController.setTolerance(AutoAlign.DISTANCE_TOLERANCE_METERS);
+
+    // Create persistent Shuffleboard entries on the Drive tab
+    var driveTab = Shuffleboard.getTab("Drive");
+    faceStatusEntry =
+        driveTab
+            .add("FaceTags/Status", "NOT ACTIVE")
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(0, 0)
+            .withSize(2, 1)
+            .getEntry();
+    faceAllianceEntry =
+        driveTab
+            .add("FaceTags/Alliance", "N/A")
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(2, 0)
+            .withSize(2, 1)
+            .getEntry();
+    faceHubPosEntry =
+        driveTab
+            .add("FaceTags/HubPosition", "X=0.00m Y=0.00m")
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(4, 0)
+            .withSize(3, 1)
+            .getEntry();
+
+    faceAutoDrivingEntry =
+        driveTab
+            .add("FaceTags/AutoDriving", false)
+            .withWidget(BuiltInWidgets.kBooleanBox)
+            .withPosition(0, 2)
+            .withSize(2, 1)
+            .getEntry();
+    faceAutoXSpeedEntry =
+        driveTab
+            .add("FaceTags/AutoXSpeed", 0.0)
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(2, 2)
+            .withSize(2, 1)
+            .getEntry();
+
+    faceCurrentDistanceEntry =
+        driveTab
+            .add("FaceTags/CurrentDistance", 0.0)
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(0, 3)
+            .withSize(2, 1)
+            .getEntry();
+    faceTargetDistanceEntry =
+        driveTab
+            .add("FaceTags/TargetDistance", AutoAlign.HUB_DISTANCE_METERS)
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(2, 3)
+            .withSize(2, 1)
+            .getEntry();
+    faceDesiredHeadingEntry =
+        driveTab
+            .add("FaceTags/DesiredHeading", 0.0)
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(0, 4)
+            .withSize(2, 1)
+            .getEntry();
+    faceCurrentHeadingEntry =
+        driveTab
+            .add("FaceTags/CurrentHeading", 0.0)
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(2, 4)
+            .withSize(2, 1)
+            .getEntry();
+    faceHeadingErrorEntry =
+        driveTab
+            .add("FaceTags/HeadingError", 0.0)
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(4, 4)
+            .withSize(2, 1)
+            .getEntry();
+    faceRotationSpeedEntry =
+        driveTab
+            .add("FaceTags/RotationSpeed", 0.0)
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(6, 4)
+            .withSize(2, 1)
+            .getEntry();
+    faceVisibleHubTagsEntry =
+        driveTab
+            .add("FaceTags/VisibleHubTags", "[]")
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(0, 5)
+            .withSize(3, 1)
+            .getEntry();
+    faceSeesHubTagsEntry =
+        driveTab
+            .add("FaceTags/SeesHubTags", false)
+            .withWidget(BuiltInWidgets.kBooleanBox)
+            .withPosition(3, 5)
+            .withSize(2, 1)
+            .getEntry();
+    faceWithinAutoDriveRangeEntry =
+        driveTab
+            .add("FaceTags/WithinAutoDriveRange", false)
+            .withWidget(BuiltInWidgets.kBooleanBox)
+            .withPosition(5, 5)
+            .withSize(2, 1)
+            .getEntry();
+    faceAtTargetDistanceEntry =
+        driveTab
+            .add("FaceTags/AtTargetDistance", false)
+            .withWidget(BuiltInWidgets.kBooleanBox)
+            .withPosition(0, 6)
+            .withSize(2, 1)
+            .getEntry();
+    faceAtTargetHeadingEntry =
+        driveTab
+            .add("FaceTags/AtTargetHeading", false)
+            .withWidget(BuiltInWidgets.kBooleanBox)
+            .withPosition(2, 6)
+            .withSize(2, 1)
+            .getEntry();
   }
 
   @Override
@@ -93,15 +228,11 @@ public class FaceTagsCommand extends Command {
 
     // Determine which hub to target based on alliance
     Optional<Alliance> alliance = DriverStation.getAlliance();
-    if (alliance.isEmpty()) {
-      Shuffleboard.getTab("Drive")
-          .add("FaceTags/Status", "NO ALLIANCE")
-          .withWidget(BuiltInWidgets.kTextView)
-          .withPosition(0, 0)
-          .withSize(2, 1);
-      cancel();
-      return;
-    }
+        if (alliance.isEmpty()) {
+            faceStatusEntry.setString("NO ALLIANCE");
+            cancel();
+            return;
+        }
 
     // Select hub position and tag list based on alliance
     if (alliance.get() == Alliance.Red) {
@@ -117,24 +248,10 @@ public class FaceTagsCommand extends Command {
     distanceController.reset();
 
     hasInitialized = true;
-    var driveTab = Shuffleboard.getTab("Drive");
-    driveTab
-        .add("FaceTags/Status", "ACTIVE")
-        .withWidget(BuiltInWidgets.kTextView)
-        .withPosition(0, 0)
-        .withSize(2, 1);
-    driveTab
-        .add("FaceTags/Alliance", alliance.get().toString())
-        .withWidget(BuiltInWidgets.kTextView)
-        .withPosition(2, 0)
-        .withSize(2, 1);
-    driveTab
-        .add(
-            "FaceTags/HubPosition",
-            String.format("X=%.2fm Y=%.2fm", hubPosition.getX(), hubPosition.getY()))
-        .withWidget(BuiltInWidgets.kTextView)
-        .withPosition(4, 0)
-        .withSize(3, 1);
+    faceStatusEntry.setString("ACTIVE");
+    faceAllianceEntry.setString(alliance.get().toString());
+    faceHubPosEntry.setString(
+        String.format("X=%.2fm Y=%.2fm", hubPosition.getX(), hubPosition.getY()));
   }
 
   @Override
@@ -182,22 +299,10 @@ public class FaceTagsCommand extends Command {
 
       xSpeed = autoXSpeed;
 
-      Shuffleboard.getTab("Drive")
-          .add("FaceTags/AutoDriving", true)
-          .withWidget(BuiltInWidgets.kBooleanBox)
-          .withPosition(0, 2)
-          .withSize(2, 1);
-      Shuffleboard.getTab("Drive")
-          .add("FaceTags/AutoXSpeed", autoXSpeed)
-          .withWidget(BuiltInWidgets.kTextView)
-          .withPosition(2, 2)
-          .withSize(2, 1);
+      faceAutoDrivingEntry.setBoolean(true);
+      faceAutoXSpeedEntry.setDouble(autoXSpeed);
     } else {
-      Shuffleboard.getTab("Drive")
-          .add("FaceTags/AutoDriving", false)
-          .withWidget(BuiltInWidgets.kBooleanBox)
-          .withPosition(0, 2)
-          .withSize(2, 1);
+      faceAutoDrivingEntry.setBoolean(false);
     }
 
     // Limit rotation speed
@@ -211,69 +316,20 @@ public class FaceTagsCommand extends Command {
     drive.runVelocity(fieldRelativeSpeeds);
 
     // ── Logging on the Drive tab ──────────────────────────────────────────────
-    var driveTab = Shuffleboard.getTab("Drive");
-    driveTab
-        .add("FaceTags/CurrentDistance", currentDistance)
-        .withWidget(BuiltInWidgets.kTextView)
-        .withPosition(0, 3)
-        .withSize(2, 1);
-    driveTab
-        .add("FaceTags/TargetDistance", AutoAlign.HUB_DISTANCE_METERS)
-        .withWidget(BuiltInWidgets.kTextView)
-        .withPosition(2, 3)
-        .withSize(2, 1);
-    driveTab
-        .add("FaceTags/DesiredHeading", desiredHeading.getDegrees())
-        .withWidget(BuiltInWidgets.kTextView)
-        .withPosition(0, 4)
-        .withSize(2, 1);
-    driveTab
-        .add("FaceTags/CurrentHeading", currentPose.getRotation().getDegrees())
-        .withWidget(BuiltInWidgets.kTextView)
-        .withPosition(2, 4)
-        .withSize(2, 1);
-    driveTab
-        .add(
-            "FaceTags/HeadingError",
-            desiredHeading.minus(currentPose.getRotation()).getDegrees())
-        .withWidget(BuiltInWidgets.kTextView)
-        .withPosition(4, 4)
-        .withSize(2, 1);
-    driveTab
-        .add("FaceTags/RotationSpeed", rotationSpeed)
-        .withWidget(BuiltInWidgets.kTextView)
-        .withPosition(6, 4)
-        .withSize(2, 1);
-    driveTab
-        .add("FaceTags/VisibleHubTags", visibleHubTags.toString())
-        .withWidget(BuiltInWidgets.kTextView)
-        .withPosition(0, 5)
-        .withSize(3, 1);
-    driveTab
-        .add("FaceTags/SeesHubTags", seesHubTags)
-        .withWidget(BuiltInWidgets.kBooleanBox)
-        .withPosition(3, 5)
-        .withSize(2, 1);
-    driveTab
-        .add(
-            "FaceTags/WithinAutoDriveRange",
-            currentDistance < AutoAlign.VISION_DISTANCE_THRESHOLD_METERS)
-        .withWidget(BuiltInWidgets.kBooleanBox)
-        .withPosition(5, 5)
-        .withSize(2, 1);
-    driveTab
-        .add(
-            "FaceTags/AtTargetDistance",
-            Math.abs(currentDistance - AutoAlign.HUB_DISTANCE_METERS)
-                < AutoAlign.DISTANCE_TOLERANCE_METERS)
-        .withWidget(BuiltInWidgets.kBooleanBox)
-        .withPosition(0, 6)
-        .withSize(2, 1);
-    driveTab
-        .add("FaceTags/AtTargetHeading", rotationController.atSetpoint())
-        .withWidget(BuiltInWidgets.kBooleanBox)
-        .withPosition(2, 6)
-        .withSize(2, 1);
+    faceCurrentDistanceEntry.setDouble(currentDistance);
+    faceTargetDistanceEntry.setDouble(AutoAlign.HUB_DISTANCE_METERS);
+    faceDesiredHeadingEntry.setDouble(desiredHeading.getDegrees());
+    faceCurrentHeadingEntry.setDouble(currentPose.getRotation().getDegrees());
+    faceHeadingErrorEntry.setDouble(desiredHeading.minus(currentPose.getRotation()).getDegrees());
+    faceRotationSpeedEntry.setDouble(rotationSpeed);
+    faceVisibleHubTagsEntry.setString(visibleHubTags.toString());
+    faceSeesHubTagsEntry.setBoolean(seesHubTags);
+    faceWithinAutoDriveRangeEntry.setBoolean(
+        currentDistance < AutoAlign.VISION_DISTANCE_THRESHOLD_METERS);
+    faceAtTargetDistanceEntry.setBoolean(
+        Math.abs(currentDistance - AutoAlign.HUB_DISTANCE_METERS)
+            < AutoAlign.DISTANCE_TOLERANCE_METERS);
+    faceAtTargetHeadingEntry.setBoolean(rotationController.atSetpoint());
   }
 
   /** Get list of visible hub tags (for auto-drive trigger only). */
@@ -297,11 +353,7 @@ public class FaceTagsCommand extends Command {
   @Override
   public void end(boolean interrupted) {
     drive.stop();
-    Shuffleboard.getTab("Drive")
-        .add("FaceTags/Status", interrupted ? "INTERRUPTED" : "FINISHED")
-        .withWidget(BuiltInWidgets.kTextView)
-        .withPosition(0, 0)
-        .withSize(2, 1);
+        faceStatusEntry.setString(interrupted ? "INTERRUPTED" : "FINISHED");
   }
 
   @Override

@@ -37,8 +37,10 @@ import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
+import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
@@ -103,6 +105,16 @@ public class Drive extends SubsystemBase {
   private SwerveDrivePoseEstimator poseEstimator =
       new SwerveDrivePoseEstimator(kinematics, rawGyroRotation, lastModulePositions, Pose2d.kZero);
 
+  // Shuffleboard entries (vision & CAN status)
+  private final ShuffleboardTab visionTab = Shuffleboard.getTab("Vision");
+  private final GenericEntry cam1XEntry;
+  private final GenericEntry cam1YEntry;
+  private final GenericEntry cam1RotEntry;
+
+  private final ShuffleboardTab canTab = Shuffleboard.getTab("CAN Status");
+  // moduleCanEntries[moduleIndex][0]=Drive, [1]=Turn, [2]=Encoder
+  private final GenericEntry[][] moduleCanEntries = new GenericEntry[4][3];
+
   public Drive(
       GyroIO gyroIO,
       ModuleIO flModuleIO,
@@ -141,6 +153,20 @@ public class Drive extends SubsystemBase {
         (targetPose) -> {
           Logger.recordOutput("Odometry/TrajectorySetpoint", targetPose);
         });
+    
+    // Initialize Shuffleboard entries used by Drive
+    cam1XEntry = visionTab.add("C1 X", 0.0).withPosition(6, 0).withSize(1, 1).getEntry();
+    cam1YEntry = visionTab.add("C1 Y", 0.0).withPosition(7, 0).withSize(1, 1).getEntry();
+    cam1RotEntry = visionTab.add("C1 rot", 0.0).withPosition(8, 0).withSize(1, 1).getEntry();
+
+    // Initialize module CAN entries (one-time widgets)
+    String[] moduleNames = {"FL", "FR", "BL", "BR"};
+    for (int i = 0; i < 4; i++) {
+      int col = i * 3;
+      moduleCanEntries[i][0] = canTab.add(moduleNames[i] + " Drive CAN", false).withWidget(BuiltInWidgets.kBooleanBox).withPosition(col, 3).withSize(1, 1).getEntry();
+      moduleCanEntries[i][1] = canTab.add(moduleNames[i] + " Turn CAN", false).withWidget(BuiltInWidgets.kBooleanBox).withPosition(col + 1, 3).withSize(1, 1).getEntry();
+      moduleCanEntries[i][2] = canTab.add(moduleNames[i] + " Encoder CAN", false).withWidget(BuiltInWidgets.kBooleanBox).withPosition(col + 2, 3).withSize(1, 1).getEntry();
+    }
 
     // Configure SysId
     sysId =
@@ -344,18 +370,9 @@ public class Drive extends SubsystemBase {
     poseEstimator.addVisionMeasurement(
         visionRobotPoseMeters, timestampSeconds, visionMeasurementStdDevs);
 
-    Shuffleboard.getTab("Vision")
-        .add("C1 X", visionRobotPoseMeters.getX())
-        .withPosition(6, 0)
-        .withSize(1, 1);
-    Shuffleboard.getTab("Vision")
-        .add("C1 Y", visionRobotPoseMeters.getY())
-        .withPosition(7, 0)
-        .withSize(1, 1);
-    Shuffleboard.getTab("Vision")
-        .add("C1 rot", visionRobotPoseMeters.getRotation().getDegrees())
-        .withPosition(8, 0)
-        .withSize(1, 1);
+    cam1XEntry.setDouble(visionRobotPoseMeters.getX());
+    cam1YEntry.setDouble(visionRobotPoseMeters.getY());
+    cam1RotEntry.setDouble(visionRobotPoseMeters.getRotation().getDegrees());
   }
 
   /** Returns the maximum linear speed in meters per sec. */
@@ -407,30 +424,12 @@ public class Drive extends SubsystemBase {
   }
 
   public void logCanStatus() {
-    // modules[0]=FL, [1]=FR, [2]=BL, [3]=BR
-    String[] moduleNames = {"FL", "FR", "BL", "BR"};
-    // Grid layout on the CAN Status tab: row 3, cols 0-3 per module (3 booleans per module)
-    int[] colOffsets = {0, 3, 6, 9};
-
+    // Update persistent CAN status entries for each module
     for (int i = 0; i < modules.length; i++) {
       var data = modules[i].getInputs();
-      int col = colOffsets[i];
-
-      Shuffleboard.getTab("CAN Status")
-          .add(moduleNames[i] + " Drive CAN", data.driveConnected)
-          .withWidget(BuiltInWidgets.kBooleanBox)
-          .withPosition(col, 3)
-          .withSize(1, 1);
-      Shuffleboard.getTab("CAN Status")
-          .add(moduleNames[i] + " Turn CAN", data.turnConnected)
-          .withWidget(BuiltInWidgets.kBooleanBox)
-          .withPosition(col + 1, 3)
-          .withSize(1, 1);
-      Shuffleboard.getTab("CAN Status")
-          .add(moduleNames[i] + " Encoder CAN", data.encoderConnected)
-          .withWidget(BuiltInWidgets.kBooleanBox)
-          .withPosition(col + 2, 3)
-          .withSize(1, 1);
+      moduleCanEntries[i][0].setBoolean(data.driveConnected);
+      moduleCanEntries[i][1].setBoolean(data.turnConnected);
+      moduleCanEntries[i][2].setBoolean(data.encoderConnected);
     }
   }
 

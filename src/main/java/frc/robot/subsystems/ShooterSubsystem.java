@@ -14,8 +14,10 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
+import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.Shooter;
 import java.util.List;
@@ -53,6 +55,28 @@ public class ShooterSubsystem extends SubsystemBase {
   private final com.ctre.phoenix6.StatusSignal<Angle> turretPositionSignal;
   private final com.ctre.phoenix6.StatusSignal<AngularVelocity> flywheelVelocitySignal;
   private final com.ctre.phoenix6.StatusSignal<Angle> hoodPositionSignal;
+  // Shuffleboard entries
+  private final ShuffleboardTab shooterTab = Shuffleboard.getTab("Shooter");
+  private final ShuffleboardTab canTab = Shuffleboard.getTab("CAN Status");
+  private final GenericEntry shtrAtSpdEntry;
+  private final GenericEntry trrtAtPosEntry;
+  private final GenericEntry hoodAtPosEntry;
+  private final GenericEntry shtrLeadVeloEntry;
+  private final GenericEntry shtrFlwrVeloEntry;
+  private final GenericEntry shtrLeadCmdEntry;
+  private final GenericEntry shtrFlwrCmdEntry;
+  private final GenericEntry shtrLeadTempEntry;
+  private final GenericEntry shtrFlwrTempEntry;
+  private final GenericEntry hoodPosEntry;
+  private final GenericEntry hoodVeloEntry;
+  private final GenericEntry hoodTempEntry;
+  private final GenericEntry turretPosEntry;
+  private final GenericEntry turretVeloEntry;
+  private final GenericEntry turretTempEntry;
+  private final GenericEntry shtrCanOkEntry;
+  private final GenericEntry flywhCanOkEntry;
+  private final GenericEntry trrtCanOkEntry;
+  private final GenericEntry hoodCanOkEntry;
 
   public ShooterSubsystem() {
     // // Flywheel config
@@ -111,9 +135,141 @@ public class ShooterSubsystem extends SubsystemBase {
     configureMotors();
     setupTables();
 
-    turretPositionSignal = turretMotor.getPosition();
-    flywheelVelocitySignal = flywheelLead.getVelocity();
-    hoodPositionSignal = hoodMotor.getPosition();
+  turretPositionSignal = turretMotor.getPosition();
+  flywheelVelocitySignal = flywheelLead.getVelocity();
+  hoodPositionSignal = hoodMotor.getPosition();
+
+  // Create persistent Shuffleboard widgets
+  shtrAtSpdEntry =
+    shooterTab.add("Shtr Is At Spd", isFLywheelAtVelocity())
+      .withWidget(BuiltInWidgets.kBooleanBox)
+      .withPosition(0, 0)
+      .withSize(2, 1)
+      .getEntry();
+  trrtAtPosEntry =
+    shooterTab.add("Trrt Is At Pos", isTurretAtPosition())
+      .withWidget(BuiltInWidgets.kBooleanBox)
+      .withPosition(2, 0)
+      .withSize(2, 1)
+      .getEntry();
+  hoodAtPosEntry =
+    shooterTab.add("Hood Is At Pos", isHoodAtPosition())
+      .withWidget(BuiltInWidgets.kBooleanBox)
+      .withPosition(4, 0)
+      .withSize(2, 1)
+      .getEntry();
+
+  shtrLeadVeloEntry =
+    shooterTab.add("Shtr Lead Velo (RPS)", flywheelLead.getVelocity().getValueAsDouble())
+      .withWidget(BuiltInWidgets.kTextView)
+      .withPosition(0, 1)
+      .withSize(2, 1)
+      .getEntry();
+  shtrFlwrVeloEntry =
+    shooterTab.add("Shtr Flwr Velo (RPS)", flywheelFollower.getVelocity().getValueAsDouble())
+      .withWidget(BuiltInWidgets.kTextView)
+      .withPosition(2, 1)
+      .withSize(2, 1)
+      .getEntry();
+  shtrLeadCmdEntry =
+    shooterTab.add("Shtr Lead Cmd", flywheelLead.get())
+      .withWidget(BuiltInWidgets.kTextView)
+      .withPosition(4, 1)
+      .withSize(2, 1)
+      .getEntry();
+  shtrFlwrCmdEntry =
+    shooterTab.add("Shtr Flwr Cmd", flywheelFollower.get())
+      .withWidget(BuiltInWidgets.kTextView)
+      .withPosition(6, 1)
+      .withSize(2, 1)
+      .getEntry();
+  shtrLeadTempEntry =
+    shooterTab.add("Shtr Lead Temp", flywheelLead.getDeviceTemp().getValueAsDouble())
+      .withWidget(BuiltInWidgets.kTextView)
+      .withPosition(0, 2)
+      .withSize(2, 1)
+      .getEntry();
+  shtrFlwrTempEntry =
+    shooterTab.add("Shtr Flwr Temp", flywheelFollower.getDeviceTemp().getValueAsDouble())
+      .withWidget(BuiltInWidgets.kTextView)
+      .withPosition(2, 2)
+      .withSize(2, 1)
+      .getEntry();
+
+  hoodPosEntry =
+    shooterTab
+      .add(
+        "Shtr Hood Pos (deg, output)",
+        hoodMotor.getPosition().getValueAsDouble() * 360.0 / Shooter.HOOD_GEAR_RATIO)
+      .withWidget(BuiltInWidgets.kTextView)
+      .withPosition(0, 3)
+      .withSize(2, 1)
+      .getEntry();
+  hoodVeloEntry =
+    shooterTab
+      .add(
+        "Shtr Hood Velo (RPS, output)",
+        hoodMotor.getVelocity().getValueAsDouble() / Shooter.HOOD_GEAR_RATIO)
+      .withWidget(BuiltInWidgets.kTextView)
+      .withPosition(2, 3)
+      .withSize(2, 1)
+      .getEntry();
+  hoodTempEntry =
+    shooterTab.add("Hood Temp", hoodMotor.getDeviceTemp().getValueAsDouble())
+      .withWidget(BuiltInWidgets.kTextView)
+      .withPosition(4, 3)
+      .withSize(2, 1)
+      .getEntry();
+
+  turretPosEntry =
+    shooterTab
+      .add(
+        "Shtr Turret Pos (deg, output)",
+        turretMotor.getPosition().getValueAsDouble() * 360.0 / Shooter.TURRET_GEAR_RATIO)
+      .withWidget(BuiltInWidgets.kTextView)
+      .withPosition(0, 4)
+      .withSize(2, 1)
+      .getEntry();
+  turretVeloEntry =
+    shooterTab
+      .add(
+        "Shtr Turret Velo (RPS, output)",
+        turretMotor.getVelocity().getValueAsDouble() / Shooter.TURRET_GEAR_RATIO)
+      .withWidget(BuiltInWidgets.kTextView)
+      .withPosition(2, 4)
+      .withSize(2, 1)
+      .getEntry();
+  turretTempEntry =
+    shooterTab.add("Turret Temp", turretMotor.getDeviceTemp().getValueAsDouble())
+      .withWidget(BuiltInWidgets.kTextView)
+      .withPosition(4, 4)
+      .withSize(2, 1)
+      .getEntry();
+
+  shtrCanOkEntry =
+    canTab.add("Shtr CAN OK", flywheelVelocitySignal.getStatus().isOK())
+      .withWidget(BuiltInWidgets.kBooleanBox)
+      .withPosition(0, 4)
+      .withSize(2, 1)
+      .getEntry();
+  flywhCanOkEntry =
+    canTab.add("FlyWh CAN OK", flywheelVelocitySignal.getStatus().isOK())
+      .withWidget(BuiltInWidgets.kBooleanBox)
+      .withPosition(2, 4)
+      .withSize(1, 1)
+      .getEntry();
+  trrtCanOkEntry =
+    canTab.add("Trrt CAN OK", turretPositionSignal.getStatus().isOK())
+      .withWidget(BuiltInWidgets.kBooleanBox)
+      .withPosition(3, 4)
+      .withSize(1, 1)
+      .getEntry();
+  hoodCanOkEntry =
+    canTab.add("Hood CAN OK", hoodPositionSignal.getStatus().isOK())
+      .withWidget(BuiltInWidgets.kBooleanBox)
+      .withPosition(4, 4)
+      .withSize(1, 1)
+      .getEntry();
   }
 
   @Override
@@ -344,126 +500,36 @@ public class ShooterSubsystem extends SubsystemBase {
   }
 
   public void log() {
-    // ── Shooter subsystem page ────────────────────────────────────────────────
-    var shooterTab = Shuffleboard.getTab("Shooter");
+  // Update persistent entries
+  shtrAtSpdEntry.setBoolean(isFLywheelAtVelocity());
+  trrtAtPosEntry.setBoolean(isTurretAtPosition());
+  hoodAtPosEntry.setBoolean(isHoodAtPosition());
 
-    // Status indicators
-    shooterTab
-        .add("Shtr Is At Spd", isFLywheelAtVelocity())
-        .withWidget(BuiltInWidgets.kBooleanBox)
-        .withPosition(0, 0)
-        .withSize(2, 1);
-    shooterTab
-        .add("Trrt Is At Pos", isTurretAtPosition())
-        .withWidget(BuiltInWidgets.kBooleanBox)
-        .withPosition(2, 0)
-        .withSize(2, 1);
-    shooterTab
-        .add("Hood Is At Pos", isHoodAtPosition())
-        .withWidget(BuiltInWidgets.kBooleanBox)
-        .withPosition(4, 0)
-        .withSize(2, 1);
+  shtrLeadVeloEntry.setDouble(flywheelLead.getVelocity().getValueAsDouble());
+  shtrFlwrVeloEntry.setDouble(flywheelFollower.getVelocity().getValueAsDouble());
+  shtrLeadCmdEntry.setDouble(flywheelLead.get());
+  shtrFlwrCmdEntry.setDouble(flywheelFollower.get());
+  shtrLeadTempEntry.setDouble(flywheelLead.getDeviceTemp().getValueAsDouble());
+  shtrFlwrTempEntry.setDouble(flywheelFollower.getDeviceTemp().getValueAsDouble());
 
-    // Flywheel
-    shooterTab
-        .add("Shtr Lead Velo (RPS)", flywheelLead.getVelocity().getValueAsDouble())
-        .withWidget(BuiltInWidgets.kTextView)
-        .withPosition(0, 1)
-        .withSize(2, 1);
-    shooterTab
-        .add("Shtr Flwr Velo (RPS)", flywheelFollower.getVelocity().getValueAsDouble())
-        .withWidget(BuiltInWidgets.kTextView)
-        .withPosition(2, 1)
-        .withSize(2, 1);
-    shooterTab
-        .add("Shtr Lead Cmd", flywheelLead.get())
-        .withWidget(BuiltInWidgets.kTextView)
-        .withPosition(4, 1)
-        .withSize(2, 1);
-    shooterTab
-        .add("Shtr Flwr Cmd", flywheelFollower.get())
-        .withWidget(BuiltInWidgets.kTextView)
-        .withPosition(6, 1)
-        .withSize(2, 1);
-    shooterTab
-        .add("Shtr Lead Temp", flywheelLead.getDeviceTemp().getValueAsDouble())
-        .withWidget(BuiltInWidgets.kTextView)
-        .withPosition(0, 2)
-        .withSize(2, 1);
-    shooterTab
-        .add("Shtr Flwr Temp", flywheelFollower.getDeviceTemp().getValueAsDouble())
-        .withWidget(BuiltInWidgets.kTextView)
-        .withPosition(2, 2)
-        .withSize(2, 1);
+  hoodPosEntry.setDouble(hoodMotor.getPosition().getValueAsDouble() * 360.0 / Shooter.HOOD_GEAR_RATIO);
+  hoodVeloEntry.setDouble(hoodMotor.getVelocity().getValueAsDouble() / Shooter.HOOD_GEAR_RATIO);
+  hoodTempEntry.setDouble(hoodMotor.getDeviceTemp().getValueAsDouble());
 
-    // Hood
-    shooterTab
-        .add(
-            "Shtr Hood Pos (deg, output)",
-            hoodMotor.getPosition().getValueAsDouble() * 360.0 / Shooter.HOOD_GEAR_RATIO)
-        .withWidget(BuiltInWidgets.kTextView)
-        .withPosition(0, 3)
-        .withSize(2, 1);
-    shooterTab
-        .add(
-            "Shtr Hood Velo (RPS, output)",
-            hoodMotor.getVelocity().getValueAsDouble() / Shooter.HOOD_GEAR_RATIO)
-        .withWidget(BuiltInWidgets.kTextView)
-        .withPosition(2, 3)
-        .withSize(2, 1);
-    shooterTab
-        .add("Hood Temp", hoodMotor.getDeviceTemp().getValueAsDouble())
-        .withWidget(BuiltInWidgets.kTextView)
-        .withPosition(4, 3)
-        .withSize(2, 1);
-
-    // Turret
-    shooterTab
-        .add(
-            "Shtr Turret Pos (deg, output)",
-            turretMotor.getPosition().getValueAsDouble() * 360.0 / Shooter.TURRET_GEAR_RATIO)
-        .withWidget(BuiltInWidgets.kTextView)
-        .withPosition(0, 4)
-        .withSize(2, 1);
-    shooterTab
-        .add(
-            "Shtr Turret Velo (RPS, output)",
-            turretMotor.getVelocity().getValueAsDouble() / Shooter.TURRET_GEAR_RATIO)
-        .withWidget(BuiltInWidgets.kTextView)
-        .withPosition(2, 4)
-        .withSize(2, 1);
-    shooterTab
-        .add("Turret Temp", turretMotor.getDeviceTemp().getValueAsDouble())
-        .withWidget(BuiltInWidgets.kTextView)
-        .withPosition(4, 4)
-        .withSize(2, 1);
+  turretPosEntry.setDouble(turretMotor.getPosition().getValueAsDouble() * 360.0 / Shooter.TURRET_GEAR_RATIO);
+  turretVeloEntry.setDouble(turretMotor.getVelocity().getValueAsDouble() / Shooter.TURRET_GEAR_RATIO);
+  turretTempEntry.setDouble(turretMotor.getDeviceTemp().getValueAsDouble());
 
     // ── CAN Status page ───────────────────────────────────────────────────────
     boolean shooterOK = flywheelVelocitySignal.getStatus().isOK();
     boolean turretOK = turretPositionSignal.getStatus().isOK();
     boolean hoodOK = hoodPositionSignal.getStatus().isOK();
 
-    var canTab = Shuffleboard.getTab("CAN Status");
-    canTab
-        .add("Shtr CAN OK", shooterOK && turretOK && hoodOK)
-        .withWidget(BuiltInWidgets.kBooleanBox)
-        .withPosition(0, 4)
-        .withSize(2, 1);
-    canTab
-        .add("FlyWh CAN OK", shooterOK)
-        .withWidget(BuiltInWidgets.kBooleanBox)
-        .withPosition(2, 4)
-        .withSize(1, 1);
-    canTab
-        .add("Trrt CAN OK", turretOK)
-        .withWidget(BuiltInWidgets.kBooleanBox)
-        .withPosition(3, 4)
-        .withSize(1, 1);
-    canTab
-        .add("Hood CAN OK", hoodOK)
-        .withWidget(BuiltInWidgets.kBooleanBox)
-        .withPosition(4, 4)
-        .withSize(1, 1);
+  // Update CAN status entries
+  shtrCanOkEntry.setBoolean(shooterOK && turretOK && hoodOK);
+  flywhCanOkEntry.setBoolean(shooterOK);
+  trrtCanOkEntry.setBoolean(turretOK);
+  hoodCanOkEntry.setBoolean(hoodOK);
   }
 
   private void setupTables() {

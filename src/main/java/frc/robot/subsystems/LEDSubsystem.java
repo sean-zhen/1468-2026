@@ -11,8 +11,10 @@ import com.ctre.phoenix6.hardware.CANdle;
 import com.ctre.phoenix6.signals.RGBWColor;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
+import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.subsystems.drive.Drive;
 
@@ -40,6 +42,11 @@ public class LEDSubsystem extends SubsystemBase {
   private Drive m_drive;
   private VisionSubsystem m_vision;
 
+  // Shuffleboard entries
+  private final ShuffleboardTab canTab = Shuffleboard.getTab("CAN Status");
+  private final GenericEntry ledsActiveEntry;
+  private final GenericEntry candLeCanOkEntry;
+
   // Pre-defined animations for states
   private final SingleFadeAnimation m_fadeOrange =
       new SingleFadeAnimation(START_IDX, LED_COUNT)
@@ -65,6 +72,18 @@ public class LEDSubsystem extends SubsystemBase {
     this.m_shooter = shooter;
     this.m_drive = drive;
     this.m_vision = vision;
+  ledsActiveEntry =
+    canTab.add("LEDs Active", m_ledEnabled)
+      .withWidget(BuiltInWidgets.kBooleanBox)
+      .withPosition(5, 5)
+      .withSize(1, 1)
+      .getEntry();
+  candLeCanOkEntry =
+    canTab.add("CANdle CAN OK", isCanDleConnected())
+      .withWidget(BuiltInWidgets.kBooleanBox)
+      .withPosition(6, 5)
+      .withSize(1, 1)
+      .getEntry();
   }
 
   public void toggleLeds() {
@@ -86,16 +105,9 @@ public class LEDSubsystem extends SubsystemBase {
       handleEnabledLogic();
     }
 
-    Shuffleboard.getTab("CAN Status")
-        .add("LEDs Active", m_ledEnabled)
-        .withWidget(BuiltInWidgets.kBooleanBox)
-        .withPosition(5, 5)
-        .withSize(1, 1);
-    Shuffleboard.getTab("CAN Status")
-        .add("CANdle CAN OK", isCanDleConnected())
-        .withWidget(BuiltInWidgets.kBooleanBox)
-        .withPosition(6, 5)
-        .withSize(1, 1);
+    // Update persistent entries
+    ledsActiveEntry.setBoolean(m_ledEnabled);
+    candLeCanOkEntry.setBoolean(isCanDleConnected());
   }
 
   private void handleEnabledLogic() {
@@ -128,8 +140,9 @@ public class LEDSubsystem extends SubsystemBase {
 
       if (m_vision.getTagCount() >= 3) {
         m_candle.setControl(m_strobeGold);
+      } else {
+        m_candle.setControl(m_strobeWhite);
       }
-      m_candle.setControl(m_strobeWhite);
 
     } else {
       // RGB Mix: Red(Fly), Green(Hood), Blue(Turret)

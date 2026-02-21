@@ -11,8 +11,10 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
+import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.Climber;
 
@@ -25,6 +27,14 @@ public class ClimberSubsystem extends SubsystemBase {
   private final VelocityVoltage velocityRequest = new VelocityVoltage(0);
 
   private final com.ctre.phoenix6.StatusSignal<Angle> climberPositionSignal;
+  // Shuffleboard entries
+  private final ShuffleboardTab climbTab = Shuffleboard.getTab("Climber");
+  private final GenericEntry climberPosEntry;
+  private final GenericEntry climberSpeedEntry;
+  private final GenericEntry climberTempEntry;
+  private final GenericEntry climberTopEntry;
+  private final GenericEntry climberBotEntry;
+  private final GenericEntry climberCanOkEntry;
 
   public ClimberSubsystem() {
     // Configure left motor
@@ -45,10 +55,49 @@ public class ClimberSubsystem extends SubsystemBase {
 
     climberPositionSignal = leftClimberMotor.getPosition();
 
-    /* Configure gear ratio */
+  /* Configure gear ratio */
     FeedbackConfigs fdb = config.Feedback;
     fdb.SensorToMechanismRatio = 1.0; // 1 rotor rotations per mechanism rotation
     setPosition(HOME_POSITION_ROT); // Start at Zero position }
+  // Persistent Shuffleboard widgets
+  climberPosEntry =
+    climbTab.add("Climber Pos (deg)", getEncoderRotations() * 360.0)
+      .withWidget(BuiltInWidgets.kTextView)
+      .withPosition(0, 0)
+      .withSize(2, 1)
+      .getEntry();
+  climberSpeedEntry =
+    climbTab.add("Climber Speed", leftClimberMotor.get())
+      .withWidget(BuiltInWidgets.kTextView)
+      .withPosition(2, 0)
+      .withSize(2, 1)
+      .getEntry();
+  climberTempEntry =
+    climbTab.add("Climber Temp", getLeftClimberTemp())
+      .withWidget(BuiltInWidgets.kTextView)
+      .withPosition(4, 0)
+      .withSize(2, 1)
+      .getEntry();
+  climberTopEntry =
+    climbTab.add("Climber Is At Top", isAtTop())
+      .withWidget(BuiltInWidgets.kBooleanBox)
+      .withPosition(0, 1)
+      .withSize(2, 1)
+      .getEntry();
+  climberBotEntry =
+    climbTab.add("Climber Is At Bot", isAtBot())
+      .withWidget(BuiltInWidgets.kBooleanBox)
+      .withPosition(2, 1)
+      .withSize(2, 1)
+      .getEntry();
+
+  var canTab = Shuffleboard.getTab("CAN Status");
+  climberCanOkEntry =
+    canTab.add("Clmbr CAN OK", climberPositionSignal.getStatus().isOK())
+      .withWidget(BuiltInWidgets.kBooleanBox)
+      .withPosition(4, 5)
+      .withSize(1, 1)
+      .getEntry();
   }
 
   @Override
@@ -118,42 +167,15 @@ public class ClimberSubsystem extends SubsystemBase {
   }
 
   public void log() {
-    // ── Climber subsystem page ────────────────────────────────────────────────
-    var climbTab = Shuffleboard.getTab("Climber");
+  // Update persistent entries
+  climberPosEntry.setDouble(getEncoderRotations() * 360.0);
+  climberSpeedEntry.setDouble(leftClimberMotor.get());
+  climberTempEntry.setDouble(getLeftClimberTemp());
+  climberTopEntry.setBoolean(isAtTop());
+  climberBotEntry.setBoolean(isAtBot());
 
-    climbTab
-        .add("Climber Pos (deg)", getEncoderRotations() * 360.0)
-        .withWidget(BuiltInWidgets.kTextView)
-        .withPosition(0, 0)
-        .withSize(2, 1);
-    climbTab
-        .add("Climber Speed", leftClimberMotor.get())
-        .withWidget(BuiltInWidgets.kTextView)
-        .withPosition(2, 0)
-        .withSize(2, 1);
-    climbTab
-        .add("Climber Temp", getLeftClimberTemp())
-        .withWidget(BuiltInWidgets.kTextView)
-        .withPosition(4, 0)
-        .withSize(2, 1);
-    climbTab
-        .add("Climber Is At Top", isAtTop())
-        .withWidget(BuiltInWidgets.kBooleanBox)
-        .withPosition(0, 1)
-        .withSize(2, 1);
-    climbTab
-        .add("Climber Is At Bot", isAtBot())
-        .withWidget(BuiltInWidgets.kBooleanBox)
-        .withPosition(2, 1)
-        .withSize(2, 1);
-
-    // ── CAN Status page ───────────────────────────────────────────────────────
-    boolean climberOK = climberPositionSignal.getStatus().isOK();
-    Shuffleboard.getTab("CAN Status")
-        .add("Clmbr CAN OK", climberOK)
-        .withWidget(BuiltInWidgets.kBooleanBox)
-        .withPosition(4, 5)
-        .withSize(1, 1);
+  boolean climberOK = climberPositionSignal.getStatus().isOK();
+  climberCanOkEntry.setBoolean(climberOK);
   }
 
   public double getLeftClimberTemp() {

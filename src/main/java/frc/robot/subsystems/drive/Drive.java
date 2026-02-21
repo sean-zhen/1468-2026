@@ -37,7 +37,8 @@ import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
+import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
@@ -343,9 +344,18 @@ public class Drive extends SubsystemBase {
     poseEstimator.addVisionMeasurement(
         visionRobotPoseMeters, timestampSeconds, visionMeasurementStdDevs);
 
-    SmartDashboard.putNumber("C1 X", visionRobotPoseMeters.getX());
-    SmartDashboard.putNumber("C1 Y", visionRobotPoseMeters.getY());
-    SmartDashboard.putNumber("C1 rot", visionRobotPoseMeters.getRotation().getDegrees());
+    Shuffleboard.getTab("Vision")
+        .add("C1 X", visionRobotPoseMeters.getX())
+        .withPosition(6, 0)
+        .withSize(1, 1);
+    Shuffleboard.getTab("Vision")
+        .add("C1 Y", visionRobotPoseMeters.getY())
+        .withPosition(7, 0)
+        .withSize(1, 1);
+    Shuffleboard.getTab("Vision")
+        .add("C1 rot", visionRobotPoseMeters.getRotation().getDegrees())
+        .withPosition(8, 0)
+        .withSize(1, 1);
   }
 
   /** Returns the maximum linear speed in meters per sec. */
@@ -397,15 +407,30 @@ public class Drive extends SubsystemBase {
   }
 
   public void logCanStatus() {
-    // Assuming modules are stored in an array: modules[0] = FL, [1] = FR, [2] = BL, [3] = BR
+    // modules[0]=FL, [1]=FR, [2]=BL, [3]=BR
     String[] moduleNames = {"FL", "FR", "BL", "BR"};
+    // Grid layout on the CAN Status tab: row 3, cols 0-3 per module (3 booleans per module)
+    int[] colOffsets = {0, 3, 6, 9};
 
     for (int i = 0; i < modules.length; i++) {
-      var data = modules[i].getInputs(); // Fetch the logged IO data
+      var data = modules[i].getInputs();
+      int col = colOffsets[i];
 
-      SmartDashboard.putBoolean(moduleNames[i] + " Drive CAN", data.driveConnected);
-      SmartDashboard.putBoolean(moduleNames[i] + " Turn CAN", data.turnConnected);
-      SmartDashboard.putBoolean(moduleNames[i] + " Encoder CAN", data.encoderConnected);
+      Shuffleboard.getTab("CAN Status")
+          .add(moduleNames[i] + " Drive CAN", data.driveConnected)
+          .withWidget(BuiltInWidgets.kBooleanBox)
+          .withPosition(col, 3)
+          .withSize(1, 1);
+      Shuffleboard.getTab("CAN Status")
+          .add(moduleNames[i] + " Turn CAN", data.turnConnected)
+          .withWidget(BuiltInWidgets.kBooleanBox)
+          .withPosition(col + 1, 3)
+          .withSize(1, 1);
+      Shuffleboard.getTab("CAN Status")
+          .add(moduleNames[i] + " Encoder CAN", data.encoderConnected)
+          .withWidget(BuiltInWidgets.kBooleanBox)
+          .withPosition(col + 2, 3)
+          .withSize(1, 1);
     }
   }
 

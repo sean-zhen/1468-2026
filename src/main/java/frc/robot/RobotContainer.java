@@ -16,7 +16,9 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.XboxController;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
+import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
+import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
@@ -43,6 +45,7 @@ import frc.robot.subsystems.VisionSubsystem;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.GyroIOPigeon2;
 import frc.robot.subsystems.drive.ModuleIOTalonFX;
+import frc.robot.util.Elastic;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
 /**
@@ -270,6 +273,9 @@ public class RobotContainer {
   }
 
   public void updateGlobalHealth() {
+    // ── Grab the CAN Status Shuffleboard tab ──────────────────────────────────
+    ShuffleboardTab canTab = Shuffleboard.getTab("CAN Status");
+
     // 1. Get RoboRio CAN Health
     boolean shooterHealthy = shooter.isShooterConnected();
     boolean climberHealthy = climber.isClimberConnected();
@@ -290,25 +296,81 @@ public class RobotContainer {
             && climberHealthy
             && ledHealthy;
 
-    // Use a 2 "Master" widgets for the Main Dashboard
-    SmartDashboard.putBoolean("RoboRio CAN STATUS", robotCanOk);
-    SmartDashboard.putBoolean("CanCoder CAN STATUS", canCoderHealthy);
+    // Master CAN indicators on the CAN Status tab
+    canTab
+        .add("RoboRio CAN STATUS", robotCanOk)
+        .withWidget(BuiltInWidgets.kBooleanBox)
+        .withPosition(0, 0)
+        .withSize(2, 1);
+    canTab
+        .add("CanCoder CAN STATUS", canCoderHealthy)
+        .withWidget(BuiltInWidgets.kBooleanBox)
+        .withPosition(2, 0)
+        .withSize(2, 1);
 
-    // 1. Get RIO Bus Utilization
+    // 4. Get RIO Bus Utilization
     var rioStatus = CANBus.roboRIO().getStatus();
     double rioUsage = rioStatus.BusUtilization * 100.0; // Convert 0.0-1.0 to %
 
-    // 2. Get CANivore/CANcoder Bus Utilization
+    // 5. Get CANivore/CANcoder Bus Utilization
     // Replace "canivore1" with the name assigned in Phoenix Tuner X
     var canivoreStatus = new CANBus("1468_CANivore").getStatus();
     double canivoreUsage = canivoreStatus.BusUtilization * 100.0;
 
-    // 3. Display on Dashboard
-    SmartDashboard.putNumber("CAN RIO Usage %", rioUsage);
-    SmartDashboard.putNumber("CAN CANivore Usage %", canivoreUsage);
+    // 6. Display bus utilization on the CAN Status tab
+    canTab
+        .add("CAN RIO Usage %", rioUsage)
+        .withWidget(BuiltInWidgets.kNumberBar)
+        .withPosition(0, 1)
+        .withSize(3, 1);
+    canTab
+        .add("CAN CANivore Usage %", canivoreUsage)
+        .withWidget(BuiltInWidgets.kNumberBar)
+        .withPosition(3, 1)
+        .withSize(3, 1);
 
-    // Warning: FRC best practice is to keep utilization below 90%
-    SmartDashboard.putBoolean("RIO CAN High Load Warning", rioUsage > 90);
-    SmartDashboard.putBoolean("CANivore High Load Warning", canivoreUsage > 90);
+    // 7. High-load warnings (>90% is FRC best practice threshold)
+    canTab
+        .add("RIO CAN High Load Warning", rioUsage > 90)
+        .withWidget(BuiltInWidgets.kBooleanBox)
+        .withPosition(0, 2)
+        .withSize(2, 1);
+    canTab
+        .add("CANivore High Load Warning", canivoreUsage > 90)
+        .withWidget(BuiltInWidgets.kBooleanBox)
+        .withPosition(2, 2)
+        .withSize(2, 1);
+
+    // 8. Send an Elastic notification if CAN goes unhealthy
+    if (!robotCanOk) {
+      Elastic.sendNotification(
+          new Elastic.Notification(
+              Elastic.NotificationLevel.ERROR,
+              "CAN BUS FAULT",
+              "One or more RoboRIO CAN devices are disconnected! Check shooter, harvester, indexer,"
+                  + " kicker, climber, or LED."));
+    }
+    if (!canCoderHealthy) {
+      Elastic.sendNotification(
+          new Elastic.Notification(
+              Elastic.NotificationLevel.ERROR,
+              "Swerve CANcoder Fault",
+              "One or more swerve CANcoders are disconnected!"));
+    }
+    if (rioUsage > 90) {
+      Elastic.sendNotification(
+          new Elastic.Notification(
+              Elastic.NotificationLevel.WARNING,
+              "RIO CAN High Load",
+              String.format("RIO CAN bus at %.1f%% utilization — keep below 90%%.", rioUsage)));
+    }
+    if (canivoreUsage > 90) {
+      Elastic.sendNotification(
+          new Elastic.Notification(
+              Elastic.NotificationLevel.WARNING,
+              "CANivore High Load",
+              String.format(
+                  "CANivore bus at %.1f%% utilization — keep below 90%%.", canivoreUsage)));
+    }
   }
 }

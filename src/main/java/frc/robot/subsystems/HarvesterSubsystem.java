@@ -16,7 +16,8 @@ import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
+import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.Harvester;
 
@@ -145,25 +146,59 @@ public class HarvesterSubsystem extends SubsystemBase {
   }
 
   public void log() {
+    // ── Harvester subsystem page ──────────────────────────────────────────────
+    var harvTab = Shuffleboard.getTab("Harvester");
+
     // Deploy motor logging
-    SmartDashboard.putNumber(
-        "Harv Deploy Pos (deg)",
-        deployMotor.getPosition().getValueAsDouble() / DEPLOY_DEGREES_TO_ROTATIONS);
-    SmartDashboard.putNumber(
-        "Harv Deploy Velo (RPS, output)",
-        deployMotor.getVelocity().getValueAsDouble() / Harvester.DEPLOY_GEAR_RATIO);
-    SmartDashboard.putNumber("Harv Deploy Temp", deployMotor.getDeviceTemp().getValueAsDouble());
+    harvTab
+        .add(
+            "Harv Deploy Pos (deg)",
+            deployMotor.getPosition().getValueAsDouble() / DEPLOY_DEGREES_TO_ROTATIONS)
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(0, 0)
+        .withSize(2, 1);
+    harvTab
+        .add(
+            "Harv Deploy Velo (RPS, output)",
+            deployMotor.getVelocity().getValueAsDouble() / Harvester.DEPLOY_GEAR_RATIO)
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(2, 0)
+        .withSize(2, 1);
+    harvTab
+        .add("Harv Deploy Temp", deployMotor.getDeviceTemp().getValueAsDouble())
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(4, 0)
+        .withSize(2, 1);
 
     // Spin motor logging
-    SmartDashboard.putNumber(
-        "Harv Spin Velo (RPS, output)",
-        spinMotor.getVelocity().getValueAsDouble() / Harvester.SPIN_GEAR_RATIO);
-    SmartDashboard.putNumber("Harv Spin Temp", spinMotor.getDeviceTemp().getValueAsDouble());
+    harvTab
+        .add(
+            "Harv Spin Velo (RPS, output)",
+            spinMotor.getVelocity().getValueAsDouble() / Harvester.SPIN_GEAR_RATIO)
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(0, 1)
+        .withSize(2, 1);
+    harvTab
+        .add("Harv Spin Temp", spinMotor.getDeviceTemp().getValueAsDouble())
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(2, 1)
+        .withSize(2, 1);
 
+    // ── CAN Status page ───────────────────────────────────────────────────────
     boolean deployOK = deployPositionSignal.getStatus().isOK();
-    SmartDashboard.putBoolean("Deply CAN OK", deployOK);
     boolean spinOK = spinVelocitySignal.getStatus().isOK();
-    SmartDashboard.putBoolean("Spin CAN OK", spinOK);
+
+    var canTab = Shuffleboard.getTab("CAN Status");
+    canTab
+        .add("Deply CAN OK", deployOK)
+        .withWidget(BuiltInWidgets.kBooleanBox)
+        .withPosition(0, 5)
+        .withSize(1, 1);
+    canTab
+        .add("Spin CAN OK", spinOK)
+        .withWidget(BuiltInWidgets.kBooleanBox)
+        .withPosition(1, 5)
+        .withSize(1, 1);
   }
 
   public boolean isHarvesterConnected() {

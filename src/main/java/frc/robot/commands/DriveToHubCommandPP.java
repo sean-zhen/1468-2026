@@ -11,7 +11,8 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
+import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.drive.Drive;
 import java.util.ArrayList;
@@ -87,7 +88,11 @@ public class DriveToHubCommandPP extends Command {
   // Called once the command ends or is interrupted.
   @Override
   public void end(boolean interrupted) {
-    SmartDashboard.putString("DriveToProcessor status", "NOT ACTIVE");
+    Shuffleboard.getTab("Drive")
+        .add("DriveToProcessor status", "NOT ACTIVE")
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(0, 0)
+        .withSize(3, 1);
     m_drive.stop();
   }
 

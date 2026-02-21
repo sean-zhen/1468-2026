@@ -11,7 +11,8 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.units.measure.Angle;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
+import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.Climber;
 
@@ -117,14 +118,42 @@ public class ClimberSubsystem extends SubsystemBase {
   }
 
   public void log() {
-    SmartDashboard.putNumber("Climber Pos (Rot)", getEncoderRotations());
-    SmartDashboard.putNumber("Climber Speed", leftClimberMotor.get());
-    SmartDashboard.putNumber("Climber Temp", getLeftClimberTemp());
-    SmartDashboard.putBoolean("Climber Is At Top", isAtTop());
-    SmartDashboard.putBoolean("Climber Is At Bot", isAtBot());
+    // ── Climber subsystem page ────────────────────────────────────────────────
+    var climbTab = Shuffleboard.getTab("Climber");
 
+    climbTab
+        .add("Climber Pos (Rot)", getEncoderRotations())
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(0, 0)
+        .withSize(2, 1);
+    climbTab
+        .add("Climber Speed", leftClimberMotor.get())
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(2, 0)
+        .withSize(2, 1);
+    climbTab
+        .add("Climber Temp", getLeftClimberTemp())
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(4, 0)
+        .withSize(2, 1);
+    climbTab
+        .add("Climber Is At Top", isAtTop())
+        .withWidget(BuiltInWidgets.kBooleanBox)
+        .withPosition(0, 1)
+        .withSize(2, 1);
+    climbTab
+        .add("Climber Is At Bot", isAtBot())
+        .withWidget(BuiltInWidgets.kBooleanBox)
+        .withPosition(2, 1)
+        .withSize(2, 1);
+
+    // ── CAN Status page ───────────────────────────────────────────────────────
     boolean climberOK = climberPositionSignal.getStatus().isOK();
-    SmartDashboard.putBoolean("Clmbr CAN OK", climberOK);
+    Shuffleboard.getTab("CAN Status")
+        .add("Clmbr CAN OK", climberOK)
+        .withWidget(BuiltInWidgets.kBooleanBox)
+        .withPosition(4, 5)
+        .withSize(1, 1);
   }
 
   public double getLeftClimberTemp() {

@@ -14,7 +14,8 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
+import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.Shooter;
 import java.util.List;
@@ -343,50 +344,126 @@ public class ShooterSubsystem extends SubsystemBase {
   }
 
   public void log() {
+    // ── Shooter subsystem page ────────────────────────────────────────────────
+    var shooterTab = Shuffleboard.getTab("Shooter");
 
-    // Display green/red boolean indicators for drive team
-    SmartDashboard.putBoolean("Shtr Is At Spd", isFLywheelAtVelocity());
-    SmartDashboard.putBoolean("Trrt Is At Pos", isTurretAtPosition());
-    SmartDashboard.putBoolean("Hood Is At Pos", isHoodAtPosition());
+    // Status indicators
+    shooterTab
+        .add("Shtr Is At Spd", isFLywheelAtVelocity())
+        .withWidget(BuiltInWidgets.kBooleanBox)
+        .withPosition(0, 0)
+        .withSize(2, 1);
+    shooterTab
+        .add("Trrt Is At Pos", isTurretAtPosition())
+        .withWidget(BuiltInWidgets.kBooleanBox)
+        .withPosition(2, 0)
+        .withSize(2, 1);
+    shooterTab
+        .add("Hood Is At Pos", isHoodAtPosition())
+        .withWidget(BuiltInWidgets.kBooleanBox)
+        .withPosition(4, 0)
+        .withSize(2, 1);
 
-    // Check CAN health for the dashboard
-    // Since these signals are refreshed in the Command via waitForAll,
-    // getStatus() returns the StatusCode enum
+    // Flywheel
+    shooterTab
+        .add("Shtr Lead Velo (RPS)", flywheelLead.getVelocity().getValueAsDouble())
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(0, 1)
+        .withSize(2, 1);
+    shooterTab
+        .add("Shtr Flwr Velo (RPS)", flywheelFollower.getVelocity().getValueAsDouble())
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(2, 1)
+        .withSize(2, 1);
+    shooterTab
+        .add("Shtr Lead Cmd", flywheelLead.get())
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(4, 1)
+        .withSize(2, 1);
+    shooterTab
+        .add("Shtr Flwr Cmd", flywheelFollower.get())
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(6, 1)
+        .withSize(2, 1);
+    shooterTab
+        .add("Shtr Lead Temp", flywheelLead.getDeviceTemp().getValueAsDouble())
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(0, 2)
+        .withSize(2, 1);
+    shooterTab
+        .add("Shtr Flwr Temp", flywheelFollower.getDeviceTemp().getValueAsDouble())
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(2, 2)
+        .withSize(2, 1);
+
+    // Hood
+    shooterTab
+        .add(
+            "Shtr Hood Pos (rot, output)",
+            hoodMotor.getPosition().getValueAsDouble() / Shooter.HOOD_GEAR_RATIO)
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(0, 3)
+        .withSize(2, 1);
+    shooterTab
+        .add(
+            "Shtr Hood Velo (RPS, output)",
+            hoodMotor.getVelocity().getValueAsDouble() / Shooter.HOOD_GEAR_RATIO)
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(2, 3)
+        .withSize(2, 1);
+    shooterTab
+        .add("Hood Temp", hoodMotor.getDeviceTemp().getValueAsDouble())
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(4, 3)
+        .withSize(2, 1);
+
+    // Turret
+    shooterTab
+        .add(
+            "Shtr Turret Pos (rot, output)",
+            turretMotor.getPosition().getValueAsDouble() / Shooter.TURRET_GEAR_RATIO)
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(0, 4)
+        .withSize(2, 1);
+    shooterTab
+        .add(
+            "Shtr Turret Velo (RPS, output)",
+            turretMotor.getVelocity().getValueAsDouble() / Shooter.TURRET_GEAR_RATIO)
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(2, 4)
+        .withSize(2, 1);
+    shooterTab
+        .add("Turret Temp", turretMotor.getDeviceTemp().getValueAsDouble())
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(4, 4)
+        .withSize(2, 1);
+
+    // ── CAN Status page ───────────────────────────────────────────────────────
     boolean shooterOK = flywheelVelocitySignal.getStatus().isOK();
     boolean turretOK = turretPositionSignal.getStatus().isOK();
     boolean hoodOK = hoodPositionSignal.getStatus().isOK();
 
-    SmartDashboard.putBoolean("Shtr CAN OK", shooterOK && turretOK && hoodOK);
-    SmartDashboard.putBoolean("FlyWh CAN OK", shooterOK);
-    SmartDashboard.putBoolean("Trrt CAN OK", turretOK);
-    SmartDashboard.putBoolean("Hood CAN OK", hoodOK);
-
-    // Flywheel
-    SmartDashboard.putNumber("Shtr Lead Velo (RPS)", flywheelLead.getVelocity().getValueAsDouble());
-    SmartDashboard.putNumber(
-        "Shtr Flwr Velo (RPS)", flywheelFollower.getVelocity().getValueAsDouble());
-    SmartDashboard.putNumber("Shtr Lead Cmd", flywheelLead.get());
-    SmartDashboard.putNumber("Shtr Flwr Cmd", flywheelFollower.get());
-    SmartDashboard.putNumber("Shtr Lead Temp", flywheelLead.getDeviceTemp().getValueAsDouble());
-    SmartDashboard.putNumber("Shtr Flwr Temp", flywheelFollower.getDeviceTemp().getValueAsDouble());
-
-    // Hood
-    SmartDashboard.putNumber(
-        "Shtr Hood Pos (rot, output)",
-        hoodMotor.getPosition().getValueAsDouble() / Shooter.HOOD_GEAR_RATIO);
-    SmartDashboard.putNumber(
-        "Shtr Hood Velo (RPS, output)",
-        hoodMotor.getVelocity().getValueAsDouble() / Shooter.HOOD_GEAR_RATIO);
-    SmartDashboard.putNumber("Hood Temp", hoodMotor.getDeviceTemp().getValueAsDouble());
-
-    // Turret
-    SmartDashboard.putNumber(
-        "Shtr Turret Pos (rot, output)",
-        turretMotor.getPosition().getValueAsDouble() / Shooter.TURRET_GEAR_RATIO);
-    SmartDashboard.putNumber(
-        "Shtr Turret Velo (RPS, output)",
-        turretMotor.getVelocity().getValueAsDouble() / Shooter.TURRET_GEAR_RATIO);
-    SmartDashboard.putNumber("Turret Temp", turretMotor.getDeviceTemp().getValueAsDouble());
+    var canTab = Shuffleboard.getTab("CAN Status");
+    canTab
+        .add("Shtr CAN OK", shooterOK && turretOK && hoodOK)
+        .withWidget(BuiltInWidgets.kBooleanBox)
+        .withPosition(0, 4)
+        .withSize(2, 1);
+    canTab
+        .add("FlyWh CAN OK", shooterOK)
+        .withWidget(BuiltInWidgets.kBooleanBox)
+        .withPosition(2, 4)
+        .withSize(1, 1);
+    canTab
+        .add("Trrt CAN OK", turretOK)
+        .withWidget(BuiltInWidgets.kBooleanBox)
+        .withPosition(3, 4)
+        .withSize(1, 1);
+    canTab
+        .add("Hood CAN OK", hoodOK)
+        .withWidget(BuiltInWidgets.kBooleanBox)
+        .withPosition(4, 4)
+        .withSize(1, 1);
   }
 
   private void setupTables() {

@@ -7,7 +7,8 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.units.measure.Angle;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
+import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.Indexer;
 
@@ -60,14 +61,36 @@ public class IndexerSubsystem extends SubsystemBase {
   }
 
   public void log() {
-    SmartDashboard.putNumber(
-        "Indxr Pos (rotations, output)",
-        motor.getPosition().getValueAsDouble() / Indexer.GEAR_RATIO);
-    SmartDashboard.putNumber(
-        "Indxr Velo (RPS, output)", motor.getVelocity().getValueAsDouble() / Indexer.GEAR_RATIO);
-    SmartDashboard.putNumber("Indxr Temp", motor.getDeviceTemp().getValueAsDouble());
+    // ── Indexer subsystem page ────────────────────────────────────────────────
+    var idxTab = Shuffleboard.getTab("Indexer");
+
+    idxTab
+        .add(
+            "Indxr Pos (rotations, output)",
+            motor.getPosition().getValueAsDouble() / Indexer.GEAR_RATIO)
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(0, 0)
+        .withSize(2, 1);
+    idxTab
+        .add(
+            "Indxr Velo (RPS, output)",
+            motor.getVelocity().getValueAsDouble() / Indexer.GEAR_RATIO)
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(2, 0)
+        .withSize(2, 1);
+    idxTab
+        .add("Indxr Temp", motor.getDeviceTemp().getValueAsDouble())
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(4, 0)
+        .withSize(2, 1);
+
+    // ── CAN Status page ───────────────────────────────────────────────────────
     boolean indexerOK = indexerVeloSignal.getStatus().isOK();
-    SmartDashboard.putBoolean("Indxr CAN OK", indexerOK);
+    Shuffleboard.getTab("CAN Status")
+        .add("Indxr CAN OK", indexerOK)
+        .withWidget(BuiltInWidgets.kBooleanBox)
+        .withPosition(2, 5)
+        .withSize(1, 1);
   }
 
   public boolean isIndexerConnected() {

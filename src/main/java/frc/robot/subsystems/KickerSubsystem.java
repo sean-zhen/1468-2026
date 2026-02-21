@@ -6,7 +6,8 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.units.measure.Angle;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
+import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.Kicker;
 
@@ -65,13 +66,29 @@ public class KickerSubsystem extends SubsystemBase {
   }
 
   public void log() {
-    SmartDashboard.putNumber(
-        "Kicker Velo (RPS)",
-        kickerMotor.getVelocity().getValueAsDouble() / Kicker.KICKER_GEAR_RATIO);
-    SmartDashboard.putNumber("Kicker Temp", kickerMotor.getDeviceTemp().getValueAsDouble());
+    // ── Kicker subsystem page ─────────────────────────────────────────────────
+    var kickTab = Shuffleboard.getTab("Kicker");
 
+    kickTab
+        .add(
+            "Kicker Velo (RPS)",
+            kickerMotor.getVelocity().getValueAsDouble() / Kicker.KICKER_GEAR_RATIO)
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(0, 0)
+        .withSize(2, 1);
+    kickTab
+        .add("Kicker Temp", kickerMotor.getDeviceTemp().getValueAsDouble())
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(2, 0)
+        .withSize(2, 1);
+
+    // ── CAN Status page ───────────────────────────────────────────────────────
     boolean kickerOK = kickerVeloSignal.getStatus().isOK();
-    SmartDashboard.putBoolean("Kicker CAN OK", kickerOK);
+    Shuffleboard.getTab("CAN Status")
+        .add("Kicker CAN OK", kickerOK)
+        .withWidget(BuiltInWidgets.kBooleanBox)
+        .withPosition(3, 5)
+        .withSize(1, 1);
   }
 
   public boolean isKickerConnected() {

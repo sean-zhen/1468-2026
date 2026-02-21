@@ -5,8 +5,9 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
+import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants.Shooter;
 import frc.robot.subsystems.ShooterSubsystem;
@@ -29,8 +30,12 @@ public class PrepareShooterCmd extends Command {
     this.drive = drive;
     addRequirements(shooter);
 
-    // Publish Field2d to NetworkTables (Elastic will see this)
-    SmartDashboard.putData("Field", field);
+    // Publish Field2d to the Shooter Elastic tab
+    Shuffleboard.getTab("Shooter")
+        .add("Field", field)
+        .withWidget(BuiltInWidgets.kField)
+        .withPosition(0, 6)
+        .withSize(6, 4);
 
     allSignals.addAll(drive.getSignals());
     allSignals.addAll(shooter.getSignals());

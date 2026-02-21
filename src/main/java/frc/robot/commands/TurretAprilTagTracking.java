@@ -10,7 +10,8 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
+import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants.Shooter;
 import frc.robot.subsystems.ShooterSubsystem;
@@ -60,8 +61,17 @@ public class TurretAprilTagTracking extends Command {
 
     var alliance = DriverStation.getAlliance();
     String allianceColor = alliance.isPresent() ? alliance.get().toString() : "UNKNOWN";
-    SmartDashboard.putString("TurretTracking/Alliance", allianceColor);
-    SmartDashboard.putString("TurretTracking/Status", "TRACKING");
+    var shooterTab = Shuffleboard.getTab("Shooter");
+    shooterTab
+        .add("TurretTracking/Alliance", allianceColor)
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(0, 5)
+        .withSize(2, 1);
+    shooterTab
+        .add("TurretTracking/Status", "TRACKING")
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(2, 5)
+        .withSize(2, 1);
   }
 
   @Override
@@ -69,7 +79,11 @@ public class TurretAprilTagTracking extends Command {
     // Get alliance and determine target tags
     var alliance = DriverStation.getAlliance();
     if (alliance.isEmpty()) {
-      SmartDashboard.putString("TurretTracking/Status", "NO ALLIANCE DATA");
+      Shuffleboard.getTab("Shooter")
+          .add("TurretTracking/Status", "NO ALLIANCE DATA")
+          .withWidget(BuiltInWidgets.kTextView)
+          .withPosition(2, 5)
+          .withSize(2, 1);
       shooter.setTurretVelocity(0.0);
       return;
     }
@@ -100,7 +114,11 @@ public class TurretAprilTagTracking extends Command {
     }
 
     if (closestTagPosition.isEmpty()) {
-      SmartDashboard.putString("TurretTracking/Status", "NO TAGS FOUND");
+      Shuffleboard.getTab("Shooter")
+          .add("TurretTracking/Status", "NO TAGS FOUND")
+          .withWidget(BuiltInWidgets.kTextView)
+          .withPosition(2, 5)
+          .withSize(2, 1);
       shooter.setTurretVelocity(0.0);
       return;
     }
@@ -127,21 +145,75 @@ public class TurretAprilTagTracking extends Command {
     // Apply velocity to turret
     shooter.setTurretVelocity(turretVelocity);
 
-    // Logging
-    SmartDashboard.putString("TurretTracking/Status", "TRACKING");
-    SmartDashboard.putNumber("TurretTracking/TargetTagID", closestTagId);
-    SmartDashboard.putNumber("TurretTracking/DistanceToTag", closestDistance);
-    SmartDashboard.putNumber("TurretTracking/RobotX", robotPosition.getX());
-    SmartDashboard.putNumber("TurretTracking/RobotY", robotPosition.getY());
-    SmartDashboard.putNumber("TurretTracking/RobotHeading", robotHeading.getDegrees());
-    SmartDashboard.putNumber("TurretTracking/TagX", closestTagPosition.get().getX());
-    SmartDashboard.putNumber("TurretTracking/TagY", closestTagPosition.get().getY());
-    SmartDashboard.putNumber("TurretTracking/AngleToTag", angleToTag.getDegrees());
-    SmartDashboard.putNumber("TurretTracking/TurretTargetAngle", turretTargetAngle.getDegrees());
-    SmartDashboard.putNumber(
-        "TurretTracking/TurretCurrentAngle", Units.radiansToDegrees(currentTurretAngle));
-    SmartDashboard.putNumber("TurretTracking/TurretVelocity", turretVelocity);
-    SmartDashboard.putBoolean("TurretTracking/AtTarget", turretController.atSetpoint());
+    // ── Logging on the Shooter tab ────────────────────────────────────────────
+    var shooterTab = Shuffleboard.getTab("Shooter");
+    shooterTab
+        .add("TurretTracking/Status", "TRACKING")
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(2, 5)
+        .withSize(2, 1);
+    shooterTab
+        .add("TurretTracking/TargetTagID", closestTagId)
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(4, 5)
+        .withSize(2, 1);
+    shooterTab
+        .add("TurretTracking/DistanceToTag", closestDistance)
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(6, 5)
+        .withSize(2, 1);
+    shooterTab
+        .add("TurretTracking/RobotX", robotPosition.getX())
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(0, 6)
+        .withSize(2, 1);
+    shooterTab
+        .add("TurretTracking/RobotY", robotPosition.getY())
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(2, 6)
+        .withSize(2, 1);
+    shooterTab
+        .add("TurretTracking/RobotHeading", robotHeading.getDegrees())
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(4, 6)
+        .withSize(2, 1);
+    shooterTab
+        .add("TurretTracking/TagX", closestTagPosition.get().getX())
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(0, 7)
+        .withSize(2, 1);
+    shooterTab
+        .add("TurretTracking/TagY", closestTagPosition.get().getY())
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(2, 7)
+        .withSize(2, 1);
+    shooterTab
+        .add("TurretTracking/AngleToTag", angleToTag.getDegrees())
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(4, 7)
+        .withSize(2, 1);
+    shooterTab
+        .add("TurretTracking/TurretTargetAngle", turretTargetAngle.getDegrees())
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(0, 8)
+        .withSize(2, 1);
+    shooterTab
+        .add(
+            "TurretTracking/TurretCurrentAngle",
+            Units.radiansToDegrees(currentTurretAngle))
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(2, 8)
+        .withSize(2, 1);
+    shooterTab
+        .add("TurretTracking/TurretVelocity", turretVelocity)
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(4, 8)
+        .withSize(2, 1);
+    shooterTab
+        .add("TurretTracking/AtTarget", turretController.atSetpoint())
+        .withWidget(BuiltInWidgets.kBooleanBox)
+        .withPosition(6, 8)
+        .withSize(2, 1);
   }
 
   /**
@@ -161,7 +233,11 @@ public class TurretAprilTagTracking extends Command {
   @Override
   public void end(boolean interrupted) {
     shooter.setTurretVelocity(0.0);
-    SmartDashboard.putString("TurretTracking/Status", interrupted ? "INTERRUPTED" : "FINISHED");
+    Shuffleboard.getTab("Shooter")
+        .add("TurretTracking/Status", interrupted ? "INTERRUPTED" : "FINISHED")
+        .withWidget(BuiltInWidgets.kTextView)
+        .withPosition(2, 5)
+        .withSize(2, 1);
   }
 
   @Override

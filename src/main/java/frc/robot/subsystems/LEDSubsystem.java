@@ -11,7 +11,8 @@ import com.ctre.phoenix6.hardware.CANdle;
 import com.ctre.phoenix6.signals.RGBWColor;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
+import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.subsystems.drive.Drive;
 
@@ -85,8 +86,16 @@ public class LEDSubsystem extends SubsystemBase {
       handleEnabledLogic();
     }
 
-    SmartDashboard.putBoolean("LEDs Active", m_ledEnabled);
-    SmartDashboard.putBoolean("CANdle CAN OK", isCanDleConnected());
+    Shuffleboard.getTab("CAN Status")
+        .add("LEDs Active", m_ledEnabled)
+        .withWidget(BuiltInWidgets.kBooleanBox)
+        .withPosition(5, 5)
+        .withSize(1, 1);
+    Shuffleboard.getTab("CAN Status")
+        .add("CANdle CAN OK", isCanDleConnected())
+        .withWidget(BuiltInWidgets.kBooleanBox)
+        .withPosition(6, 5)
+        .withSize(1, 1);
   }
 
   private void handleEnabledLogic() {

@@ -1,5 +1,8 @@
 package frc.robot.subsystems;
 
+import static frc.robot.Constants.Climber.*;
+
+import com.ctre.phoenix6.configs.FeedbackConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.PositionVoltage;
@@ -41,10 +44,10 @@ public class ClimberSubsystem extends SubsystemBase {
 
     climberPositionSignal = leftClimberMotor.getPosition();
 
-    // Configure right motor to follow left
-    //    rightClimberMotor.setControl(
-    //        new Follower(leftClimberMotor.getDeviceID(), MotorAlignmentValue.Opposed));
-    //    rightClimberMotor.setNeutralMode(NeutralModeValue.Brake);
+    /* Configure gear ratio */
+    FeedbackConfigs fdb = config.Feedback;
+    fdb.SensorToMechanismRatio = 1.0; // 1 rotor rotations per mechanism rotation
+    setPosition(HOME_POSITION_ROT); // Start at Zero position }
   }
 
   @Override

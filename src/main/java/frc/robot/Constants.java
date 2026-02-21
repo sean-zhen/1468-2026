@@ -58,8 +58,8 @@ public final class Constants {
   public static final class Shooter {
     public static final int FLYWHEEL_LEAD_ID = 51;
     public static final int FLYWHEEL_FOLLOWER_ID = 52;
-    public static final int HOOD_MOTOR_ID = 53;
-    public static final int TURRET_MOTOR_ID = 54;
+    public static final int HOOD_MOTOR_ID = 54;
+    public static final int TURRET_MOTOR_ID = 53;
 
     // TODO: Gear ratios need to be determined
     public static final double HOOD_GEAR_RATIO = 1.0;
@@ -67,15 +67,17 @@ public final class Constants {
 
     public static final double FIELD_LENGTH = 16.54; // meters
     // 2026 Hub Centers (Verify exact X from official CAD/Drawings)
+
     public static final Translation2d BLUE_HUB_POS = new Translation2d(4.625, 4.035);
     public static final Translation2d RED_HUB_POS = new Translation2d(11.915, 4.035);
+
     public static final Translation2d BLUE_DEPOT_POS = new Translation2d(1.0, 6.0);
     public static final Translation2d RED_DEPOT_POS = new Translation2d(15.0, 2.0);
     public static final Translation2d BLUE_OUTPOST_POS = new Translation2d(1.0, 1.0);
     public static final Translation2d RED_OUTPOST_POS = new Translation2d(15.0, 7.0);
     // Turret Offset from Robot Center (Inches to Meters)
-    public static final double TURRET_OFFSET_X = 5.0 * 0.0254;
-    public static final double TURRET_OFFSET_Y = 0.0 * 0.0254;
+    public static final double TURRET_OFFSET_X = 0.0; // 5.5 * 0.0254; // TODO: TA get real offset
+    public static final double TURRET_OFFSET_Y = 0.0; // 5.5 * 0.0254;
     public static final Translation2d TURRET_TO_ROBOT =
         new Translation2d(TURRET_OFFSET_X, TURRET_OFFSET_Y);
 
@@ -109,17 +111,20 @@ public final class Constants {
     //////////////////////////    TURRET     /////////////////////////////////////////
     // Turret PID and soft stops (Turret)
 
-    public static final double TURRET_kP = 0.5;
+    public static final double TURRET_kP = 2.5;
     public static final double TURRET_kI = 0.0;
     public static final double TURRET_kD = 0.0;
     public static final double TURRET_kV = 0.0;
-    public static final double TURRET_RIGHT_SOFT_LIMIT_ROT = 5.0;
-    public static final double TURRET_LEFT_SOFT_LIMIT_ROT = -5.0;
+
+    public static final double TURRET_LIMIT_ROT = 135.0 / 360.0; // +/- .375 Rotstions
+    // This multiplier is used to smooth the turret motion over angles that cant be used due to
+    // wiring
+    public static final double TURRET_CLAMP_FACTOR = 0.5 / (0.5 - TURRET_LIMIT_ROT);
+    public static final double TURRET_RIGHT_SOFT_LIMIT_ROT = TURRET_LIMIT_ROT;
+    public static final double TURRET_LEFT_SOFT_LIMIT_ROT = -TURRET_LIMIT_ROT;
 
     public static final double TURRET_TRACKING_TOLERANCE_DEG = 1.0; // DEGREE TOLERANCE
     public static final double TURRET_MAX_VELOCITY_RPS = 5.0; // Max turret rotation speed
-
-    public static final double TURRET_LIMIT_ROT = 135.0 / 360.0; // +/- 135 degrees
   }
 
   //////////////////////////    KICKER     /////////////////////////////////////////
@@ -127,7 +132,7 @@ public final class Constants {
   public static final class Kicker {
     public static final int KICKER_MOTOR_ID = 42;
     public static final double KICKER_TARGET_RPS = 30.0;
-    public static final double KICKER_GEAR_RATIO = 1.0; // NEED TO INSERT
+    public static final double KICKER_GEAR_RATIO = 3.0; // NEED TO INSERT
 
     // TODO: Tune these values
     public static final double kP = 0.89;
@@ -143,12 +148,19 @@ public final class Constants {
 
   public static final class Harvester {
     public static final int DEPLOY_MOTOR_ID = 31;
+    // THE DEPLOY MECHANISM HAS A 20:1 GEAR RATIO AND A 20:1 REDUCTIONS ON THE BELT DRIVE
+    // THE GEAR RATIO IS HANDED OFF TO THE MOTOR CONFIGURATION
+    public static final double DEPLOY_GEAR_RATIO = 20.0;
+    // THE EXTERNAL BELT RATION IS INCORPORATED WHEN CONVERTING TO ROTATIONS
+    public static final double DEPLOY_DEGREES_TO_ROTATIONS = 2.5 / 360.0;
+
+    public static final double DEPLOY_START_ANGLE = 0.0; // Degrees
+    public static final double DEPLOY_IN_ANGLE = 10.0; // Degrees
+    public static final double DEPLOY_OUT_ANGLE = 100.0; // Degrees
+
     public static final int SPIN_MOTOR_ID = 32;
-    public static final double DEPLOY_GEAR_RATIO = 1.0; // NEED TO INSERT
-    public static final double SPIN_GEAR_RATIO = 1.0; // NEED TO INSERT
-    public static final double DEPLOY_TARGET_POSITION =
-        10.0; // NEED TO INSERT (position in rotations)
-    public static final double SPIN_TARGET_RPS = 20.0; // NEED TO INSERT
+    public static final double SPIN_GEAR_RATIO = 3.0; // NEED TO INSERT
+    public static final double SPIN_TARGET_RPS = -30.0;
 
     // TODO: Tune these values
     public static final double deploykP = 0.89;
@@ -167,13 +179,13 @@ public final class Constants {
   public static final class Indexer {
     public static final int MOTOR_ID = 41;
     public static final double GEAR_RATIO = 1.0; // NEED TO INSERT
-    public static final double TARGET_RPS = 10.0; // NEED TO INSERT
+    public static final double TARGET_RPS = 90.0; // NEED TO INSERT
     public static final double[] POSITIONS = {
-      0.0, 2.0, 4.0, 6.0
+      0.0, 10.0, 20.0, 30.0, 40.0, 50.0
     }; // NEED TO INSERT (positions in rotations)
 
     // TODO: Tune these values
-    public static final double kP = 0.89;
+    public static final double kP = 0.189; // was.89
     public static final double kI = 0.0;
     public static final double kD = 0.0;
     public static final double kV = 0.37;
@@ -185,7 +197,7 @@ public final class Constants {
     public static final int LEFT_MOTOR_ID = 61;
     //   public static final int RIGHT_MOTOR_ID = 62;  //TA TODO: 1 or 2 Clmbr Motors???
 
-    public static final double FORWARD_SOFT_LIMIT_ROT = 20.0; // rotations
+    public static final double FORWARD_SOFT_LIMIT_ROT = 200.0; // rotations
     public static final double REVERSE_SOFT_LIMIT_ROT = 0.0; // rotations
     public static final double UP_SPEED = 0.5;
     public static final double DOWN_SPEED = -0.5;
@@ -193,7 +205,7 @@ public final class Constants {
     public static final double HOME_POSITION_ROT = 0.0;
 
     // TODO: Tune these values
-    public static final double kP = 0.89;
+    public static final double kP = 0.60; // 60 way too high
     public static final double kI = 0.0;
     public static final double kD = 0.0;
     public static final double kV = 0.37;

@@ -15,6 +15,7 @@ import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.subsystems.drive.Drive;
@@ -26,10 +27,12 @@ import org.photonvision.targeting.PhotonPipelineResult;
 
 public class VisionSubsystem extends SubsystemBase {
   // Camera Names
-  private static final String FRONT_NAME = "frontCamera";
-  private static final String BACK_NAME = "backCamera";
-  private static final String LEFT_NAME = "leftCamera";
-  private static final String RIGHT_NAME = "rightCamera";
+  private static final String FRONT_NAME = "Camera_1";
+  private static final String BACK_NAME = "Camera_2";
+  // private static final String LEFT_NAME = "leftCamera";
+  // private static final String RIGHT_NAME = "rightCamera";
+
+  private final Field2d m_field = new Field2d();
 
   // Constants
   private static final double MAX_SINGLE_TAG_DIST = 3.0; // Meters
@@ -41,10 +44,27 @@ public class VisionSubsystem extends SubsystemBase {
   private static final Matrix<N3, N1> SINGLE_TAG_AUTO = VecBuilder.fill(4.0, 4.0, 8.0);
   private static final Matrix<N3, N1> MULTI_TAG = VecBuilder.fill(0.1, 0.1, 0.25);
 
-  private final PhotonCamera frontCam, backCam, leftCam, rightCam;
-  private final PhotonPoseEstimator frontEst, backEst, leftEst, rightEst;
+  // private final PhotonCamera frontCam, backCam, leftCam, rightCam;
+  private final PhotonCamera frontCam, backCam;
+  // private final PhotonPoseEstimator frontEst, backEst, leftEst, rightEst;
+  private final PhotonPoseEstimator frontEst, backEst;
+
   private final AprilTagFieldLayout fieldLayout;
   private final Drive drive;
+
+  public static double cam1_x = Units.inchesToMeters(13);
+  public static double cam1_y = Units.inchesToMeters(-12);
+  public static double cam1_z = Units.inchesToMeters(15.0);
+  public static double cam1_roll = 0;
+  public static double cam1_pitch = 0;
+  public static double cam1_yaw = 0;
+
+  public static double cam2_x = Units.inchesToMeters(13);
+  public static double cam2_y = Units.inchesToMeters(-6);
+  public static double cam2_z = Units.inchesToMeters(15.0);
+  public static double cam2_roll = 0;
+  public static double cam2_pitch = 0;
+  public static double cam2_yaw = 0;
 
   private double lastMeasurementTimestamp = 0;
   private int lastTagCount = 0;
@@ -65,29 +85,36 @@ public class VisionSubsystem extends SubsystemBase {
     this.drive = drive;
     fieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltAndymark);
 
+    SmartDashboard.putData("Vision/Field", m_field);
+
     frontCam = new PhotonCamera(FRONT_NAME);
     backCam = new PhotonCamera(BACK_NAME);
-    leftCam = new PhotonCamera(LEFT_NAME);
-    rightCam = new PhotonCamera(RIGHT_NAME);
+    // leftCam = new PhotonCamera(LEFT_NAME);
+    // rightCam = new PhotonCamera(RIGHT_NAME);
 
     // 2026 API Constructor: (Layout, RobotToCameraTransform)
-    frontEst = new PhotonPoseEstimator(fieldLayout, createTrf(13.6, -10.5, 12.125, 0, 0.5, 22.8));
+    frontEst =
+        new PhotonPoseEstimator(
+            fieldLayout, createTrf(cam1_x, cam1_y, cam1_z, cam1_roll, cam1_pitch, cam1_yaw));
     backEst =
-        new PhotonPoseEstimator(fieldLayout, createTrf(13.6, 10.5, 12.125, -0.44, -0.5, -22.8));
-    leftEst = new PhotonPoseEstimator(fieldLayout, createTrf(0.0, 12.0, 12.0, 0, 0, 90.0));
-    rightEst = new PhotonPoseEstimator(fieldLayout, createTrf(0.0, -12.0, 12.0, 0, 0, -90.0));
+        new PhotonPoseEstimator(
+            fieldLayout, createTrf(cam2_x, cam2_y, cam2_z, cam2_roll, cam2_pitch, cam2_yaw));
+    // leftEst = new PhotonPoseEstimator(fieldLayout, createTrf(0.0, 12.0, 12.0, 0, 0, 90.0));
+    // rightEst = new PhotonPoseEstimator(fieldLayout, createTrf(0.0, -12.0, 12.0, 0, 0, -90.0));
   }
 
   @Override
   public void periodic() {
-    updateCam(frontCam, frontEst, fData);
-    updateCam(backCam, backEst, bData);
-    updateCam(leftCam, leftEst, lData);
-    updateCam(rightCam, rightEst, rData);
+    updateCam(frontCam, frontEst, fData, FRONT_NAME);
+    updateCam(backCam, backEst, bData, BACK_NAME);
+
+    // updateCam(leftCam, leftEst, lData);
+    // updateCam(rightCam, rightEst, rData);
     log();
   }
 
-  private void updateCam(PhotonCamera cam, PhotonPoseEstimator est, CameraData data) {
+  private void updateCam(
+      PhotonCamera cam, PhotonPoseEstimator est, CameraData data, String camera) {
     long start = System.nanoTime();
     var results = cam.getAllUnreadResults();
     for (var res : results) {
@@ -142,7 +169,8 @@ public class VisionSubsystem extends SubsystemBase {
 
                   // 5. Apply the measurement to the Drive Subsystem
                   // Uses the synchronized timestamp from the PhotonLib result
-                  drive.addVisionMeasurement(estPose2d, estPose.timestampSeconds, dynamicStds);
+                  drive.addVisionMeasurement(
+                      estPose2d, estPose.timestampSeconds, dynamicStds, camera);
 
                   // Update the timestamp for dashboard/logging
                   lastMeasurementTimestamp = Timer.getFPGATimestamp();
@@ -189,7 +217,7 @@ public class VisionSubsystem extends SubsystemBase {
             drive.getActualChassisSpeeds().vyMetersPerSecond);
     if (speed > MAX_RESET_VELOCITY) return;
 
-    CameraData[] all = {fData, bData, lData, rData};
+    CameraData[] all = {fData, bData};
     for (CameraData d : all) {
       if (d.pose.isPresent() && d.result.getTargets().size() > 1) {
         drive.resetPose(d.pose.get().estimatedPose.toPose2d());
@@ -207,25 +235,38 @@ public class VisionSubsystem extends SubsystemBase {
       return false;
     }
 
-    // 2. Velocity Delta Check: Vision should not jump significantly from current odometry
-    // If the jump is > 1.0m, it's likely a "ghost" detection
-    double poseJump = estPose.getTranslation().getDistance(drive.getPose().getTranslation());
-    if (poseJump > 1.0) {
-      return false;
-    }
-
     return true;
   }
 
   private Transform3d createTrf(double x, double y, double z, double r, double p, double yw) {
     return new Transform3d(
-        new Translation3d(
-            Units.inchesToMeters(x), Units.inchesToMeters(y), Units.inchesToMeters(z)),
+        new Translation3d(x, y, z), // Variables are already in meters!
         new Rotation3d(
             Units.degreesToRadians(r), Units.degreesToRadians(p), Units.degreesToRadians(yw)));
   }
 
   private void log() {
+
+    // 1. Update the main robot pose from your Drive subsystem
+    m_field.setRobotPose(drive.getPose());
+
+    // 2. Log Front Camera Estimate (if present)
+    if (fData.pose.isPresent()) {
+      m_field.getObject("Front Cam Pose").setPose(fData.pose.get().estimatedPose.toPose2d());
+    } else {
+      // Optional: Move it off-field if lost to "hide" it
+      m_field.getObject("Front Cam Pose").setPoses();
+    }
+
+    SmartDashboard.putBoolean("BACK PRESENT", bData.pose.isPresent());
+
+    // 3. Log Back Camera Estimate (if present)
+    if (bData.pose.isPresent()) {
+      m_field.getObject("Back Cam Pose").setPose(bData.pose.get().estimatedPose.toPose2d());
+    } else {
+      m_field.getObject("Back Cam Pose").setPoses();
+    }
+
     boolean healthy = (Timer.getFPGATimestamp() - lastMeasurementTimestamp) < VISION_TIMEOUT;
     SmartDashboard.putBoolean("Vision/Healthy", healthy);
 
@@ -233,8 +274,8 @@ public class VisionSubsystem extends SubsystemBase {
   }
 
   private void logBestCameraSummary() {
-    CameraData[] allCams = {fData, bData, lData, rData};
-    String[] names = {"Front", "Back", "Left", "Right"};
+    CameraData[] allCams = {fData, bData};
+    String[] names = {FRONT_NAME, BACK_NAME};
 
     int bestCamIdx = -1;
     int maxTags = 0;
@@ -249,8 +290,8 @@ public class VisionSubsystem extends SubsystemBase {
     }
 
     if (bestCamIdx != -1) {
-      SmartDashboard.putString("Vision/Summary/ActiveSource", names[bestCamIdx]);
-      SmartDashboard.putNumber("Vision/Summary/TagsVisible", maxTags);
+      SmartDashboard.putString("ActiveSource", names[bestCamIdx]);
+      SmartDashboard.putNumber("TagsVisible", maxTags);
 
       // Get distance of the best target from the best camera
       double dist =
@@ -260,10 +301,10 @@ public class VisionSubsystem extends SubsystemBase {
               .getBestCameraToTarget()
               .getTranslation()
               .getNorm();
-      SmartDashboard.putNumber("Vision/Summary/BestTargetDist", dist);
+      SmartDashboard.putNumber("BestTargetDist", dist);
     } else {
-      SmartDashboard.putString("Vision/Summary/ActiveSource", "None");
-      SmartDashboard.putNumber("Vision/Summary/TagsVisible", 0);
+      SmartDashboard.putString("ActiveSource", "None");
+      SmartDashboard.putNumber("TagsVisible", 0);
     }
   }
 
@@ -277,13 +318,13 @@ public class VisionSubsystem extends SubsystemBase {
     return bData.result.hasTargets();
   }
 
-  public boolean leftCameraHasTargets() {
-    return lData.result.hasTargets();
-  }
+  // public boolean leftCameraHasTargets() {
+  //   return lData.result.hasTargets();
+  // }
 
-  public boolean rightCameraHasTargets() {
-    return rData.result.hasTargets();
-  }
+  // public boolean rightCameraHasTargets() {
+  //   return rData.result.hasTargets();
+  // }
 
   public int getFrontCameraBestTargetId() {
     return fData.result.hasTargets() ? fData.result.getBestTarget().getFiducialId() : -1;

@@ -1,6 +1,14 @@
 package frc.robot.subsystems;
 
+import static edu.wpi.first.units.Units.*;
+import static frc.robot.Constants.Harvester.*;
+
+import com.ctre.phoenix6.StatusCode;
+import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
+import com.ctre.phoenix6.configs.FeedbackConfigs;
+import com.ctre.phoenix6.configs.MotionMagicConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
+import com.ctre.phoenix6.controls.MotionMagicVoltage;
 import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
@@ -23,26 +31,67 @@ public class HarvesterSubsystem extends SubsystemBase {
   private final com.ctre.phoenix6.StatusSignal<AngularVelocity> spinVelocitySignal;
   private final com.ctre.phoenix6.StatusSignal<Angle> deployPositionSignal;
 
+  private final MotionMagicVoltage m_mmReqLt = new MotionMagicVoltage(0);
+
   public HarvesterSubsystem() {
+
     // Deploy motor config (position/velocity, brake)
     var deployConfig = new com.ctre.phoenix6.configs.TalonFXConfiguration();
     var deploySlot0 = new Slot0Configs();
-    deploySlot0.kP = Harvester.deploykP;
-    deploySlot0.kI = Harvester.deploykI;
-    deploySlot0.kD = Harvester.deploykD;
-    deploySlot0.kV = Harvester.deploykV;
+    // deploySlot0.kP = deploykP;
+    // deploySlot0.kI = deploykI;
+    // deploySlot0.kD = deploykD;
+    // deploySlot0.kV = deploykV;
+    deploySlot0.kS = 0.25; // Add 0.25 V output to overcome static friction
+    deploySlot0.kV = 0.12; // A velocity target of 1 rps results in 0.12 V output
+    deploySlot0.kA = 0.01; // An acceleration of 1 rps/s requires 0.01 V output
+    deploySlot0.kP = 60; // A position error of 0.2 rotations results in 12 V output
+    deploySlot0.kI = 0; // No output for integrated error
+    deploySlot0.kD = 0.5; // A velocity error of 1 rps results in 0.5 V output
+
     deployConfig.Slot0 = deploySlot0;
     deployConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
     deployMotor.getConfigurator().apply(deployConfig);
     deployMotor.setNeutralMode(NeutralModeValue.Brake);
 
+    /* Configure gear ratio */
+    FeedbackConfigs fdb = deployConfig.Feedback;
+    fdb.SensorToMechanismRatio = 20.0; // 20 rotor rotations per mechanism rotation
+    setDeployPosition(DEPLOY_START_ANGLE); // Start at Zero position
+
+    /* Configure Motion Magic */
+    MotionMagicConfigs mm = deployConfig.MotionMagic;
+    mm.withMotionMagicCruiseVelocity(
+            RotationsPerSecond.of(2)) // s/b 10 (mechanism) rotations per second cruise
+        .withMotionMagicAcceleration(
+            RotationsPerSecondPerSecond.of(
+                2)) // s/b 4Take approximately 0.2 seconds to reach max vel
+        // Take approximately 0.2 seconds to reach max accel
+        .withMotionMagicJerk(RotationsPerSecondPerSecond.per(Second).of(0));
+
+    deployConfig.withCurrentLimits(
+        new CurrentLimitsConfigs()
+            .withStatorCurrentLimit(Amps.of(80))
+            .withStatorCurrentLimitEnable(true));
+
+    StatusCode status = StatusCode.StatusCodeNotInitialized;
+    for (int i = 0; i < 5; ++i) {
+      status = deployMotor.getConfigurator().apply(deployConfig);
+      if (status.isOK()) break;
+    }
+    if (!status.isOK()) {
+      System.out.println("Could not configure Harv Deploy device. Error: " + status.toString());
+    }
+
+    deployMotor.setNeutralMode(NeutralModeValue.Brake);
+
     // Spin motor config (velocity, coast)
     var spinConfig = new com.ctre.phoenix6.configs.TalonFXConfiguration();
     var spinSlot0 = new Slot0Configs();
-    spinSlot0.kP = Harvester.spinkP;
-    spinSlot0.kI = Harvester.spinkI;
-    spinSlot0.kD = Harvester.spinkD;
-    spinSlot0.kV = Harvester.spinkV;
+    spinSlot0.kP = spinkP;
+    spinSlot0.kI = spinkI;
+    spinSlot0.kD = spinkD;
+    spinSlot0.kV = spinkV;
     spinConfig.Slot0 = spinSlot0;
     spinConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
     spinMotor.getConfigurator().apply(spinConfig);
@@ -57,10 +106,17 @@ public class HarvesterSubsystem extends SubsystemBase {
     log();
   }
 
-  // Deploy position control (rotations at output)
-  public void setDeployPosition(double rotations) {
-    double motorRotations = rotations * Harvester.DEPLOY_GEAR_RATIO;
-    deployMotor.setControl(deployPositionRequest.withPosition(motorRotations));
+  /* Set Deploy motor Position using Magic Motion*/
+  public void setHarvDeployMagicMoPos(double pos) {
+    deployMotor.setControl(
+        m_mmReqLt.withPosition(pos).withSlot(0).withOverrideBrakeDurNeutral(true));
+  }
+
+  // Deploy position control (shaft rotations at output)
+  // Note that motor rotations to shaft rotations ratio is handled in motor config
+  public void setDeployPosition(double degrees) {
+    double shaftRotations = degrees * Harvester.DEPLOY_DEGREES_TO_ROTATIONS;
+    deployMotor.setControl(deployPositionRequest.withPosition(shaftRotations));
   }
 
   // Deploy velocity control (RPS at output)
@@ -83,11 +139,16 @@ public class HarvesterSubsystem extends SubsystemBase {
     spinMotor.stopMotor();
   }
 
+  public void stopHarvester() {
+    spinMotor.stopMotor();
+    deployMotor.stopMotor();
+  }
+
   public void log() {
     // Deploy motor logging
     SmartDashboard.putNumber(
-        "Harv Deploy Pos (rot, output)",
-        deployMotor.getPosition().getValueAsDouble() / Harvester.DEPLOY_GEAR_RATIO);
+        "Harv Deploy Pos (deg)",
+        deployMotor.getPosition().getValueAsDouble() / DEPLOY_DEGREES_TO_ROTATIONS);
     SmartDashboard.putNumber(
         "Harv Deploy Velo (RPS, output)",
         deployMotor.getVelocity().getValueAsDouble() / Harvester.DEPLOY_GEAR_RATIO);

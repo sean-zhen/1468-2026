@@ -36,7 +36,7 @@ public class ShootSequence extends Command {
   @Override
   public void execute() {
     // Once shooter reaches velocity and kicker hasn't started yet, start the kicker
-    if (!kickerStarted && shooter.isAtVelocity()) {
+    if (!kickerStarted && shooter.isFLywheelAtVelocity()) {
       kicker.setVelocity(Kicker.KICKER_TARGET_RPS);
       kickerStarted = true;
     }

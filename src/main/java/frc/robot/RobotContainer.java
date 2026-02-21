@@ -7,6 +7,8 @@
 
 package frc.robot;
 
+import static frc.robot.Constants.Harvester.*;
+
 import com.ctre.phoenix6.CANBus;
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -38,10 +40,7 @@ import frc.robot.subsystems.LEDSubsystem;
 import frc.robot.subsystems.ShooterSubsystem;
 import frc.robot.subsystems.VisionSubsystem;
 import frc.robot.subsystems.drive.Drive;
-import frc.robot.subsystems.drive.GyroIO;
 import frc.robot.subsystems.drive.GyroIOPigeon2;
-import frc.robot.subsystems.drive.ModuleIO;
-import frc.robot.subsystems.drive.ModuleIOSim;
 import frc.robot.subsystems.drive.ModuleIOTalonFX;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
@@ -80,67 +79,15 @@ public class RobotContainer {
     indexer = new IndexerSubsystem();
     climber = new ClimberSubsystem();
 
-    switch (Constants.currentMode) {
-      case REAL:
-        // Real robot, instantiate hardware IO implementations
-        // ModuleIOTalonFX is intended for modules with TalonFX drive, TalonFX turn, and
-        // a CANcoder
-        drive =
-            new Drive(
-                new GyroIOPigeon2(),
-                new ModuleIOTalonFX(TunerConstants.FrontLeft),
-                new ModuleIOTalonFX(TunerConstants.FrontRight),
-                new ModuleIOTalonFX(TunerConstants.BackLeft),
-                new ModuleIOTalonFX(TunerConstants.BackRight));
+    drive =
+        new Drive(
+            new GyroIOPigeon2(),
+            new ModuleIOTalonFX(TunerConstants.FrontLeft),
+            new ModuleIOTalonFX(TunerConstants.FrontRight),
+            new ModuleIOTalonFX(TunerConstants.BackLeft),
+            new ModuleIOTalonFX(TunerConstants.BackRight));
 
-        vision = new VisionSubsystem(drive);
-
-        // The ModuleIOTalonFXS implementation provides an example implementation for
-        // TalonFXS controller connected to a CANdi with a PWM encoder. The
-        // implementations
-        // of ModuleIOTalonFX, ModuleIOTalonFXS, and ModuleIOSpark (from the Spark
-        // swerve
-        // template) can be freely intermixed to support alternative hardware
-        // arrangements.
-        // Please see the AdvantageKit template documentation for more information:
-        // https://docs.advantagekit.org/getting-started/template-projects/talonfx-swerve-template#custom-module-implementations
-        //
-        // drive =
-        // new Drive(
-        // new GyroIOPigeon2(),
-        // new ModuleIOTalonFXS(TunerConstants.FrontLeft),
-        // new ModuleIOTalonFXS(TunerConstants.FrontRight),
-        // new ModuleIOTalonFXS(TunerConstants.BackLeft),
-        // new ModuleIOTalonFXS(TunerConstants.BackRight));
-        break;
-
-      case SIM:
-        // Sim robot, instantiate physics sim IO implementations
-        drive =
-            new Drive(
-                new GyroIO() {},
-                new ModuleIOSim(TunerConstants.FrontLeft),
-                new ModuleIOSim(TunerConstants.FrontRight),
-                new ModuleIOSim(TunerConstants.BackLeft),
-                new ModuleIOSim(TunerConstants.BackRight));
-
-        vision = new VisionSubsystem(drive);
-        break;
-
-      default:
-        // Replayed robot, disable IO implementations
-        drive =
-            new Drive(
-                new GyroIO() {},
-                new ModuleIO() {},
-                new ModuleIO() {},
-                new ModuleIO() {},
-                new ModuleIO() {});
-
-        vision = new VisionSubsystem(drive);
-
-        break;
-    }
+    vision = new VisionSubsystem(drive);
 
     led = new LEDSubsystem(shooter, drive, vision);
 
@@ -183,15 +130,19 @@ public class RobotContainer {
     final JoystickButton turnLEDsOff = new JoystickButton(driverLeftJoystick, 11);
 
     final JoystickButton flyWheel = new JoystickButton(operatorManualJoystick, 1);
-    final JoystickButton kick = new JoystickButton(operatorManualJoystick, 2);
-    final JoystickButton harvesterDeploy = new JoystickButton(operatorManualJoystick, 3);
+    final JoystickButton kickBtn = new JoystickButton(operatorManualJoystick, 2);
+    final JoystickButton harvesterDeployBtn = new JoystickButton(operatorManualJoystick, 3);
     final JoystickButton harvesterSpin = new JoystickButton(operatorManualJoystick, 4);
     final JoystickButton indexerSpin = new JoystickButton(operatorManualJoystick, 5);
 
     final JoystickButton fire = new JoystickButton(operatorAutoJoystick, 1);
     final JoystickButton aim = new JoystickButton(operatorAutoJoystick, 2);
-    final JoystickButton climberUp = new JoystickButton(operatorAutoJoystick, 9);
-    final JoystickButton climberDown = new JoystickButton(operatorAutoJoystick, 10);
+    final JoystickButton harvestStartBtn = new JoystickButton(operatorAutoJoystick, 5);
+    final JoystickButton harvestStopBtn = new JoystickButton(operatorAutoJoystick, 3);
+    final JoystickButton climberUpBtn = new JoystickButton(operatorAutoJoystick, 9);
+    final JoystickButton climberDownBtn = new JoystickButton(operatorAutoJoystick, 10);
+    final JoystickButton ManTurretBtn1 = new JoystickButton(operatorAutoJoystick, 11);
+    final JoystickButton ManTurretBtn2 = new JoystickButton(operatorAutoJoystick, 12);
 
     // Default command, normal field-relative drive
     drive.setDefaultCommand(
@@ -221,21 +172,31 @@ public class RobotContainer {
                 drive)
             .ignoringDisable(true));
 
-    // Reset gyro to 0° when 7 on right joystick button is pressed
+    harvestStartBtn.onTrue(new HarvesterDeploy(harvester, DEPLOY_OUT_ANGLE, 0.0));
+    harvestStopBtn.onTrue(new HarvesterDeploy(harvester, DEPLOY_IN_ANGLE, 0.0));
+
+    // toggle LEDs on / off
     turnLEDsOff.onTrue(new InstantCommand(led::toggleLeds));
+
+    ManTurretBtn1.onTrue(new InstantCommand(() -> shooter.setTurretPosition(0.330)));
+    ManTurretBtn1.onFalse(new InstantCommand(() -> shooter.setTurretPosition(0.0)));
+    ManTurretBtn2.onTrue(new InstantCommand(() -> shooter.setTurretPosition(-0.25)));
+    ManTurretBtn2.onFalse(new InstantCommand(() -> shooter.setTurretPosition(-0.50)));
 
     // Shooter
     flyWheel.whileTrue(
         new Shoot(
             shooter,
             // Flywheel Speed: Scale Z axis from 0 to 1
-            () -> (-operatorManualJoystick.getZ() + 1) / 2.0));
+            () -> (operatorManualJoystick.getZ() - 1) / 2.0));
 
     // Kicker
-    kick.whileTrue(new Kick(kicker));
+    kickBtn.whileTrue(new Kick(kicker));
 
     // Harvester Deploy
-    harvesterDeploy.whileTrue(new HarvesterDeploy(harvester));
+    // harvesterDeployBtn.onTrue(new HarvesterDeploy(harvester, DEPLOY_IN_ANGLE, 0.0));
+    harvesterDeployBtn.onTrue(new HarvesterDeploy(harvester, 45.0, 0.0));
+    harvesterDeployBtn.onFalse(new HarvesterDeploy(harvester, DEPLOY_START_ANGLE, 0.0));
 
     // Harvester Spin
     harvesterSpin.whileTrue(new HarvesterSpin(harvester));
@@ -257,7 +218,7 @@ public class RobotContainer {
         .debounce(0.10)
         .onTrue(
             new Shoot(shooter, () -> (0.50))
-                .alongWith(new InstantCommand(() -> shooter.setTurretPosition(0.1)))
+                .alongWith(new InstantCommand(() -> shooter.setTurretPosition(0.0)))
                 .alongWith(new InstantCommand(() -> shooter.setHoodPosition((.1)))));
 
     // Prepare to shoot from Tower // TODO: TA - All parameters must be fixed
@@ -265,7 +226,7 @@ public class RobotContainer {
         .debounce(0.10)
         .onTrue(
             new Shoot(shooter, () -> (0.50))
-                .alongWith(new InstantCommand(() -> shooter.setTurretPosition(0.1)))
+                .alongWith(new InstantCommand(() -> shooter.setTurretPosition(0.25)))
                 .alongWith(new InstantCommand(() -> shooter.setHoodPosition((.1)))));
 
     // Prepare to shoot from Depot // TODO: TA - All parameters must be fixed
@@ -273,7 +234,7 @@ public class RobotContainer {
         .debounce(0.10)
         .onTrue(
             new Shoot(shooter, () -> (0.50))
-                .alongWith(new InstantCommand(() -> shooter.setTurretPosition(0.1)))
+                .alongWith(new InstantCommand(() -> shooter.setTurretPosition(0.5)))
                 .alongWith(new InstantCommand(() -> shooter.setHoodPosition((.1)))));
 
     // Prepare to shoot from Outpost // TODO: TA - All parameters must be fixed
@@ -281,17 +242,17 @@ public class RobotContainer {
         .debounce(0.10)
         .onTrue(
             new Shoot(shooter, () -> (0.50))
-                .alongWith(new InstantCommand(() -> shooter.setTurretPosition(0.1)))
+                .alongWith(new InstantCommand(() -> shooter.setTurretPosition(-0.25)))
                 .alongWith(new InstantCommand(() -> shooter.setHoodPosition((.1)))));
 
     fire.whileTrue(
         (new Kick(kicker)).alongWith(Commands.waitSeconds(0.2).andThen(new IndexerSpin(indexer))));
 
     // Moves to 4 rotations when button 9 is pressed
-    climberUp.onTrue(new InstantCommand(() -> climber.setPosition(4.0), climber));
+    climberUpBtn.onTrue(new InstantCommand(() -> climber.setPosition(40.0), climber));
 
     // Returns to 0 rotations when button 10 is pressed
-    climberDown.onTrue(new InstantCommand(() -> climber.setPosition(0.0), climber));
+    climberDownBtn.onTrue(new InstantCommand(() -> climber.setPosition(0.0), climber));
   }
 
   /**

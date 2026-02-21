@@ -5,6 +5,7 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants.Shooter;
 import frc.robot.subsystems.*;
@@ -43,11 +44,14 @@ public class PrepareShooterCmd extends Command {
     Translation2d turretFieldPos =
         robotPose.getTranslation().plus(Shooter.TURRET_TO_ROBOT.rotateBy(robotPose.getRotation()));
 
+    SmartDashboard.putNumber("tx", turretFieldPos.getX());
+    SmartDashboard.putNumber("ty", turretFieldPos.getY());
+
     // Determine Target to shoot at based on alliance color and position on field
     Translation2d shootingTarget =
         (alliance == DriverStation.Alliance.Red) ? Shooter.RED_HUB_POS : Shooter.BLUE_HUB_POS;
 
-    if (getZone(robotPose.getX(), alliance) != "Alliance") {
+    if (!getZone(robotPose.getX(), alliance).equals("Alliance")) {
       if (alliance == DriverStation.Alliance.Red) {
         shootingTarget =
             (robotPose.getX() < 4.035) ? Shooter.RED_DEPOT_POS : Shooter.RED_OUTPOST_POS;

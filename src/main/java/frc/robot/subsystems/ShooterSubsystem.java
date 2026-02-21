@@ -146,32 +146,55 @@ public class ShooterSubsystem extends SubsystemBase {
 
     // --- Turret (Motion Magic - 11:1 Ratio) ---
     TalonFXConfiguration turretConfigs = new TalonFXConfiguration();
+
+    // 1. RATIO: 11:1 on Belt drive
     turretConfigs.Feedback.SensorToMechanismRatio = 11.0;
 
-    // TODO: TA - tune these constants
-    turretConfigs.Slot0.kS = 0.25; // 0.6;  0.25; // Voltage to overcome internal/belt friction
-    turretConfigs.Slot0.kV = 0.12; // Base speed feedforward
-    turretConfigs.Slot0.kP = 200; // 50.0; // High P for "snappy" reaction to inputs
-    //    turretConfigs.Slot0.kP = 1.0;
-    // turretConfigs.Slot0.kI = 0.12;
+    // 2. FRICTION (kS) - THE MOST IMPORTANT TUNING PARAMETER
+    // If you have "huge friction", 0.25V is likely too low.
+    // Increase this until the turret *just barely* moves when you enable, then back off 0.05.
+    // For a sticky belt, this might need to be 0.45 - 0.60 Volts.
+    turretConfigs.Slot0.kS = 0.35;
 
-    // 2.0 Rotations/Sec = 720 degrees/sec.
-    turretConfigs.MotionMagic.MotionMagicCruiseVelocity = 1.0; // 0.5;  2.0;
-    turretConfigs.MotionMagic.MotionMagicAcceleration =
-        3.0; // 1.0;  4.0; // 0.5s to reach top speed
-    turretConfigs.MotionMagic.MotionMagicJerk = 0.0; // Optional: smooths the "kick"  - WAS 40
-    turretConfigs.MotorOutput.DutyCycleNeutralDeadband = 0.001; // Reach the exact end point
+    // 3. VELOCITY FF (kV)
+    // 0.12 Volts / (1 Rot/s) -> At max speed (9 RPS), this adds ~1.08V.
+    // This seems low. Ideally, 12V should correspond to Max Speed.
+    // Try: 12V / 9 RPS = ~1.33.
+    // Start conservative:
+    turretConfigs.Slot0.kV = 0.9;
 
-    // turretConfigs.MotionMagic.MotionMagicCruiseVelocity = 60;
-    // turretConfigs.MotionMagic.MotionMagicAcceleration = 120;
-    turretConfigs.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+    // 4. PROPORTIONAL (kP)
+    // 200 is very "stiff" (200V per 1 rotation error).
+    // With high friction, stiff is good, but 200 might cause the vibration.
+    // If it buzzes, drop this to 80-120.
+    turretConfigs.Slot0.kP = 120.0;
+    turretConfigs.Slot0.kI = 0.0; // Keep zero!
+    turretConfigs.Slot0.kD = 0.0; // Add small D (e.g., 5.0) only if it oscillates.
+
+    // 5. MOTION MAGIC - UNLEASH THE SPEED
+    // Cruise: 4.0 RPS (1440 deg/s) - Must be faster than Robot Spin (720 deg/s)
+    turretConfigs.MotionMagic.MotionMagicCruiseVelocity = 4.0;
+
+    // Accel: 10.0 RPS/s - Snap to target in < 0.2 seconds
+    turretConfigs.MotionMagic.MotionMagicAcceleration = 10.0;
+
+    // Jerk: 100.0 or 0. Smooths the start/stop to prevent belt slip.
+    // 0 = Infinite Jerk (Max Aggression). For vision, higher jerk is often better.
+    turretConfigs.MotionMagic.MotionMagicJerk = 100.0;
+
+    // 6. DEADBAND
+    turretConfigs.MotorOutput.DutyCycleNeutralDeadband = 0.001;
+
+    // ... Limits & Inverts ...
     turretConfigs.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
     turretConfigs.SoftwareLimitSwitch.ForwardSoftLimitThreshold =
         Shooter.TURRET_RIGHT_SOFT_LIMIT_ROT;
     turretConfigs.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
     turretConfigs.SoftwareLimitSwitch.ReverseSoftLimitThreshold =
         Shooter.TURRET_LEFT_SOFT_LIMIT_ROT;
+
     turretMotor.getConfigurator().apply(turretConfigs);
+
     turretMotor.setNeutralMode(NeutralModeValue.Brake);
 
     // --- Hood (Motion Magic) ---
@@ -275,6 +298,7 @@ public class ShooterSubsystem extends SubsystemBase {
     this.targetTurretRot = clamped;
     double ffVolts = feedforwardRPS * Shooter.TURRET_kV;
 
+    // TODO: TA - Decide on Magic Motion or Straight PID for Turret angle
     // turretMotor.setControl(
     //     new PositionVoltage(clamped).withFeedForward(ffVolts));
     turretMotor.setControl(m_mmReq.withPosition(clamped));

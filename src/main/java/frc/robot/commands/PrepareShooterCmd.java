@@ -5,27 +5,31 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants.Shooter;
-import frc.robot.subsystems.*;
+import frc.robot.subsystems.ShooterSubsystem;
 import frc.robot.subsystems.drive.Drive;
 import java.util.ArrayList;
 import java.util.List;
-import org.littletonrobotics.junction.Logger;
 
 public class PrepareShooterCmd extends Command {
+
   private final ShooterSubsystem shooter;
   private final Drive drive;
 
   private final List<BaseStatusSignal> allSignals = new ArrayList<>();
+  private final Field2d field = new Field2d();
 
   public PrepareShooterCmd(ShooterSubsystem shooter, Drive drive) {
     this.shooter = shooter;
     this.drive = drive;
     addRequirements(shooter);
 
-    // Sync List: 8 Swerve motors + 1 Gyro + 3 Shooter motors = 12 signals
+    // Publish Field2d to NetworkTables (Elastic will see this)
+    SmartDashboard.putData("Field", field);
+
     allSignals.addAll(drive.getSignals());
     allSignals.addAll(shooter.getSignals());
   }
@@ -33,21 +37,19 @@ public class PrepareShooterCmd extends Command {
   @Override
   public void execute() {
 
-    // 1. SYNC HEARTBEAT: Wait for fresh CAN packets
+    // 1. Sync CAN signals
     BaseStatusSignal.waitForAll(0.020, allSignals);
 
     Pose2d robotPose = drive.getPose();
+    field.setRobotPose(robotPose);
 
     var alliance = DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue);
 
-    // 2. Transform Robot Pose to Turret Pose
+    // 2. Calculate turret field position
     Translation2d turretFieldPos =
         robotPose.getTranslation().plus(Shooter.TURRET_TO_ROBOT.rotateBy(robotPose.getRotation()));
 
-    SmartDashboard.putNumber("tx", turretFieldPos.getX());
-    SmartDashboard.putNumber("ty", turretFieldPos.getY());
-
-    // Determine Target to shoot at based on alliance color and position on field
+    // 3. Determine shooting target
     Translation2d shootingTarget =
         (alliance == DriverStation.Alliance.Red) ? Shooter.RED_HUB_POS : Shooter.BLUE_HUB_POS;
 
@@ -61,27 +63,24 @@ public class PrepareShooterCmd extends Command {
       }
     }
 
-    // 3. Velocity Compensation (Field-Relative)
-    // Get speeds relative to the robot's front
+    // 4. Velocity compensation
     ChassisSpeeds robotSpeeds = drive.getChassisSpeeds();
-
-    // Convert robot-relative speeds to field-relative speeds using the robot's rotation
-    // This ensures that 'forward' on the robot is translated to the correct field direction
     ChassisSpeeds fieldSpeeds =
         ChassisSpeeds.fromRobotRelativeSpeeds(robotSpeeds, robotPose.getRotation());
 
-    // 4. Velocity Leading (Virtual Target)
-    double flightTime =
-        turretFieldPos.getDistance(shootingTarget) / 20.0; // TODO: TA - Optimize Shooting sp m/sec
+    double flightTime = turretFieldPos.getDistance(shootingTarget) / 20.0;
+
     Translation2d virtualTarget =
         shootingTarget.minus(
             new Translation2d(
                 fieldSpeeds.vxMetersPerSecond * flightTime,
                 fieldSpeeds.vyMetersPerSecond * flightTime));
 
-    // 5. Horizontal Aim & Anti-Spin Feedforward Logic
+    // 5. Aim calculation
     Translation2d relTrans = virtualTarget.minus(turretFieldPos);
+
     double odoTargetAngle = Math.atan2(relTrans.getY(), relTrans.getX());
+
     double odoRot =
         MathUtil.inputModulus(
             (odoTargetAngle / (2 * Math.PI)) - robotPose.getRotation().getRotations(), -0.5, 0.5);
@@ -89,17 +88,35 @@ public class PrepareShooterCmd extends Command {
     double turretFF = -robotSpeeds.omegaRadiansPerSecond / (2 * Math.PI);
 
     shooter.setShooterParams(relTrans.getNorm(), getZone(robotPose.getX(), alliance));
+
     shooter.setTurretWithFF(odoRot, turretFF);
 
-    Logger.recordOutput("Shooter/VirtualTarget", virtualTarget);
-    Logger.recordOutput("Shooter/RealHub", shootingTarget); // For reference
+    // ---------------------------------------------------------
+    // Elastic Field Visualization
+    // ---------------------------------------------------------
+
+    Pose2d turretAimingPose = new Pose2d(turretFieldPos, new Rotation2d(odoTargetAngle));
+
+    // Turret
+    field.getObject("Turret").setPose(turretAimingPose);
+
+    // Virtual target (lead compensated)
+    field.getObject("VirtualTarget").setPose(new Pose2d(virtualTarget, new Rotation2d()));
+
+    // Real hub
+    field.getObject("RealHub").setPose(new Pose2d(shootingTarget, new Rotation2d()));
+
+    // Shot trajectory line
+    field
+        .getObject("ShotTrajectory")
+        .setPoses(turretAimingPose, new Pose2d(virtualTarget, new Rotation2d()));
   }
 
   private String getZone(double x, DriverStation.Alliance alliance) {
     if (alliance == DriverStation.Alliance.Blue) {
       if (x < 5.5) return "Alliance";
       if (x > 11.0) return "Opposition";
-    } else { // Red Alliance
+    } else {
       if (x > 11.0) return "Alliance";
       if (x < 5.5) return "Opposition";
     }

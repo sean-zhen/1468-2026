@@ -96,28 +96,44 @@
     },
     {
       "anchor": {
-        "x": 1.5633098591549306,
-        "y": 2.0549295774647884
+        "x": 1.2279753521126766,
+        "y": 2.007024647887324
       },
       "prevControl": {
-        "x": 1.1321654929577478,
-        "y": 1.6716901408450697
+        "x": 0.7968309859154938,
+        "y": 1.6237852112676054
       },
       "nextControl": {
-        "x": 1.9346356702174918,
-        "y": 2.3849969650759544
+        "x": 1.5993011631752378,
+        "y": 2.33709203549849
       },
       "isLocked": false,
       "linkedName": null
     },
     {
       "anchor": {
-        "x": 1.818802816901409,
-        "y": 5.647799295774648
+        "x": 1.7708978873239447,
+        "y": 4.06693661971831
       },
       "prevControl": {
-        "x": 1.243943661971832,
-        "y": 5.009066901408451
+        "x": 1.9465492957746484,
+        "y": 3.5399823943661968
+      },
+      "nextControl": {
+        "x": 1.6918409458197365,
+        "y": 4.304107444230935
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 2.026390845070423,
+        "y": 5.248591549295774
+      },
+      "prevControl": {
+        "x": 2.0583274647887326,
+        "y": 5.775545774647887
       },
       "nextControl": null,
       "isLocked": false,
@@ -130,15 +146,19 @@
       "rotationDegrees": -90.0
     },
     {
-      "waypointRelativePos": 4.5,
+      "waypointRelativePos": 2.722222222222218,
       "rotationDegrees": -90.0
     },
     {
-      "waypointRelativePos": 4.937198067632851,
-      "rotationDegrees": 0.0
+      "waypointRelativePos": 3.905797101449279,
+      "rotationDegrees": 180.0
     },
     {
-      "waypointRelativePos": 6.23913043478261,
+      "waypointRelativePos": 4.618357487922717,
+      "rotationDegrees": 180.0
+    },
+    {
+      "waypointRelativePos": 4.966183574879222,
       "rotationDegrees": 90.0
     }
   ],
@@ -155,7 +175,7 @@
   },
   "goalEndState": {
     "velocity": 0,
-    "rotation": 53.841814560191686
+    "rotation": 90.0
   },
   "reversed": false,
   "folder": null,

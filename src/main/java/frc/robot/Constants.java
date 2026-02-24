@@ -61,9 +61,12 @@ public final class Constants {
     public static final int HOOD_MOTOR_ID = 54;
     public static final int TURRET_MOTOR_ID = 53;
 
-    // TODO: Gear ratios need to be determined
-    public static final double HOOD_GEAR_RATIO = 1.0;
-    public static final double TURRET_GEAR_RATIO = 1.0;
+    // Gear ratios setup in configureMotors
+    //    public static final double HOOD_GEAR_RATIO = 1.0;
+    //    public static final double TURRET_GEAR_RATIO = 1.0;
+
+    // Sentinel Value: If a parameter equals this, use Auto-Calculation
+    public static final double DONT_OVERRIDE_VAL = 999.0;
 
     public static final double FIELD_LENGTH = 16.54; // meters
     // 2026 Hub Centers (Verify exact X from official CAD/Drawings)
@@ -103,9 +106,11 @@ public final class Constants {
     public static final double HOOD_kI = 0.0;
     public static final double HOOD_kD = 0.0;
     public static final double HOOD_kV = 0.0;
-    public static final double HOOD_TOP_SOFT_LIMIT_ROT = 10.0;
+
+    // *** THe Hood Gear has 22 teeth and the Hood itself has 29, so using approx 27 teeth
+    public static final double HOOD_TOP_SOFT_LIMIT_ROT = 1.25;
     public static final double HOOD_BOTTOM_SOFT_LIMIT_ROT = 0.0;
-    public static final double HOOD_TRACKING_TOLERANCE_DEG = 1.0; // DEGREE TOLERANCE
+    public static final double HOOD_TRACKING_TOLERANCE_DEG = 20 / 360.0; // DEGREE TOLERANCE
     public static final double HOOD_DEG_PER_ROTATION = 360.0; // DEGREE TOLERANCE
 
     //////////////////////////    TURRET     /////////////////////////////////////////

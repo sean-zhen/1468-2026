@@ -1,5 +1,7 @@
 package frc.robot.commands;
 
+import static frc.robot.Constants.Shooter.*;
+
 import com.ctre.phoenix6.BaseStatusSignal;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.*;
@@ -14,6 +16,7 @@ import frc.robot.subsystems.ShooterSubsystem;
 import frc.robot.subsystems.drive.Drive;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.DoubleSupplier;
 
 public class PrepareShooterCmd extends Command {
 
@@ -25,9 +28,23 @@ public class PrepareShooterCmd extends Command {
   private final List<BaseStatusSignal> allSignals = new ArrayList<>();
   private final Field2d field = new Field2d();
 
-  public PrepareShooterCmd(ShooterSubsystem shooter, Drive drive) {
+  // Overrides
+  private final DoubleSupplier flyWheelRPSOverride;
+  private final DoubleSupplier hoodAngleOverride;
+  private final DoubleSupplier TurretAngleOverride;
+
+  public PrepareShooterCmd(
+      ShooterSubsystem shooter,
+      Drive drive,
+      DoubleSupplier flyWheelRPSOverride,
+      DoubleSupplier hoodAngleOverride,
+      DoubleSupplier TurretAngleOverride) {
     this.shooter = shooter;
     this.drive = drive;
+    this.flyWheelRPSOverride = flyWheelRPSOverride;
+    this.hoodAngleOverride = hoodAngleOverride;
+    this.TurretAngleOverride = TurretAngleOverride;
+
     addRequirements(shooter);
 
     // Publish Field2d to the Shooter Elastic tab
@@ -92,11 +109,22 @@ public class PrepareShooterCmd extends Command {
         MathUtil.inputModulus(
             (odoTargetAngle / (2 * Math.PI)) - robotPose.getRotation().getRotations(), -0.5, 0.5);
 
-    double turretFF = -robotSpeeds.omegaRadiansPerSecond / (2 * Math.PI);
+    // shooter.setShooterParams(relTrans.getNorm(), getZone(robotPose.getX(), alliance));
+    if (flyWheelRPSOverride.getAsDouble() == DONT_OVERRIDE_VAL)
+      shooter.setFlywheelViaTable(relTrans.getNorm(), getZone(robotPose.getX(), alliance));
+    else shooter.setFlywheelRPS(flyWheelRPSOverride.getAsDouble());
 
-    shooter.setShooterParams(relTrans.getNorm(), getZone(robotPose.getX(), alliance));
+    if (hoodAngleOverride.getAsDouble() == DONT_OVERRIDE_VAL)
+      shooter.setHoodViaTable(relTrans.getNorm(), getZone(robotPose.getX(), alliance));
+    // Override value is in degrees, convert to rotations (0-20 Deg => 0-1.25 Rot)
+    else shooter.setHoodPosition(hoodAngleOverride.getAsDouble() / 20.0 * 1.25);
 
-    shooter.setTurretWithFF(odoRot, turretFF);
+    // double turretFF = -robotSpeeds.omegaRadiansPerSecond / (2 * Math.PI);
+    // shooter.setTurretWithFF(odoRot, turretFF); // Using Magic Motion Now
+    if (TurretAngleOverride.getAsDouble() == DONT_OVERRIDE_VAL) shooter.setTurretPosition(odoRot);
+    // Override value is in degrees, convert to rotations (+/-180 Deg -> +/- 0.5 Rot), so just /
+    // 360.0
+    else shooter.setTurretPosition(TurretAngleOverride.getAsDouble() / 360.0);
 
     // ---------------------------------------------------------
     // Elastic Field Visualization
@@ -110,8 +138,8 @@ public class PrepareShooterCmd extends Command {
     // Virtual target (lead compensated)
     field.getObject("VirtualTarget").setPose(new Pose2d(virtualTarget, new Rotation2d()));
 
-    // Real hub
-    field.getObject("RealHub").setPose(new Pose2d(shootingTarget, new Rotation2d()));
+    // Real target
+    field.getObject("RealTarget").setPose(new Pose2d(shootingTarget, new Rotation2d()));
 
     // Shot trajectory line
     field
@@ -121,11 +149,11 @@ public class PrepareShooterCmd extends Command {
 
   private String getZone(double x, DriverStation.Alliance alliance) {
     if (alliance == DriverStation.Alliance.Blue) {
-      if (x < 5.5) return "Alliance";
-      if (x > 11.0) return "Opposition";
+      if (x < 4.5) return "Alliance"; //
+      if (x > 12.0) return "Opposition";
     } else {
-      if (x > 11.0) return "Alliance";
-      if (x < 5.5) return "Opposition";
+      if (x > 12.0) return "Alliance";
+      if (x < 4.5) return "Opposition";
     }
     return "Neutral";
   }

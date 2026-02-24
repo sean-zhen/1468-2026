@@ -77,60 +77,18 @@ public class ShooterSubsystem extends SubsystemBase {
   private final GenericEntry flywhCanOkEntry;
   private final GenericEntry trrtCanOkEntry;
   private final GenericEntry hoodCanOkEntry;
+  private final GenericEntry readyToShoot;
+  private final GenericEntry distanceEntry;
 
   public ShooterSubsystem() {
-    // // Flywheel config
-    // var flywheelConfig = new TalonFXConfiguration();
-    // var slot0Configs = new Slot0Configs();
-    // slot0Configs.kV = Shooter.SHOOT_kV;
-    // slot0Configs.kA = Shooter.SHOOT_kA;
-    // slot0Configs.kP = Shooter.SHOOT_kP;
-    // slot0Configs.kI = Shooter.SHOOT_kI;
-    // slot0Configs.kD = Shooter.SHOOT_kD;
-    // flywheelConfig.Slot0 = slot0Configs;
-    // flywheelConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
-    // flywheelLead.getConfigurator().apply(flywheelConfig);
-    // flywheelLead.setNeutralMode(NeutralModeValue.Coast);
 
-    // // Follower config
-    // flywheelFollower.setControl(
-    //     new Follower(flywheelLead.getDeviceID(), MotorAlignmentValue.Opposed));
-    // flywheelFollower.setNeutralMode(NeutralModeValue.Coast);
-
-    // // Hood config (positional PID or velocity, brake mode, soft stops)
-    // var hoodConfig = new TalonFXConfiguration();
-    // var hoodSlot0 = new Slot0Configs();
-    // hoodSlot0.kP = Shooter.HOOD_kP;
-    // hoodSlot0.kI = Shooter.HOOD_kI;
-    // hoodSlot0.kD = Shooter.HOOD_kD;
-    // hoodSlot0.kV = Shooter.HOOD_kV;
-    // hoodConfig.Slot0 = hoodSlot0;
-    // hoodConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
-    // hoodConfig.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
-    // hoodConfig.SoftwareLimitSwitch.ForwardSoftLimitThreshold = Shooter.HOOD_TOP_SOFT_LIMIT_ROT;
-    // hoodConfig.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
-    // hoodConfig.SoftwareLimitSwitch.ReverseSoftLimitThreshold =
-    // Shooter.HOOD_BOTTOM_SOFT_LIMIT_ROT;
-    // hoodMotor.getConfigurator().apply(hoodConfig);
-    // hoodMotor.setNeutralMode(NeutralModeValue.Brake);
-
-    // // Turret config (velocity, brake mode, soft stops)
-    // var turretConfig = new TalonFXConfiguration();
-    // var turretSlot0 = new Slot0Configs();
-    // turretSlot0.kP = Shooter.TURRET_kP;
-    // turretSlot0.kI = Shooter.TURRET_kI;
-    // turretSlot0.kD = Shooter.TURRET_kD;
-    // turretSlot0.kV = Shooter.TURRET_kV;
-    // turretConfig.Slot0 = turretSlot0;
-    // turretConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
-    // turretConfig.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
-    // turretConfig.SoftwareLimitSwitch.ForwardSoftLimitThreshold =
-    //     Shooter.TURRET_RIGHT_SOFT_LIMIT_ROT;
-    // turretConfig.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
-    // turretConfig.SoftwareLimitSwitch.ReverseSoftLimitThreshold =
-    // Shooter.TURRET_LEFT_SOFT_LIMIT_ROT;
-    // turretMotor.getConfigurator().apply(turretConfig);
-    // turretMotor.setNeutralMode(NeutralModeValue.Brake);
+    distanceEntry =
+        shooterTab
+            .add("Distance To Target", 0.0)
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(6, 6)
+            .withSize(2, 1)
+            .getEntry();
 
     configureMotors();
     setupTables();
@@ -159,6 +117,14 @@ public class ShooterSubsystem extends SubsystemBase {
             .add("Hood Is At Pos", isHoodAtPosition())
             .withWidget(BuiltInWidgets.kBooleanBox)
             .withPosition(4, 0)
+            .withSize(2, 1)
+            .getEntry();
+
+    readyToShoot =
+        shooterTab
+            .add("Ready to Shoot", isReadyToShoot())
+            .withWidget(BuiltInWidgets.kBooleanBox)
+            .withPosition(6, 0)
             .withSize(2, 1)
             .getEntry();
 
@@ -209,16 +175,14 @@ public class ShooterSubsystem extends SubsystemBase {
         shooterTab
             .add(
                 "Shtr Hood Pos (deg, output)",
-                hoodMotor.getPosition().getValueAsDouble() * 360.0 / Shooter.HOOD_GEAR_RATIO)
+                hoodMotor.getPosition().getValueAsDouble()) // * 360.0 / Shooter.HOOD_GEAR_RATIO)
             .withWidget(BuiltInWidgets.kTextView)
             .withPosition(0, 3)
             .withSize(2, 1)
             .getEntry();
     hoodVeloEntry =
         shooterTab
-            .add(
-                "Shtr Hood Velo (RPS, output)",
-                hoodMotor.getVelocity().getValueAsDouble() / Shooter.HOOD_GEAR_RATIO)
+            .add("Shtr Hood Velo (RPS, output)", hoodMotor.getVelocity().getValueAsDouble())
             .withWidget(BuiltInWidgets.kTextView)
             .withPosition(2, 3)
             .withSize(2, 1)
@@ -235,16 +199,14 @@ public class ShooterSubsystem extends SubsystemBase {
         shooterTab
             .add(
                 "Shtr Turret Pos (deg, output)",
-                turretMotor.getPosition().getValueAsDouble() * 360.0 / Shooter.TURRET_GEAR_RATIO)
+                turretMotor.getPosition().getValueAsDouble() * 360.0)
             .withWidget(BuiltInWidgets.kTextView)
             .withPosition(0, 4)
             .withSize(2, 1)
             .getEntry();
     turretVeloEntry =
         shooterTab
-            .add(
-                "Shtr Turret Velo (RPS, output)",
-                turretMotor.getVelocity().getValueAsDouble() / Shooter.TURRET_GEAR_RATIO)
+            .add("Shtr Turret Velo (RPS, output)", turretMotor.getVelocity().getValueAsDouble())
             .withWidget(BuiltInWidgets.kTextView)
             .withPosition(2, 4)
             .withSize(2, 1)
@@ -372,20 +334,20 @@ public class ShooterSubsystem extends SubsystemBase {
     // --- Hood (Motion Magic) ---
     TalonFXConfiguration hoodConfigs = new TalonFXConfiguration();
 
-    hoodConfigs.Feedback.SensorToMechanismRatio = 15.0; // TODO TA: Get real reduction
+    hoodConfigs.Feedback.SensorToMechanismRatio = 45.0; // Internal Reduction
 
     // hoodConfigs.Slot0.kP = 1.5;
     // hoodConfigs.Slot0.kV = 0.12;
     // hoodConfigs.MotionMagic.MotionMagicCruiseVelocity = 40;
     // hoodConfigs.MotionMagic.MotionMagicAcceleration = 80;
 
-    hoodConfigs.Slot0.kS = 0.25; // Voltage to overcome friction
-    hoodConfigs.Slot0.kV = 0.12; // Theoretical kV for Kraken
-    hoodConfigs.Slot0.kP = 2.4; // Higher P for precision positioning
-    hoodConfigs.MotionMagic.MotionMagicCruiseVelocity = 1.0; // 1 RPS
-    hoodConfigs.MotionMagic.MotionMagicAcceleration = 2.0;
+    hoodConfigs.Slot0.kS = 0.7; // Voltage to overcome friction
+    hoodConfigs.Slot0.kV = .12; // Theoretical kV for Kraken
+    hoodConfigs.Slot0.kP = 200; // Higher P for precision positioning
+    hoodConfigs.MotionMagic.MotionMagicCruiseVelocity = 8; //  RPS
+    hoodConfigs.MotionMagic.MotionMagicAcceleration = 040;
 
-    hoodConfigs.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+    hoodConfigs.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
     hoodConfigs.MotorOutput.NeutralMode = NeutralModeValue.Brake; // Keep Brake for hood
     hoodConfigs.MotorOutput.DutyCycleNeutralDeadband = 0.001; // Help reach the final point
 
@@ -398,8 +360,13 @@ public class ShooterSubsystem extends SubsystemBase {
   }
 
   // Flywheel velocity (RPS at output) - this is for testing, using joystick Z axis for velo
-  public void setFlywheel(double velocityRPS) {
-    velocityRPS = velocityRPS * 100; // Temporary scaling for testing
+  public void setFlywheel(double velocity) {
+    double velocityRPS = velocity * 100; // Temporary scaling for testing
+    this.targetFlyWheelVeloRPS = velocityRPS;
+    flywheelLead.setControl(leadRequest.withVelocity(velocityRPS));
+  }
+
+  public void setFlywheelRPS(double velocityRPS) {
     this.targetFlyWheelVeloRPS = velocityRPS;
     flywheelLead.setControl(leadRequest.withVelocity(velocityRPS));
   }
@@ -418,6 +385,28 @@ public class ShooterSubsystem extends SubsystemBase {
     // hoodMotor.setControl(new PositionVoltage(hoodRot * Shooter.HOOD_GEAR_RATIO));
     flywheelLead.setControl(m_velocityReq.withVelocity(flyRPS));
     hoodMotor.setControl(m_mmReq.withPosition(hoodRot));
+
+    distanceEntry.setValue(distance);
+  }
+
+  public void setFlywheelViaTable(double distance, String zone) {
+    double flyRPS =
+        zone.equals("Alliance")
+            ? flyAlliance.get(distance)
+            : zone.equals("Neutral") ? flyNeutral.get(distance) : flyOpposition.get(distance);
+    flywheelLead.setControl(m_velocityReq.withVelocity(flyRPS));
+
+    distanceEntry.setValue(distance);
+  }
+
+  public void setHoodViaTable(double distance, String zone) {
+    double hoodRot =
+        zone.equals("Alliance")
+            ? hoodAlliance.get(distance)
+            : zone.equals("Neutral") ? hoodNeutral.get(distance) : hoodOpposition.get(distance);
+    hoodMotor.setControl(m_mmReq.withPosition(hoodRot));
+
+    distanceEntry.setValue(distance);
   }
 
   public double getFlywheelVeloRPS() {
@@ -446,7 +435,7 @@ public class ShooterSubsystem extends SubsystemBase {
 
   // Turret position getter
   public double getHoodPosition() {
-    return hoodMotor.getPosition().getValueAsDouble() / Shooter.TURRET_GEAR_RATIO;
+    return hoodMotor.getPosition().getValueAsDouble();
   }
 
   public boolean isHoodAtPosition() {
@@ -492,19 +481,27 @@ public class ShooterSubsystem extends SubsystemBase {
 
   // Turret velocity (RPS at output)
   public void setTurretVelocity(double rps) {
-    double motorRPS = rps * Shooter.TURRET_GEAR_RATIO;
+    double motorRPS = rps;
     turretMotor.setControl(turretVelocityRequest.withVelocity(motorRPS));
   }
 
   // Turret position getter
   public double getTurretPosition() {
-    return turretMotor.getPosition().getValueAsDouble() / Shooter.TURRET_GEAR_RATIO;
+    return turretMotor.getPosition().getValueAsDouble();
   }
 
   public boolean isTurretAtPosition() {
     double currentPosition = getTurretPosition();
     double toleranceRot = Math.toRadians(Shooter.TURRET_TRACKING_TOLERANCE_DEG) / (2 * Math.PI);
     return Math.abs(currentPosition - targetTurretPositionRot) < toleranceRot;
+  }
+
+  public boolean isReadyToShoot() {
+    if (isTurretAtPosition() && isFLywheelAtVelocity() && isHoodAtPosition()) {
+      return true;
+    } else {
+      return false;
+    }
   }
 
   public void stop() {
@@ -528,14 +525,12 @@ public class ShooterSubsystem extends SubsystemBase {
     shtrFlwrTempEntry.setDouble(flywheelFollower.getDeviceTemp().getValueAsDouble());
 
     hoodPosEntry.setDouble(
-        hoodMotor.getPosition().getValueAsDouble() * 360.0 / Shooter.HOOD_GEAR_RATIO);
-    hoodVeloEntry.setDouble(hoodMotor.getVelocity().getValueAsDouble() / Shooter.HOOD_GEAR_RATIO);
+        hoodMotor.getPosition().getValueAsDouble()); // TA * 360.0 / Shooter.HOOD_GEAR_RATIO);
+    hoodVeloEntry.setDouble(hoodMotor.getVelocity().getValueAsDouble());
     hoodTempEntry.setDouble(hoodMotor.getDeviceTemp().getValueAsDouble());
 
-    turretPosEntry.setDouble(
-        turretMotor.getPosition().getValueAsDouble() * 360.0 / Shooter.TURRET_GEAR_RATIO);
-    turretVeloEntry.setDouble(
-        turretMotor.getVelocity().getValueAsDouble() / Shooter.TURRET_GEAR_RATIO);
+    turretPosEntry.setDouble(turretMotor.getPosition().getValueAsDouble() * 360.0);
+    turretVeloEntry.setDouble(turretMotor.getVelocity().getValueAsDouble());
     turretTempEntry.setDouble(turretMotor.getDeviceTemp().getValueAsDouble());
 
     // ── CAN Status page ───────────────────────────────────────────────────────

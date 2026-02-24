@@ -100,8 +100,8 @@
         "y": 4.865675670588643
       },
       "prevControl": {
-        "x": 0.4813230343332219,
-        "y": 6.3927890067463
+        "x": 0.509401408450705,
+        "y": 6.46218309859155
       },
       "nextControl": null,
       "isLocked": false,
@@ -115,7 +115,7 @@
     },
     {
       "waypointRelativePos": 4.0,
-      "rotationDegrees": 139.18491612511835
+      "rotationDegrees": -142.1250163485754
     },
     {
       "waypointRelativePos": 5.0,
@@ -124,7 +124,60 @@
   ],
   "constraintZones": [],
   "pointTowardsZones": [],
-  "eventMarkers": [],
+  "eventMarkers": [
+    {
+      "name": "Aim",
+      "waypointRelativePos": 0,
+      "endWaypointRelativePos": null,
+      "command": null
+    },
+    {
+      "name": "StartHarvest",
+      "waypointRelativePos": 0.9671641791044783,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "named",
+        "data": {
+          "name": "StartHarvest"
+        }
+      }
+    },
+    {
+      "name": "StopHarvest",
+      "waypointRelativePos": 3.4029850746268684,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "named",
+        "data": {
+          "name": "StopHarvest"
+        }
+      }
+    },
+    {
+      "name": "StHarAndSht",
+      "waypointRelativePos": 4.173134328358216,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "parallel",
+        "data": {
+          "commands": [
+            {
+              "type": "named",
+              "data": {
+                "name": "StartHarvest"
+              }
+            },
+            {
+              "type": "named",
+              "data": {
+                "name": "Shoot"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
   "globalConstraints": {
     "maxVelocity": 2.0,
     "maxAcceleration": 2.5,
@@ -135,7 +188,7 @@
   },
   "goalEndState": {
     "velocity": 0,
-    "rotation": -90.00000000013856
+    "rotation": -90.0
   },
   "reversed": false,
   "folder": null,

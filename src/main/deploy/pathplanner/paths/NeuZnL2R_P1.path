@@ -87,54 +87,6 @@
         "x": 2.4294991055456174,
         "y": 0.6337745974955272
       },
-      "nextControl": {
-        "x": 0.2000083978568693,
-        "y": 0.6520491114929766
-      },
-      "isLocked": false,
-      "linkedName": null
-    },
-    {
-      "anchor": {
-        "x": 1.2279753521126766,
-        "y": 2.007024647887324
-      },
-      "prevControl": {
-        "x": 0.7968309859154938,
-        "y": 1.6237852112676054
-      },
-      "nextControl": {
-        "x": 1.5993011631752378,
-        "y": 2.33709203549849
-      },
-      "isLocked": false,
-      "linkedName": null
-    },
-    {
-      "anchor": {
-        "x": 1.7708978873239447,
-        "y": 4.06693661971831
-      },
-      "prevControl": {
-        "x": 1.9465492957746484,
-        "y": 3.5399823943661968
-      },
-      "nextControl": {
-        "x": 1.6918409458197365,
-        "y": 4.304107444230935
-      },
-      "isLocked": false,
-      "linkedName": null
-    },
-    {
-      "anchor": {
-        "x": 2.026390845070423,
-        "y": 5.248591549295774
-      },
-      "prevControl": {
-        "x": 2.0583274647887326,
-        "y": 5.775545774647887
-      },
       "nextControl": null,
       "isLocked": false,
       "linkedName": null
@@ -164,7 +116,65 @@
   ],
   "constraintZones": [],
   "pointTowardsZones": [],
-  "eventMarkers": [],
+  "eventMarkers": [
+    {
+      "name": "Aim",
+      "waypointRelativePos": 0.0,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "named",
+        "data": {
+          "name": "Aim"
+        }
+      }
+    },
+    {
+      "name": "HarvestAndPass",
+      "waypointRelativePos": 1.3,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "parallel",
+        "data": {
+          "commands": [
+            {
+              "type": "named",
+              "data": {
+                "name": "StartHarvest"
+              }
+            },
+            {
+              "type": "named",
+              "data": {
+                "name": "Fire"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "StopPassing",
+      "waypointRelativePos": 2.7462686567164156,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "named",
+        "data": {
+          "name": "StopFire"
+        }
+      }
+    },
+    {
+      "name": "Shoot",
+      "waypointRelativePos": 4.5,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "named",
+        "data": {
+          "name": "Fire"
+        }
+      }
+    }
+  ],
   "globalConstraints": {
     "maxVelocity": 2.0,
     "maxAcceleration": 2.0,

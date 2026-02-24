@@ -8,9 +8,11 @@
 package frc.robot;
 
 import static frc.robot.Constants.Harvester.*;
+import static frc.robot.Constants.Shooter.*;
 
 import com.ctre.phoenix6.CANBus;
 import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.auto.NamedCommands;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.networktables.GenericEntry;
@@ -46,7 +48,7 @@ import frc.robot.subsystems.VisionSubsystem;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.GyroIOPigeon2;
 import frc.robot.subsystems.drive.ModuleIOTalonFX;
-import frc.robot.util.Elastic;
+import java.util.function.DoubleSupplier;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
 /**
@@ -82,6 +84,9 @@ public class RobotContainer {
   private final GenericEntry canivoreUsageEntry;
   private final GenericEntry rioHighLoadEntry;
   private final GenericEntry canivoreHighLoadEntry;
+  private final GenericEntry turretEntry;
+  private final GenericEntry hoodEntry;
+  private final GenericEntry flyEntry;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -123,8 +128,39 @@ public class RobotContainer {
     autoChooser.addOption(
         "Drive SysId (Dynamic Reverse)", drive.sysIdDynamic(SysIdRoutine.Direction.kReverse));
 
-    // Configure the button bindings
-    configureButtonBindings();
+    /////////////////////////////////////////////////////////////////////////////////////////////
+    // Register NamedCommands for PathPlanner Auto Routines
+    // The drive commands are in the PathPlanner AutoRoutines only
+    /////////////////////////////////////////////////////////////////////////////////////////////
+    NamedCommands.registerCommand( // Only use in DEADLINE with a drive cmd as the DEADLINE
+        "Aim",
+        (new PrepareShooterCmd(
+            shooter,
+            drive,
+            (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
+            (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
+            (DoubleSupplier) () -> DONT_OVERRIDE_VAL)));
+
+    NamedCommands.registerCommand(
+        "Fire",
+        (new Kick(kicker).alongWith(Commands.waitSeconds(0.2).andThen(new IndexerSpin(indexer)))));
+
+    NamedCommands.registerCommand(
+        "StopFire",
+        (new InstantCommand(() -> kicker.stop())
+            .andThen(Commands.waitSeconds(0.2).andThen(new InstantCommand(() -> indexer.stop())))));
+
+    NamedCommands.registerCommand(
+        "StartHarvest", (new HarvesterDeploy(harvester, DEPLOY_OUT_ANGLE, 0.0)));
+
+    NamedCommands.registerCommand(
+        "StopHarvest", (new HarvesterDeploy(harvester, DEPLOY_IN_ANGLE, 0.0)));
+
+    NamedCommands.registerCommand(
+        "ClimberUp", (new InstantCommand(() -> climber.setPosition(40.0), climber)));
+
+    NamedCommands.registerCommand(
+        "ClimberDown", (new InstantCommand(() -> climber.setPosition(0.0), climber)));
 
     // Initialize persistent CAN Status dashboard entries
     roboRioCanStatusEntry =
@@ -169,6 +205,58 @@ public class RobotContainer {
             .withPosition(2, 2)
             .withSize(2, 1)
             .getEntry();
+
+    // 1. Get the Tab
+    ShuffleboardTab shooterTab = Shuffleboard.getTab("Shooter");
+    // --- ROW 0: INSTRUCTIONAL LABELS (Width 3) ---
+    shooterTab.add("Flywheel RPS", "0-100 [999 = Auto]").withPosition(0, 0).withSize(3, 1);
+
+    shooterTab.add("Hood Deg", "(0-20°) [999 = Auto]").withPosition(3, 0).withSize(3, 1);
+
+    shooterTab.add("Turret Deg", "(±180°) [999 = Auto]").withPosition(6, 0).withSize(3, 1);
+
+    // --- ROW 1: INPUT BOXES (Width 3) ---
+    flyEntry =
+        shooterTab
+            .add("Flywheel OverRide", 999.0)
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(0, 1)
+            .withSize(3, 1)
+            .getEntry();
+
+    hoodEntry =
+        shooterTab
+            .add("Hood OverRide", 999.0)
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(3, 1)
+            .withSize(3, 1)
+            .getEntry();
+
+    turretEntry =
+        shooterTab
+            .add("Turret OverRide", 999.0)
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(6, 1)
+            .withSize(3, 1)
+            .getEntry();
+
+    // --- THE RESET BUTTON ---
+    // This creates a button on the dashboard that sets all values back to 999
+    shooterTab
+        .add(
+            "RESET ALL",
+            Commands.runOnce(
+                () -> {
+                  flyEntry.setDouble(999.0);
+                  hoodEntry.setDouble(999.0);
+                  turretEntry.setDouble(999.0);
+                }))
+        .withWidget(BuiltInWidgets.kCommand)
+        .withPosition(9, 0)
+        .withSize(2, 2); // A tall 2x2 button next to the inputs
+
+    // Configure the button bindings
+    configureButtonBindings();
   }
 
   /**
@@ -193,9 +281,12 @@ public class RobotContainer {
     final JoystickButton harvesterDeployBtn = new JoystickButton(operatorManualJoystick, 3);
     final JoystickButton harvesterSpin = new JoystickButton(operatorManualJoystick, 4);
     final JoystickButton indexerSpin = new JoystickButton(operatorManualJoystick, 5);
+    final JoystickButton manHoodBtn1 = new JoystickButton(operatorManualJoystick, 8);
+    final JoystickButton manHoodBtn2 = new JoystickButton(operatorManualJoystick, 9);
+    final JoystickButton manPrepareShtrBtn2 = new JoystickButton(operatorManualJoystick, 11);
 
-    final JoystickButton fire = new JoystickButton(operatorAutoJoystick, 1);
-    final JoystickButton aim = new JoystickButton(operatorAutoJoystick, 2);
+    final JoystickButton fireBtn = new JoystickButton(operatorAutoJoystick, 1);
+    final JoystickButton aimBtn = new JoystickButton(operatorAutoJoystick, 2);
     final JoystickButton harvestStartBtn = new JoystickButton(operatorAutoJoystick, 5);
     final JoystickButton harvestStopBtn = new JoystickButton(operatorAutoJoystick, 3);
     final JoystickButton climberUpBtn = new JoystickButton(operatorAutoJoystick, 9);
@@ -219,7 +310,7 @@ public class RobotContainer {
             () -> -driverLeftJoystick.getX(),
             () -> new Rotation2d()));
 
-    driveToHub.onTrue(new DriveToHubCommandPP(drive));
+    driveToHub.onTrue(DriveToHubCommandPP.create(drive));
 
     // Drive facing april tag
     faceHubButton.whileTrue(
@@ -243,6 +334,12 @@ public class RobotContainer {
     ManTurretBtn1.onFalse(new InstantCommand(() -> shooter.setTurretPosition(0.0)));
     ManTurretBtn2.onTrue(new InstantCommand(() -> shooter.setTurretPosition(-0.25)));
     ManTurretBtn2.onFalse(new InstantCommand(() -> shooter.setTurretPosition(-0.50)));
+
+    manHoodBtn1.onTrue(new InstantCommand(() -> shooter.setHoodPosition(180.0 / 360.0)));
+    manHoodBtn1.onFalse(new InstantCommand(() -> shooter.setHoodPosition(0.0)));
+    manHoodBtn2.onTrue(new InstantCommand(() -> shooter.setHoodPosition(360.0 / 360.0)));
+    manHoodBtn2.onFalse(
+        new InstantCommand(() -> shooter.setHoodPosition(520.0 / 360.0))); // SW Stop Test
 
     // Shooter
     flyWheel.whileTrue(
@@ -268,11 +365,35 @@ public class RobotContainer {
     // Vision Reset
     resetOdom.onTrue(new InstantCommand(vision::forceOdometryToVision, vision));
 
-    aim.whileTrue(new PrepareShooterCmd(shooter, drive));
-    // fire.whileTrue(
-    //     new PrepareShooterCmd(shooter, drive)
-    //         .alongWith(Commands.waitSeconds(0.1).andThen(new Kick(kicker)))
-    //         .alongWith(Commands.waitSeconds(0.2).andThen(new IndexerSpin(indexer))));
+    // flyEntry = Shuffleboard.getTab("Shooter").add("Flywheel", 0).getEntry();
+    // hoodEntry = Shuffleboard.getTab("Shooter").add("Hood", 0).getEntry();
+    // turretEntry = Shuffleboard.getTab("Shooter").add("Turret", 0).getEntry();
+
+    manPrepareShtrBtn2.onTrue(
+        (new PrepareShooterCmd(
+            shooter,
+            drive,
+            (DoubleSupplier) () -> flyEntry.getDouble(999.0),
+            (DoubleSupplier) () -> hoodEntry.getDouble(999.0),
+            (DoubleSupplier) () -> turretEntry.getDouble(999.0))));
+
+    aimBtn.whileTrue(
+        (new PrepareShooterCmd(
+            shooter,
+            drive,
+            (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
+            (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
+            (DoubleSupplier) () -> DONT_OVERRIDE_VAL)));
+    // Start up Kicker First to get it up to speed, and then hand off Fuel from indexer to the
+    // kicker
+    fireBtn.whileTrue(
+        new Kick(kicker).alongWith(Commands.waitSeconds(0.2).andThen(new IndexerSpin(indexer))));
+    fireBtn
+        .debounce(0.10)
+        .onFalse(
+            new InstantCommand(() -> kicker.stop())
+                .andThen(
+                    Commands.waitSeconds(0.2).andThen(new InstantCommand(() -> indexer.stop()))));
 
     // Prepare to shoot from Hub // TODO: TA - All parameters must be fixed
     new POVButton(operatorAutoJoystick, 0)
@@ -280,7 +401,7 @@ public class RobotContainer {
         .onTrue(
             new Shoot(shooter, () -> (0.50))
                 .alongWith(new InstantCommand(() -> shooter.setTurretPosition(0.0)))
-                .alongWith(new InstantCommand(() -> shooter.setHoodPosition((.1)))));
+                .alongWith(new InstantCommand(() -> shooter.setHoodPosition((10 / 360)))));
 
     // Prepare to shoot from Tower // TODO: TA - All parameters must be fixed
     new POVButton(operatorAutoJoystick, 180)
@@ -288,7 +409,7 @@ public class RobotContainer {
         .onTrue(
             new Shoot(shooter, () -> (0.50))
                 .alongWith(new InstantCommand(() -> shooter.setTurretPosition(0.25)))
-                .alongWith(new InstantCommand(() -> shooter.setHoodPosition((.1)))));
+                .alongWith(new InstantCommand(() -> shooter.setHoodPosition((15 / 360)))));
 
     // Prepare to shoot from Depot // TODO: TA - All parameters must be fixed
     new POVButton(operatorAutoJoystick, 90)
@@ -296,7 +417,7 @@ public class RobotContainer {
         .onTrue(
             new Shoot(shooter, () -> (0.50))
                 .alongWith(new InstantCommand(() -> shooter.setTurretPosition(0.5)))
-                .alongWith(new InstantCommand(() -> shooter.setHoodPosition((.1)))));
+                .alongWith(new InstantCommand(() -> shooter.setHoodPosition((20 / 360)))));
 
     // Prepare to shoot from Outpost // TODO: TA - All parameters must be fixed
     new POVButton(operatorAutoJoystick, 270)
@@ -304,10 +425,7 @@ public class RobotContainer {
         .onTrue(
             new Shoot(shooter, () -> (0.50))
                 .alongWith(new InstantCommand(() -> shooter.setTurretPosition(-0.25)))
-                .alongWith(new InstantCommand(() -> shooter.setHoodPosition((.1)))));
-
-    fire.whileTrue(
-        (new Kick(kicker)).alongWith(Commands.waitSeconds(0.2).andThen(new IndexerSpin(indexer))));
+                .alongWith(new InstantCommand(() -> shooter.setHoodPosition((0.0)))));
 
     // Moves to 4 rotations when button 9 is pressed
     climberUpBtn.onTrue(new InstantCommand(() -> climber.setPosition(40.0), climber));
@@ -370,35 +488,36 @@ public class RobotContainer {
     canivoreHighLoadEntry.setBoolean(canivoreUsage > 90);
 
     // 8. Send an Elastic notification if CAN goes unhealthy
-    if (!robotCanOk) {
-      Elastic.sendNotification(
-          new Elastic.Notification(
-              Elastic.NotificationLevel.ERROR,
-              "CAN BUS FAULT",
-              "One or more RoboRIO CAN devices are disconnected! Check shooter, harvester, indexer,"
-                  + " kicker, climber, or LED."));
-    }
-    if (!canCoderHealthy) {
-      Elastic.sendNotification(
-          new Elastic.Notification(
-              Elastic.NotificationLevel.ERROR,
-              "Swerve CANcoder Fault",
-              "One or more swerve CANcoders are disconnected!"));
-    }
-    if (rioUsage > 90) {
-      Elastic.sendNotification(
-          new Elastic.Notification(
-              Elastic.NotificationLevel.WARNING,
-              "RIO CAN High Load",
-              String.format("RIO CAN bus at %.1f%% utilization — keep below 90%%.", rioUsage)));
-    }
-    if (canivoreUsage > 90) {
-      Elastic.sendNotification(
-          new Elastic.Notification(
-              Elastic.NotificationLevel.WARNING,
-              "CANivore High Load",
-              String.format(
-                  "CANivore bus at %.1f%% utilization — keep below 90%%.", canivoreUsage)));
-    }
+    // if (!robotCanOk) {
+    //   Elastic.sendNotification(
+    //       new Elastic.Notification(
+    //           Elastic.NotificationLevel.ERROR,
+    //           "CAN BUS FAULT",
+    //           "One or more RoboRIO CAN devices are disconnected! Check shooter, harvester,
+    // indexer,"
+    //               + " kicker, climber, or LED."));
+    // }
+    // if (!canCoderHealthy) {
+    //   Elastic.sendNotification(
+    //       new Elastic.Notification(
+    //           Elastic.NotificationLevel.ERROR,
+    //           "Swerve CANcoder Fault",
+    //           "One or more swerve CANcoders are disconnected!"));
+    // }
+    // if (rioUsage > 90) {
+    //   Elastic.sendNotification(
+    //       new Elastic.Notification(
+    //           Elastic.NotificationLevel.WARNING,
+    //           "RIO CAN High Load",
+    //           String.format("RIO CAN bus at %.1f%% utilization — keep below 90%%.", rioUsage)));
+    // }
+    // if (canivoreUsage > 90) {
+    //   Elastic.sendNotification(
+    //       new Elastic.Notification(
+    //           Elastic.NotificationLevel.WARNING,
+    //           "CANivore High Load",
+    //           String.format(
+    //               "CANivore bus at %.1f%% utilization — keep below 90%%.", canivoreUsage)));
+    // }
   }
 }

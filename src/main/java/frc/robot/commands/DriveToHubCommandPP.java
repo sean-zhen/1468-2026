@@ -9,102 +9,92 @@ import com.pathplanner.lib.path.Waypoint;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
-import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
-import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.subsystems.drive.Drive;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
-public class DriveToHubCommandPP extends Command {
+// 1. Remove 'extends Command'. This is now a factory class.
+public class DriveToHubCommandPP {
 
-  private double endPtX, endPtY, endPtHoloRotation;
+  // 2. Change to a STATIC method that returns a Command
+  public static Command create(Drive drive) {
 
-  private final Drive m_drive;
-  private final GenericEntry driveToProcessorStatusEntry;
+    // 3. The Defer Block
+    return Commands.defer(
+        () -> {
 
-  public DriveToHubCommandPP(Drive drive) {
-    m_drive = drive;
-    addRequirements(m_drive);
-    var driveTab = Shuffleboard.getTab("Drive");
-    driveToProcessorStatusEntry =
-        driveTab
-            .add("DriveToProcessor status", "NOT ACTIVE")
-            .withWidget(BuiltInWidgets.kTextView)
-            .withPosition(0, 0)
-            .withSize(3, 1)
-            .getEntry();
-  }
+          // --- EVERYTHING INSIDE HERE RUNS "JUST IN TIME" ---
 
-  // Called when the command is initially scheduled.
-  @Override
-  public void initialize() {}
+          SmartDashboard.putString("DriveToHub status", "CALCULATING");
 
-  @Override
-  public void execute() {
+          Pose2d startPt = drive.getPose();
+          double startX = startPt.getX();
 
-    // The rotation component in these poses represents the direction of travel
-    Pose2d startPt = m_drive.getPose();
-    double startX = m_drive.getPose().getX();
-    Pose2d endPt;
-    Pose2d interPt;
-    List<Waypoint> wayPoints;
+          // Local variables (Do not use class fields)
+          double endPtX, endPtY, endPtHoloRotation;
+          Pose2d endPt, interPt;
 
-    if (DriverStation.getAlliance().isPresent()
-        && (DriverStation.getAlliance().get() == Alliance.Red)
-        && startX > 13.0) {
-      //  Real Coordinates
-      endPtX = 13.0;
-      endPtY = 4.6;
-      endPtHoloRotation = 180.0;
-      endPt = new Pose2d(endPtX, endPtY, Rotation2d.fromDegrees(endPtHoloRotation));
-      double interPtX = 13.3;
-      interPt = new Pose2d(interPtX, endPtY, Rotation2d.fromDegrees(endPtHoloRotation));
-    } else if (DriverStation.getAlliance().isPresent()
-        && (DriverStation.getAlliance().get() == Alliance.Blue)
-        && (startX < 3.5)) {
-      endPtX = 3.5;
-      endPtY = 3.6;
-      endPtHoloRotation = 0.0;
-      endPt = new Pose2d(endPtX, endPtY, Rotation2d.fromDegrees(endPtHoloRotation));
-      double interPtX = 3.2;
-      interPt = new Pose2d(interPtX, endPtY, Rotation2d.fromDegrees(endPtHoloRotation));
-    } else {
-      interPt = startPt;
-      endPt = startPt;
-    }
+          // Logic to determine Alliance/Target
+          if (DriverStation.getAlliance().isPresent()
+              && (DriverStation.getAlliance().get() == Alliance.Red)
+              && startX > 13.0) {
+            endPtX = 13.0;
+            endPtY = 4.6;
+            endPtHoloRotation = 180.0;
+            endPt = new Pose2d(endPtX, endPtY, Rotation2d.fromDegrees(endPtHoloRotation));
+            double interPtX = 13.3;
+            interPt = new Pose2d(interPtX, endPtY, Rotation2d.fromDegrees(endPtHoloRotation));
+          } else if (DriverStation.getAlliance().isPresent()
+              && (DriverStation.getAlliance().get() == Alliance.Blue)
+              && (startX < 3.5)) {
+            endPtX = 3.5;
+            endPtY = 3.6;
+            endPtHoloRotation = 0.0;
+            endPt = new Pose2d(endPtX, endPtY, Rotation2d.fromDegrees(endPtHoloRotation));
+            double interPtX = 3.2;
+            interPt = new Pose2d(interPtX, endPtY, Rotation2d.fromDegrees(endPtHoloRotation));
+          } else {
+            // Fallback: Stay put if zones don't match
+            interPt = startPt;
+            endPt = startPt;
+            endPtHoloRotation = startPt.getRotation().getDegrees();
+          }
 
-    wayPoints = PathPlannerPath.waypointsFromPoses(startPt, interPt, endPt);
-    PathPlannerPath path =
-        new PathPlannerPath(
-            wayPoints,
-            new PathConstraints(2.0, 2.0, Units.degreesToRadians(540), Units.degreesToRadians(720)),
-            null,
-            new GoalEndState(0.0, Rotation2d.fromDegrees(endPtHoloRotation)));
+          List<Waypoint> wayPoints = PathPlannerPath.waypointsFromPoses(startPt, interPt, endPt);
 
-    // The first parameter is the position along the path (0.0 to 1.0)
-    List<RotationTarget> rotationTargets = new ArrayList<>();
-    rotationTargets.add(new RotationTarget(0.5, Rotation2d.fromDegrees(0.0)));
-    // Prevent this path from being flipped on the red alliance, since the given
-    // positions are already correct
-    path.preventFlipping = true;
+          // 4. Define Rotation Targets BEFORE creating the path
+          // Note: Index 1.0 is the intermediate point (Start=0, Inter=1, End=2)
+          List<RotationTarget> rotationTargets =
+              List.of(new RotationTarget(1.0, Rotation2d.fromDegrees(0.0)));
 
-    AutoBuilder.followPath(path).schedule();
-  }
+          // 5. Use Full Constructor to inject RotationTargets
+          PathPlannerPath path =
+              new PathPlannerPath(
+                  wayPoints,
+                  rotationTargets, // <--- Targets go here
+                  Collections.emptyList(), // PointTowardsZones
+                  Collections.emptyList(), // ConstraintZones
+                  Collections.emptyList(), // EventMarkers
+                  new PathConstraints(
+                      2.0, 2.0, Units.degreesToRadians(540), Units.degreesToRadians(720)),
+                  null, // IdealStartingState
+                  new GoalEndState(0.0, Rotation2d.fromDegrees(endPtHoloRotation)),
+                  false // Reversed
+                  );
 
-  // Called once the command ends or is interrupted.
-  @Override
-  public void end(boolean interrupted) {
-    driveToProcessorStatusEntry.setString("NOT ACTIVE");
-    m_drive.stop();
-  }
+          path.preventFlipping = true;
 
-  // Returns true when the command should end.
-  @Override
-  public boolean isFinished() {
-    return false;
+          SmartDashboard.putString("DriveToHub status", "RUNNING");
+
+          // Return the specific command to follow this newly generated path
+          return AutoBuilder.followPath(path);
+        },
+        Set.of(drive)); // 6. REQUIREMENTS DECLARED HERE
   }
 }

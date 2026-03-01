@@ -19,6 +19,7 @@ import edu.wpi.first.networktables.IntegerPublisher;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.subsystems.drive.Drive;
 import java.util.*;
@@ -47,12 +48,16 @@ public class VisionSubsystem extends SubsystemBase {
   private int rejectCount = 0;
   private boolean hasEverHadVision = false;
   private int lastFusedTagCount = 0;
+  private double lastPoseResetTime = 0;
+  private double lastPoseUpdateTime = 0;
 
   // --- Cached NT publishers: top-level ---
   private final BooleanPublisher healthyPub;
   private final IntegerPublisher rejectCountPub;
   private final BooleanPublisher initialResetPub;
   private final BooleanPublisher resetTriggeredPub;
+  private final BooleanPublisher poseResetPub;
+  private final BooleanPublisher poseUpdatedPub;
 
   // --- Cached NT publishers: per-camera ---
   private final BooleanPublisher[] camConnectedPub = new BooleanPublisher[4];
@@ -131,6 +136,8 @@ public class VisionSubsystem extends SubsystemBase {
     rejectCountPub = visionTable.getIntegerTopic("RejectCount").publish();
     initialResetPub = visionTable.getBooleanTopic("InitialReset").publish();
     resetTriggeredPub = visionTable.getBooleanTopic("ResetTriggered").publish();
+    poseResetPub = visionTable.getBooleanTopic("PoseReset").publish();
+    poseUpdatedPub = visionTable.getBooleanTopic("PoseUpdated").publish();
 
     // Cache per-camera publishers
     for (int i = 0; i < 4; i++) {
@@ -186,7 +193,10 @@ public class VisionSubsystem extends SubsystemBase {
       hasEverHadVision = true;
       lastVisionTimestamp = Timer.getFPGATimestamp();
       lastResetTime = Timer.getFPGATimestamp();
+      lastPoseResetTime = Timer.getFPGATimestamp();
       initialResetPub.set(true);
+      poseResetPub.set(true);
+      SmartDashboard.putBoolean("Vision/Pose Reset", true);
       logFusion(best, validMeasurements);
       logDiagnostics(validMeasurements.size(), validMeasurements.size(), validMeasurements.size());
       return;
@@ -210,6 +220,19 @@ public class VisionSubsystem extends SubsystemBase {
 
     healthyPub.set((Timer.getFPGATimestamp() - lastVisionTimestamp) < 0.5);
     rejectCountPub.set(rejectCount);
+
+    // Update state-based indicators
+    double currentTime = Timer.getFPGATimestamp();
+    
+    // Pose Reset: Green for 0.5s after reset, then red
+    boolean poseResetActive = (currentTime - lastPoseResetTime) < 0.5;
+    poseResetPub.set(poseResetActive);
+    SmartDashboard.putBoolean("Vision/Pose Reset", poseResetActive);
+    
+    // Pose Updated: Green while actively updating, red if no update for 0.5s
+    boolean poseUpdateActive = (currentTime - lastPoseUpdateTime) < 0.5;
+    poseUpdatedPub.set(poseUpdateActive);
+    SmartDashboard.putBoolean("Vision/Pose Updated", poseUpdateActive);
   }
 
   private List<Measurement> collectMeasurements(double velocity) {
@@ -357,6 +380,9 @@ public class VisionSubsystem extends SubsystemBase {
             0.05 * (1 + velocity / MAX_SPEED),
             0.1 * (1 + velocity / MAX_SPEED));
     drive.addVisionMeasurement(fused.pose, fused.timestamp, stdDevs, "FUSED");
+    lastPoseUpdateTime = Timer.getFPGATimestamp();
+    poseUpdatedPub.set(true);
+    SmartDashboard.putBoolean("Vision/Pose Updated", true);
   }
 
   private void maybeHardReset(Measurement fused, double velocity) {
@@ -366,7 +392,10 @@ public class VisionSubsystem extends SubsystemBase {
 
     drive.resetPose(fused.pose);
     lastResetTime = Timer.getFPGATimestamp();
+    lastPoseResetTime = Timer.getFPGATimestamp();
     resetTriggeredPub.set(true);
+    poseResetPub.set(true);
+    SmartDashboard.putBoolean("Vision/Pose Reset", true);
   }
 
   private void logCamera(int idx, Pose2d pose, int tagCount, double score) {

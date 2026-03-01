@@ -221,6 +221,11 @@ public class VisionSubsystem extends SubsystemBase {
     healthyPub.set((Timer.getFPGATimestamp() - lastVisionTimestamp) < 0.5);
     rejectCountPub.set(rejectCount);
 
+    // Reset hasEverHadVision if we haven't seen vision for 5+ seconds (allows re-bootstrap)
+    if (hasEverHadVision && (Timer.getFPGATimestamp() - lastVisionTimestamp) > 5.0) {
+      hasEverHadVision = false;
+    }
+
     // Update state-based indicators
     double currentTime = Timer.getFPGATimestamp();
     
@@ -287,13 +292,21 @@ public class VisionSubsystem extends SubsystemBase {
   private List<Measurement> mahalanobisGate(List<Measurement> measurements) {
     List<Measurement> accepted = new ArrayList<>();
     Pose2d current = drive.getPose();
+    
+    // Calculate velocity-dependent variances
+    double velocity = Math.hypot(
+        drive.getActualChassisSpeeds().vxMetersPerSecond,
+        drive.getActualChassisSpeeds().vyMetersPerSecond);
+    double posVariance = 0.1 * (1 + velocity / MAX_SPEED);  // Position variance scales with speed
+    double rotVariance = 0.05 * (1 + velocity / MAX_SPEED); // Rotation variance (radians²) scales with speed
 
     for (Measurement m : measurements) {
       double dx = m.pose.getX() - current.getX();
       double dy = m.pose.getY() - current.getY();
       double dtheta = m.pose.getRotation().minus(current.getRotation()).getRadians();
-      double variance = 0.5;
-      double d2 = (dx * dx + dy * dy + dtheta * dtheta) / variance;
+      
+      // Proper Mahalanobis distance with separate variances
+      double d2 = (dx * dx + dy * dy) / posVariance + (dtheta * dtheta) / rotVariance;
 
       m.mahalanobis = d2;
       if (d2 < MAHALANOBIS_THRESHOLD) accepted.add(m);

@@ -29,8 +29,8 @@ import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import edu.wpi.first.wpilibj2.command.button.POVButton;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.DriveCommands;
+import frc.robot.commands.DriveLockToHubCmd;
 import frc.robot.commands.DriveToHubCommandPP;
-import frc.robot.commands.FaceTagsCommand;
 import frc.robot.commands.HarvesterDeploy;
 import frc.robot.commands.HarvesterSpin;
 import frc.robot.commands.IndexerSpin;
@@ -48,6 +48,7 @@ import frc.robot.subsystems.VisionSubsystem;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.GyroIOPigeon2;
 import frc.robot.subsystems.drive.ModuleIOTalonFX;
+import frc.robot.util.Elastic;
 import java.util.function.DoubleSupplier;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
@@ -87,6 +88,12 @@ public class RobotContainer {
   private final GenericEntry turretEntry;
   private final GenericEntry hoodEntry;
   private final GenericEntry flyEntry;
+
+  // Class-level variables to track alert states
+  private boolean canFaultAlertSent = false;
+  private boolean canCoderFaultAlertSent = false;
+  private boolean canUtilizationAlertSent = false;
+  private boolean canCoderUtilizationAlertSent = false;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -269,6 +276,8 @@ public class RobotContainer {
 
     // TODO: Decide on final button mappings
     final JoystickButton driveToHub = new JoystickButton(driverLeftJoystick, 5);
+    final JoystickButton driveToDepot = new JoystickButton(driverLeftJoystick, 3);
+    final JoystickButton driveToOutpJoystickButton = new JoystickButton(driverLeftJoystick, 4);
 
     final JoystickButton resetGyro = new JoystickButton(driverRightJoystick, 7);
     final JoystickButton lockToZero = new JoystickButton(driverRightJoystick, 9);
@@ -312,17 +321,18 @@ public class RobotContainer {
 
     driveToHub.onTrue(DriveToHubCommandPP.create(drive));
 
-    // Drive facing april tag
-    faceHubButton.whileTrue(
-        new FaceTagsCommand(
-            drive, vision, () -> -driverLeftJoystick.getY(), () -> -driverLeftJoystick.getX()));
-
     // Reset gyro to 0° when 7 on right joystick button is pressed
     resetGyro.onTrue(
         Commands.runOnce(
                 () -> drive.setPose(new Pose2d(drive.getPose().getTranslation(), Rotation2d.kZero)),
                 drive)
             .ignoringDisable(true));
+
+    // Lock Onto Hub
+    // While holding Button 1 on the Right Joystick, lock heading to the Hub
+    faceHubButton.whileTrue(
+        DriveLockToHubCmd.create(
+            drive, () -> -driverLeftJoystick.getY(), () -> -driverLeftJoystick.getX()));
 
     harvestStartBtn.onTrue(new HarvesterDeploy(harvester, DEPLOY_OUT_ANGLE, 0.0));
     harvestStopBtn.onTrue(new HarvesterDeploy(harvester, DEPLOY_IN_ANGLE, 0.0));
@@ -362,9 +372,6 @@ public class RobotContainer {
     // Indexer Spin
     indexerSpin.whileTrue(new IndexerSpin(indexer));
 
-    // Vision Reset
-    resetOdom.onTrue(new InstantCommand(vision::forceOdometryToVision, vision));
-
     // flyEntry = Shuffleboard.getTab("Shooter").add("Flywheel", 0).getEntry();
     // hoodEntry = Shuffleboard.getTab("Shooter").add("Hood", 0).getEntry();
     // turretEntry = Shuffleboard.getTab("Shooter").add("Turret", 0).getEntry();
@@ -384,10 +391,20 @@ public class RobotContainer {
             (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
             (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
             (DoubleSupplier) () -> DONT_OVERRIDE_VAL)));
+
+    // TODO TA: ***** Inhibiting shooting if turret is not at correct angle, test and decide whether
+    // to keep
+    // possibly add a check for the hood and the flywheel also
     // Start up Kicker First to get it up to speed, and then hand off Fuel from indexer to the
     // kicker
     fireBtn.whileTrue(
-        new Kick(kicker).alongWith(Commands.waitSeconds(0.2).andThen(new IndexerSpin(indexer))));
+        new Kick(kicker)
+            .alongWith(
+                Commands.waitSeconds(0.2)
+                    // .andThen(new IndexerSpin(indexer).onlyIf(() ->
+                    // shooter.isTurretAtPosition()))));
+                    .andThen(new IndexerSpin(indexer))));
+
     fireBtn
         .debounce(0.10)
         .onFalse(
@@ -487,37 +504,60 @@ public class RobotContainer {
     rioHighLoadEntry.setBoolean(rioUsage > 90);
     canivoreHighLoadEntry.setBoolean(canivoreUsage > 90);
 
-    // 8. Send an Elastic notification if CAN goes unhealthy
-    // if (!robotCanOk) {
-    //   Elastic.sendNotification(
-    //       new Elastic.Notification(
-    //           Elastic.NotificationLevel.ERROR,
-    //           "CAN BUS FAULT",
-    //           "One or more RoboRIO CAN devices are disconnected! Check shooter, harvester,
-    // indexer,"
-    //               + " kicker, climber, or LED."));
-    // }
-    // if (!canCoderHealthy) {
-    //   Elastic.sendNotification(
-    //       new Elastic.Notification(
-    //           Elastic.NotificationLevel.ERROR,
-    //           "Swerve CANcoder Fault",
-    //           "One or more swerve CANcoders are disconnected!"));
-    // }
-    // if (rioUsage > 90) {
-    //   Elastic.sendNotification(
-    //       new Elastic.Notification(
-    //           Elastic.NotificationLevel.WARNING,
-    //           "RIO CAN High Load",
-    //           String.format("RIO CAN bus at %.1f%% utilization — keep below 90%%.", rioUsage)));
-    // }
-    // if (canivoreUsage > 90) {
-    //   Elastic.sendNotification(
-    //       new Elastic.Notification(
-    //           Elastic.NotificationLevel.WARNING,
-    //           "CANivore High Load",
-    //           String.format(
-    //               "CANivore bus at %.1f%% utilization — keep below 90%%.", canivoreUsage)));
-    // }
+    if (!robotCanOk) {
+      if (!canFaultAlertSent) {
+        Elastic.sendNotification(
+            new Elastic.Notification(
+                Elastic.NotificationLevel.ERROR,
+                "CAN BUS FAULT",
+                "One or more RoboRIO CAN devices are disconnected! Check shooter, harvester, indexer, kicker, climber, or LED."));
+        canFaultAlertSent = true; // Mark as sent so it doesn't repeat
+      }
+    } else {
+      // Reset the alert state when the CAN bus is healthy again
+      canFaultAlertSent = false;
+    }
+
+    if (!canCoderHealthy) {
+      if (!canCoderFaultAlertSent) {
+        Elastic.sendNotification(
+            new Elastic.Notification(
+                Elastic.NotificationLevel.ERROR,
+                "Swerve CANcoder Fault",
+                "One or more swerve CANcoders are disconnected!"));
+        canCoderFaultAlertSent = true; // Mark as sent so it doesn't repeat
+      }
+    } else {
+      // Reset the alert state when the CAN bus is healthy again
+      canCoderFaultAlertSent = false;
+    }
+
+    if (rioUsage > 90) {
+      if (!canUtilizationAlertSent) {
+        Elastic.sendNotification(
+            new Elastic.Notification(
+                Elastic.NotificationLevel.ERROR,
+                "RIO CAN High Load",
+                "RIO CAN bus at %.1f%% utilization — keep below 90%"));
+        canUtilizationAlertSent = true; // Mark as sent so it doesn't repeat
+      }
+    } else {
+      // Reset the alert state when the CAN bus is healthy again
+      canUtilizationAlertSent = false;
+    }
+
+    if (canivoreUsage > 90) {
+      if (!canCoderUtilizationAlertSent) {
+        Elastic.sendNotification(
+            new Elastic.Notification(
+                Elastic.NotificationLevel.ERROR,
+                "CANivore High Load",
+                "CANivore bus at %.1f%% utilization — keep below 90%%.\", canivoreUsage"));
+        canCoderUtilizationAlertSent = true; // Mark as sent so it doesn't repeat
+      }
+    } else {
+      // Reset the alert state when the CAN bus is healthy again
+      canCoderUtilizationAlertSent = false;
+    }
   }
 }

@@ -7,7 +7,7 @@
         {
           "type": "path",
           "data": {
-            "pathName": "NeuZnL2R_P1"
+            "pathName": "LtP3"
           }
         },
         {
@@ -17,7 +17,7 @@
               {
                 "type": "wait",
                 "data": {
-                  "waitTime": 3.5
+                  "waitTime": 3.0
                 }
               },
               {
@@ -36,34 +36,9 @@
           }
         },
         {
-          "type": "race",
+          "type": "named",
           "data": {
-            "commands": [
-              {
-                "type": "path",
-                "data": {
-                  "pathName": "NeuZnL2R_P2"
-                }
-              },
-              {
-                "type": "named",
-                "data": {
-                  "name": "Aim"
-                }
-              },
-              {
-                "type": "named",
-                "data": {
-                  "name": "StartHarvest"
-                }
-              },
-              {
-                "type": "named",
-                "data": {
-                  "name": "Fire"
-                }
-              }
-            ]
+            "name": "ClimberDown"
           }
         }
       ]

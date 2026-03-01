@@ -7,7 +7,7 @@
         {
           "type": "path",
           "data": {
-            "pathName": "NeuZnL2R_P1"
+            "pathName": "NeuZnR2L_P1"
           }
         },
         {
@@ -17,13 +17,19 @@
               {
                 "type": "wait",
                 "data": {
-                  "waitTime": 3.5
+                  "waitTime": 2.0
                 }
               },
               {
                 "type": "named",
                 "data": {
                   "name": "Aim"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "StartHarvest"
                 }
               },
               {
@@ -42,19 +48,19 @@
               {
                 "type": "path",
                 "data": {
-                  "pathName": "NeuZnL2R_P2"
-                }
-              },
-              {
-                "type": "named",
-                "data": {
-                  "name": "Aim"
+                  "pathName": "NeuZnR2L_P2"
                 }
               },
               {
                 "type": "named",
                 "data": {
                   "name": "StartHarvest"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "Aim"
                 }
               },
               {

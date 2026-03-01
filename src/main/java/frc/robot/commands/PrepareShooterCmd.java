@@ -7,7 +7,6 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -33,6 +32,11 @@ public class PrepareShooterCmd extends Command {
   private final DoubleSupplier hoodAngleOverride;
   private final DoubleSupplier TurretAngleOverride;
 
+  // ---> ADDED: Variable to store the calculated angle
+  private Rotation2d cachedAimAngle = new Rotation2d();
+
+  // private final ComplexWidget fieldEntry;
+
   public PrepareShooterCmd(
       ShooterSubsystem shooter,
       Drive drive,
@@ -47,15 +51,22 @@ public class PrepareShooterCmd extends Command {
 
     addRequirements(shooter);
 
+    var shtrTab = Shuffleboard.getTab("Shooter");
     // Publish Field2d to the Shooter Elastic tab
-    Shuffleboard.getTab("Shooter")
-        .add("Field", field)
-        .withWidget(BuiltInWidgets.kField)
-        .withPosition(0, 6)
-        .withSize(6, 4);
+    // fieldEntry =
+    //     shtrTab
+    //         .add("Field", field)
+    //         .withWidget(BuiltInWidgets.kField)
+    //         .withPosition(0, 6)
+    //         .withSize(6, 4);
 
     allSignals.addAll(drive.getSignals());
     allSignals.addAll(shooter.getSignals());
+  }
+
+  // ---> ADDED: Getter so the Drive command can read the result
+  public Rotation2d getAimAngle() {
+    return cachedAimAngle;
   }
 
   @Override
@@ -88,7 +99,8 @@ public class PrepareShooterCmd extends Command {
     }
 
     // 4. Velocity compensation
-    ChassisSpeeds robotSpeeds = drive.getChassisSpeeds();
+    ChassisSpeeds robotSpeeds = drive.getActualChassisSpeeds();
+
     ChassisSpeeds fieldSpeeds =
         ChassisSpeeds.fromRobotRelativeSpeeds(robotSpeeds, robotPose.getRotation());
 
@@ -104,6 +116,9 @@ public class PrepareShooterCmd extends Command {
     Translation2d relTrans = virtualTarget.minus(turretFieldPos);
 
     double odoTargetAngle = Math.atan2(relTrans.getY(), relTrans.getX());
+
+    // ---> ADDED: Save the result to our variable so we don't calculate it again
+    cachedAimAngle = new Rotation2d(odoTargetAngle);
 
     double odoRot =
         MathUtil.inputModulus(

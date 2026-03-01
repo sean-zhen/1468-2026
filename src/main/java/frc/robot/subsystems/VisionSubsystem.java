@@ -31,8 +31,8 @@ import org.photonvision.targeting.PhotonPipelineResult;
 
 public class VisionSubsystem extends SubsystemBase {
   // Camera Names
-  private static final String FRONT_NAME = "Camera_1";
-  private static final String BACK_NAME = "Camera_2";
+  private static final String FRONT_NAME = "Camera-1";
+  private static final String BACK_NAME = "Camera-2";
   // private static final String LEFT_NAME = "leftCamera";
   // private static final String RIGHT_NAME = "rightCamera";
 
@@ -55,20 +55,6 @@ public class VisionSubsystem extends SubsystemBase {
 
   private final AprilTagFieldLayout fieldLayout;
   private final Drive drive;
-
-  public static double cam1_x = Units.inchesToMeters(13);
-  public static double cam1_y = Units.inchesToMeters(-12);
-  public static double cam1_z = Units.inchesToMeters(15.0);
-  public static double cam1_roll = 0;
-  public static double cam1_pitch = 0;
-  public static double cam1_yaw = 0;
-
-  public static double cam2_x = Units.inchesToMeters(13);
-  public static double cam2_y = Units.inchesToMeters(-6);
-  public static double cam2_z = Units.inchesToMeters(15.0);
-  public static double cam2_roll = 0;
-  public static double cam2_pitch = 0;
-  public static double cam2_yaw = 0;
 
   private double lastMeasurementTimestamp = 0;
   private int lastTagCount = 0;
@@ -142,12 +128,27 @@ public class VisionSubsystem extends SubsystemBase {
     // rightCam = new PhotonCamera(RIGHT_NAME);
 
     // 2026 API Constructor: (Layout, RobotToCameraTransform)
+
     frontEst =
         new PhotonPoseEstimator(
-            fieldLayout, createTrf(cam1_x, cam1_y, cam1_z, cam1_roll, cam1_pitch, cam1_yaw));
+            fieldLayout,
+            createTrf(
+                Units.inchesToMeters(-7.857),
+                Units.inchesToMeters(12.293),
+                Units.inchesToMeters(8.181),
+                0,
+                Units.degreesToRadians(-18),
+                Units.degreesToRadians(70)));
     backEst =
         new PhotonPoseEstimator(
-            fieldLayout, createTrf(cam2_x, cam2_y, cam2_z, cam2_roll, cam2_pitch, cam2_yaw));
+            fieldLayout,
+            createTrf(
+                Units.inchesToMeters(-11.946),
+                Units.inchesToMeters(10.063),
+                Units.inchesToMeters(7.799),
+                0,
+                Units.degreesToRadians(-28),
+                Units.degreesToRadians(220)));
     // leftEst = new PhotonPoseEstimator(fieldLayout, createTrf(0.0, 12.0, 12.0, 0, 0, 90.0));
     // rightEst = new PhotonPoseEstimator(fieldLayout, createTrf(0.0, -12.0, 12.0, 0, 0, -90.0));
   }

@@ -75,7 +75,7 @@ public class HarvesterSubsystem extends SubsystemBase {
     /* Configure Motion Magic */
     MotionMagicConfigs mm = deployConfig.MotionMagic;
     mm.withMotionMagicCruiseVelocity(
-            RotationsPerSecond.of(2)) // s/b 10 (mechanism) rotations per second cruise
+            RotationsPerSecond.of(4)) // s/b 10 (mechanism) rotations per second cruise
         .withMotionMagicAcceleration(
             RotationsPerSecondPerSecond.of(
                 2)) // s/b 4Take approximately 0.2 seconds to reach max vel

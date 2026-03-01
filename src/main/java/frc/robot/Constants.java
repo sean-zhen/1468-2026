@@ -107,11 +107,13 @@ public final class Constants {
     public static final double HOOD_kD = 0.0;
     public static final double HOOD_kV = 0.0;
 
-    // *** THe Hood Gear has 22 teeth and the Hood itself has 29, so using approx 27 teeth
+    // *** The Hood Gear has 22 teeth and the Hood itself has 29, so using approx 27 teeth
     public static final double HOOD_TOP_SOFT_LIMIT_ROT = 1.25;
     public static final double HOOD_BOTTOM_SOFT_LIMIT_ROT = 0.0;
-    public static final double HOOD_TRACKING_TOLERANCE_DEG = 20 / 360.0; // DEGREE TOLERANCE
-    public static final double HOOD_DEG_PER_ROTATION = 360.0; // DEGREE TOLERANCE
+    public static final double HOOD_TRACKING_TOLERANCE_ROT =
+        HOOD_TOP_SOFT_LIMIT_ROT * 0.02; // 2% error tolerance
+    public static final double HOOD_DEG_PER_ROTATION =
+        20.0 / HOOD_TOP_SOFT_LIMIT_ROT; // DEGREE TOLERANCE
 
     //////////////////////////    TURRET     /////////////////////////////////////////
     // Turret PID and soft stops (Turret)
@@ -121,14 +123,14 @@ public final class Constants {
     public static final double TURRET_kD = 0.0;
     public static final double TURRET_kV = 0.0;
 
-    public static final double TURRET_LIMIT_ROT = 135.0 / 360.0; // +/- .375 Rotstions
+    public static final double TURRET_LIMIT_ROT = 95.0 / 360.0; // +/- .375 Rotstions
     // This multiplier is used to smooth the turret motion over angles that cant be used due to
     // wiring
     public static final double TURRET_CLAMP_FACTOR = 0.5 / (0.5 - TURRET_LIMIT_ROT);
     public static final double TURRET_RIGHT_SOFT_LIMIT_ROT = TURRET_LIMIT_ROT;
     public static final double TURRET_LEFT_SOFT_LIMIT_ROT = -TURRET_LIMIT_ROT;
 
-    public static final double TURRET_TRACKING_TOLERANCE_DEG = 1.0; // DEGREE TOLERANCE
+    public static final double TURRET_TRACKING_TOLERANCE_DEG = 2.0; // DEGREE TOLERANCE
     public static final double TURRET_MAX_VELOCITY_RPS = 5.0; // Max turret rotation speed
   }
 
@@ -160,7 +162,7 @@ public final class Constants {
     public static final double DEPLOY_DEGREES_TO_ROTATIONS = 2.5 / 360.0;
 
     public static final double DEPLOY_START_ANGLE = 0.0; // Degrees
-    public static final double DEPLOY_IN_ANGLE = 10.0; // Degrees
+    public static final double DEPLOY_IN_ANGLE = 25.0; // Degrees
     public static final double DEPLOY_OUT_ANGLE = 100.0; // Degrees
 
     public static final int SPIN_MOTOR_ID = 32;
@@ -184,7 +186,7 @@ public final class Constants {
   public static final class Indexer {
     public static final int MOTOR_ID = 41;
     public static final double GEAR_RATIO = 1.0; // NEED TO INSERT
-    public static final double TARGET_RPS = 90.0; // NEED TO INSERT
+    public static final double TARGET_RPS = 45.0; // NEED TO INSERT
     public static final double[] POSITIONS = {
       0.0, 10.0, 20.0, 30.0, 40.0, 50.0
     }; // NEED TO INSERT (positions in rotations)

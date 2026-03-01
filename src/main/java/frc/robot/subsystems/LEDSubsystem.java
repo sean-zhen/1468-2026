@@ -140,7 +140,7 @@ public class LEDSubsystem extends SubsystemBase {
 
     if (flyOk && turretOk && hoodOk) {
 
-      if (m_vision.getTagCount() >= 3) {
+      if (m_vision.getFusedTagCount() >= 3) {
         m_candle.setControl(m_strobeGold);
       } else {
         m_candle.setControl(m_strobeWhite);

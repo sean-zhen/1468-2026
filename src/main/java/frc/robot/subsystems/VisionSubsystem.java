@@ -2,444 +2,416 @@ package frc.robot.subsystems;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
-import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
-import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.networktables.GenericEntry;
-import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.networktables.BooleanPublisher;
+import edu.wpi.first.networktables.DoublePublisher;
+import edu.wpi.first.networktables.IntegerPublisher;
+import edu.wpi.first.networktables.NetworkTable;
+import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
-import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
-import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
-import edu.wpi.first.wpilibj.smartdashboard.Field2d;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.subsystems.drive.Drive;
-import java.util.Optional;
+import java.util.*;
 import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
-import org.photonvision.targeting.PhotonPipelineResult;
 
 public class VisionSubsystem extends SubsystemBase {
-  // Camera Names
-  private static final String FRONT_NAME = "Camera-1";
-  private static final String BACK_NAME = "Camera-2";
-  // private static final String LEFT_NAME = "leftCamera";
-  // private static final String RIGHT_NAME = "rightCamera";
 
-  private final Field2d m_field = new Field2d();
+  private static final String[] CAM_NAMES = {"Camera-1", "Camera-2", "Camera-3", "Camera-4"};
+  private static final double MAX_SPEED = 4.5;
+  private static final double AGREEMENT_POS_TOL = 0.075;
+  private static final double AGREEMENT_ROT_TOL_DEG = 10.0;
+  private static final double RESET_SPEED_THRESHOLD = 0.4;
+  private static final double RESET_STABILITY_TIME = 0.25;
+  private static final double MAHALANOBIS_THRESHOLD = 7.8;
 
-  // Constants
-  private static final double MAX_SINGLE_TAG_DIST = 3.0; // Meters
-  private static final double MAX_RESET_VELOCITY = 0.5; // M/s
-  private static final double VISION_TIMEOUT = 0.5; // Seconds
-
-  // Confidence Matrices
-  private static final Matrix<N3, N1> SINGLE_TAG_TELEOP = VecBuilder.fill(0.1, 0.1, 4.0);
-  private static final Matrix<N3, N1> SINGLE_TAG_AUTO = VecBuilder.fill(4.0, 4.0, 8.0);
-  private static final Matrix<N3, N1> MULTI_TAG = VecBuilder.fill(0.1, 0.1, 0.25);
-
-  // private final PhotonCamera frontCam, backCam, leftCam, rightCam;
-  private final PhotonCamera frontCam, backCam;
-  // private final PhotonPoseEstimator frontEst, backEst, leftEst, rightEst;
-  private final PhotonPoseEstimator frontEst, backEst;
-
-  private final AprilTagFieldLayout fieldLayout;
   private final Drive drive;
+  private final AprilTagFieldLayout fieldLayout;
+  private final PhotonCamera[] cameras = new PhotonCamera[4];
+  private final PhotonPoseEstimator[] estimators = new PhotonPoseEstimator[4];
+  private final NetworkTable visionTable = NetworkTableInstance.getDefault().getTable("Vision");
 
-  private double lastMeasurementTimestamp = 0;
-  private int lastTagCount = 0;
+  private double lastResetTime = 0;
+  private double lastVisionTimestamp = 0;
+  private int rejectCount = 0;
+  private boolean hasEverHadVision = false;
+  private int lastFusedTagCount = 0;
 
-  // Data Cache Class
-  private static class CameraData {
-    public PhotonPipelineResult result = new PhotonPipelineResult();
-    public Optional<EstimatedRobotPose> pose = Optional.empty();
-    public long loopTimeNanos = 0;
+  // --- Cached NT publishers: top-level ---
+  private final BooleanPublisher healthyPub;
+  private final IntegerPublisher rejectCountPub;
+  private final BooleanPublisher initialResetPub;
+  private final BooleanPublisher resetTriggeredPub;
+
+  // --- Cached NT publishers: per-camera ---
+  private final BooleanPublisher[] camConnectedPub = new BooleanPublisher[4];
+  private final IntegerPublisher[] camResultCountPub = new IntegerPublisher[4];
+  private final BooleanPublisher[] camHasTargetsPub = new BooleanPublisher[4];
+  private final IntegerPublisher[] camTargetsSeenPub = new IntegerPublisher[4];
+  private final BooleanPublisher[] camHasMultiTagPub = new BooleanPublisher[4];
+  private final BooleanPublisher[] camMultiTagPosePub = new BooleanPublisher[4];
+  private final DoublePublisher[] camXPub = new DoublePublisher[4];
+  private final DoublePublisher[] camYPub = new DoublePublisher[4];
+  private final DoublePublisher[] camThetaPub = new DoublePublisher[4];
+  private final IntegerPublisher[] camTagCountPub = new IntegerPublisher[4];
+  private final DoublePublisher[] camScorePub = new DoublePublisher[4];
+  private final DoublePublisher[] camMahalanobisPub = new DoublePublisher[4];
+
+  // --- Cached NT publishers: fused ---
+  private final DoublePublisher fusedXPub;
+  private final DoublePublisher fusedYPub;
+  private final DoublePublisher fusedThetaPub;
+  private final IntegerPublisher fusedTagCountPub;
+  private final IntegerPublisher fusedUsedCamerasPub;
+
+  // --- Cached NT publishers: diagnostics ---
+  private final IntegerPublisher diagCollectedPub;
+  private final IntegerPublisher diagAfterGatePub;
+  private final IntegerPublisher diagAfterAgreementPub;
+  private final BooleanPublisher diagHasEverVisionPub;
+
+  private static class Measurement {
+    Pose2d pose;
+    double score;
+    int tagCount;
+    double mahalanobis;
+    int camIndex;
+    double timestamp;
   }
 
-  private final CameraData fData = new CameraData(),
-      bData = new CameraData(),
-      lData = new CameraData(),
-      rData = new CameraData();
-
-  // Shuffleboard entries
-  private final ShuffleboardTab visionTab = Shuffleboard.getTab("Vision");
-  private final GenericEntry backPresentEntry;
-  private final GenericEntry visionHealthyEntry;
-  private final GenericEntry activeSourceEntry;
-  private final GenericEntry tagsVisibleEntry;
-  private final GenericEntry bestTargetDistEntry;
+  private static final Transform3d[] CAMERA_TRANSFORMS = {
+    new Transform3d(
+        new Translation3d(
+            Units.inchesToMeters(-7.857),
+            Units.inchesToMeters(-12.293),
+            Units.inchesToMeters(8.181)),
+        new Rotation3d(0, Units.degreesToRadians(-18), Units.degreesToRadians(290))), // Cam 1
+    new Transform3d(
+        new Translation3d(
+            Units.inchesToMeters(-11.946),
+            Units.inchesToMeters(-10.063),
+            Units.inchesToMeters(7.799)),
+        new Rotation3d(0, Units.degreesToRadians(-28), Units.degreesToRadians(140))), // Cam 2
+    new Transform3d(
+        new Translation3d(
+            Units.inchesToMeters(-11.946),
+            Units.inchesToMeters(10.063),
+            Units.inchesToMeters(7.799)),
+        new Rotation3d(0, Units.degreesToRadians(-28), Units.degreesToRadians(220))), // Cam 3
+    new Transform3d(
+        new Translation3d(
+            Units.inchesToMeters(-7.857),
+            Units.inchesToMeters(12.293),
+            Units.inchesToMeters(8.181)),
+        new Rotation3d(0, Units.degreesToRadians(-18), Units.degreesToRadians(70))), // Cam 4
+  };
 
   public VisionSubsystem(Drive drive) {
     this.drive = drive;
     fieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltAndymark);
 
-    SmartDashboard.putData("Vision/Field", m_field);
+    for (int i = 0; i < 4; i++) {
+      cameras[i] = new PhotonCamera(CAM_NAMES[i]);
+      estimators[i] = new PhotonPoseEstimator(fieldLayout, CAMERA_TRANSFORMS[i]);
+    }
 
-    // Persistent Shuffleboard widgets
-    backPresentEntry =
-        visionTab
-            .add("BACK PRESENT", false)
-            .withWidget(BuiltInWidgets.kBooleanBox)
-            .withPosition(0, 0)
-            .withSize(2, 1)
-            .getEntry();
-    visionHealthyEntry =
-        visionTab
-            .add("Vision Healthy", false)
-            .withWidget(BuiltInWidgets.kBooleanBox)
-            .withPosition(2, 0)
-            .withSize(2, 1)
-            .getEntry();
-    activeSourceEntry =
-        visionTab
-            .add("ActiveSource", "None")
-            .withWidget(BuiltInWidgets.kTextView)
-            .withPosition(0, 1)
-            .withSize(2, 1)
-            .getEntry();
-    tagsVisibleEntry =
-        visionTab
-            .add("TagsVisible", 0)
-            .withWidget(BuiltInWidgets.kTextView)
-            .withPosition(2, 1)
-            .withSize(1, 1)
-            .getEntry();
-    bestTargetDistEntry =
-        visionTab
-            .add("BestTargetDist", 0.0)
-            .withWidget(BuiltInWidgets.kTextView)
-            .withPosition(3, 1)
-            .withSize(2, 1)
-            .getEntry();
+    // Cache top-level publishers
+    healthyPub = visionTable.getBooleanTopic("Healthy").publish();
+    rejectCountPub = visionTable.getIntegerTopic("RejectCount").publish();
+    initialResetPub = visionTable.getBooleanTopic("InitialReset").publish();
+    resetTriggeredPub = visionTable.getBooleanTopic("ResetTriggered").publish();
 
-    frontCam = new PhotonCamera(FRONT_NAME);
-    backCam = new PhotonCamera(BACK_NAME);
-    // leftCam = new PhotonCamera(LEFT_NAME);
-    // rightCam = new PhotonCamera(RIGHT_NAME);
+    // Cache per-camera publishers
+    for (int i = 0; i < 4; i++) {
+      NetworkTable camTable = visionTable.getSubTable("Cam" + (i + 1));
+      NetworkTable dbg = camTable.getSubTable("Debug");
+      camConnectedPub[i] = dbg.getBooleanTopic("Connected").publish();
+      camResultCountPub[i] = dbg.getIntegerTopic("ResultCount").publish();
+      camHasTargetsPub[i] = dbg.getBooleanTopic("HasTargets").publish();
+      camTargetsSeenPub[i] = dbg.getIntegerTopic("TargetsSeen").publish();
+      camHasMultiTagPub[i] = dbg.getBooleanTopic("HasMultiTagResult").publish();
+      camMultiTagPosePub[i] = dbg.getBooleanTopic("MultiTagPosePresent").publish();
+      camXPub[i] = camTable.getDoubleTopic("X").publish();
+      camYPub[i] = camTable.getDoubleTopic("Y").publish();
+      camThetaPub[i] = camTable.getDoubleTopic("ThetaDeg").publish();
+      camTagCountPub[i] = camTable.getIntegerTopic("TagCount").publish();
+      camScorePub[i] = camTable.getDoubleTopic("Score").publish();
+      camMahalanobisPub[i] = camTable.getDoubleTopic("Mahalanobis").publish();
+    }
 
-    // 2026 API Constructor: (Layout, RobotToCameraTransform)
+    // Cache fused publishers
+    NetworkTable fusedTable = visionTable.getSubTable("Fused");
+    fusedXPub = fusedTable.getDoubleTopic("X").publish();
+    fusedYPub = fusedTable.getDoubleTopic("Y").publish();
+    fusedThetaPub = fusedTable.getDoubleTopic("ThetaDeg").publish();
+    fusedTagCountPub = fusedTable.getIntegerTopic("TagCount").publish();
+    fusedUsedCamerasPub = fusedTable.getIntegerTopic("UsedCameras").publish();
 
-    frontEst =
-        new PhotonPoseEstimator(
-            fieldLayout,
-            createTrf(
-                Units.inchesToMeters(-7.857),
-                Units.inchesToMeters(12.293),
-                Units.inchesToMeters(8.181),
-                0,
-                Units.degreesToRadians(-18),
-                Units.degreesToRadians(70)));
-    backEst =
-        new PhotonPoseEstimator(
-            fieldLayout,
-            createTrf(
-                Units.inchesToMeters(-11.946),
-                Units.inchesToMeters(10.063),
-                Units.inchesToMeters(7.799),
-                0,
-                Units.degreesToRadians(-28),
-                Units.degreesToRadians(220)));
-    // leftEst = new PhotonPoseEstimator(fieldLayout, createTrf(0.0, 12.0, 12.0, 0, 0, 90.0));
-    // rightEst = new PhotonPoseEstimator(fieldLayout, createTrf(0.0, -12.0, 12.0, 0, 0, -90.0));
+    // Cache diagnostics publishers
+    NetworkTable diagTable = visionTable.getSubTable("Diagnostics");
+    diagCollectedPub = diagTable.getIntegerTopic("CollectedCount").publish();
+    diagAfterGatePub = diagTable.getIntegerTopic("AfterMahalanobisGate").publish();
+    diagAfterAgreementPub = diagTable.getIntegerTopic("AfterAgreementFilter").publish();
+    diagHasEverVisionPub = diagTable.getBooleanTopic("HasEverHadVision").publish();
   }
 
   @Override
   public void periodic() {
-    updateCam(frontCam, frontEst, fData, FRONT_NAME);
-    updateCam(backCam, backEst, bData, BACK_NAME);
-
-    // updateCam(leftCam, leftEst, lData);
-    // updateCam(rightCam, rightEst, rData);
-    log();
-  }
-
-  private void updateCam(
-      PhotonCamera cam, PhotonPoseEstimator est, CameraData data, String camera) {
-    long start = System.nanoTime();
-    var results = cam.getAllUnreadResults();
-    for (var res : results) {
-      data.result = res;
-      if (!res.hasTargets()) {
-        data.pose = Optional.empty();
-        continue;
-      }
-
-      // Distance Filter
-      if (res.getTargets().size() == 1) {
-        double dist = res.getBestTarget().getBestCameraToTarget().getTranslation().getNorm();
-        if (dist > MAX_SINGLE_TAG_DIST) continue;
-      }
-
-      // 1. Use the 2026.2.2 Strategy Method
-      est.estimateCoprocMultiTagPose(res)
-          .ifPresent(
-              estPose -> {
-                // Convert 3D estimated pose to 2D for the Swerve Drive
-                var estPose2d = estPose.estimatedPose.toPose2d();
-
-                // 2. Validate the pose is physically on the field
-                if (isPoseValid(estPose2d)) {
-                  data.pose = Optional.of(estPose);
-
-                  // 3. Calculate Average Distance to all visible targets
-                  double avgDistance =
-                      res.getTargets().stream()
-                          .mapToDouble(t -> t.getBestCameraToTarget().getTranslation().getNorm())
-                          .average()
-                          .orElse(4.0);
-
-                  // 4. Determine Dynamic Trust (Standard Deviations)
-                  int tagCount = res.getTargets().size();
-                  Vector<N3> dynamicStds;
-
-                  if (tagCount > 1) {
-                    // MULTI-TAG: High confidence that increases with more tags
-                    // 2 tags = 0.025 base, 3 tags = 0.016 base, 4 tags = 0.0125 base
-                    double trustFactor = 0.05 / tagCount;
-                    double xyStdDev = trustFactor * Math.pow(avgDistance, 2);
-
-                    // Rotation trust also increases with tag count
-                    dynamicStds = VecBuilder.fill(xyStdDev, xyStdDev, 0.5 / tagCount);
-                  } else {
-                    // SINGLE-TAG: Low confidence (penalty multiplier of 2.0)
-                    // This ensures we rely more on Swerve/Gyro when only 1 tag is seen
-                    double xyStdDev = 2.0 * Math.pow(avgDistance, 2);
-                    dynamicStds = VecBuilder.fill(xyStdDev, xyStdDev, 5.0);
-                  }
-
-                  // 5. Apply the measurement to the Drive Subsystem
-                  // Uses the synchronized timestamp from the PhotonLib result
-                  drive.addVisionMeasurement(
-                      estPose2d, estPose.timestampSeconds, dynamicStds, camera);
-
-                  // Update the timestamp for dashboard/logging
-                  lastMeasurementTimestamp = Timer.getFPGATimestamp();
-                }
-                lastTagCount = res.getTargets().size();
-              });
-    }
-    data.loopTimeNanos = System.nanoTime() - start;
-  }
-
-  // public int getTagCount() {
-  //     // If the last measurement is too old (e.g., > 0.5s), return 0
-  //     if (Timer.getFPGATimestamp() - lastMeasurementTimestamp > 0.5) {
-  //         return 0;
-  //     }
-  //     return lastTagCount;
-  // }
-
-  public int getTagCount() {
-    // 1. Get current robot velocity (linear magnitude)
-    // We use the drive subsystem speeds we set up earlier
-    var speeds = drive.getChassisSpeeds();
     double velocity =
-        Math.sqrt(Math.pow(speeds.vxMetersPerSecond, 2) + Math.pow(speeds.vyMetersPerSecond, 2));
-
-    // 2. Calculate a Dynamic Timeout
-    // If stopped (0m/s), timeout is 0.8s.
-    // If sprinting (5m/s), timeout drops to 0.1s.
-    double dynamicTimeout = MathUtil.clamp(0.8 - (velocity * 0.14), 0.1, 0.8);
-
-    // 3. Check if the data is "stale" based on that timeout
-    double timeSinceLastTag = Timer.getFPGATimestamp() - lastMeasurementTimestamp;
-
-    if (timeSinceLastTag > dynamicTimeout) {
-      return 0; // Data is too old for our current speed
-    }
-    return lastTagCount;
-  }
-
-  public void forceOdometryToVision() {
-    double speed =
         Math.hypot(
             drive.getActualChassisSpeeds().vxMetersPerSecond,
             drive.getActualChassisSpeeds().vyMetersPerSecond);
-    if (speed > MAX_RESET_VELOCITY) return;
 
-    CameraData[] all = {fData, bData};
-    for (CameraData d : all) {
-      if (d.pose.isPresent() && d.result.getTargets().size() > 1) {
-        drive.resetPose(d.pose.get().estimatedPose.toPose2d());
-        return;
+    List<Measurement> validMeasurements = collectMeasurements(velocity);
+
+    // If we've never had a vision update, skip the Mahalanobis gate entirely
+    // and hard-reset the pose from the first good multi-tag result.
+    if (!hasEverHadVision && !validMeasurements.isEmpty()) {
+      Measurement best = validMeasurements.get(0);
+      for (Measurement m : validMeasurements) {
+        if (m.score > best.score) best = m;
+      }
+      drive.resetPose(best.pose);
+      hasEverHadVision = true;
+      lastVisionTimestamp = Timer.getFPGATimestamp();
+      lastResetTime = Timer.getFPGATimestamp();
+      initialResetPub.set(true);
+      logFusion(best, validMeasurements);
+      logDiagnostics(validMeasurements.size(), validMeasurements.size(), validMeasurements.size());
+      return;
+    }
+
+    List<Measurement> gated = mahalanobisGate(validMeasurements);
+    List<Measurement> agreeing = agreementFilter(gated);
+
+    logDiagnostics(validMeasurements.size(), gated.size(), agreeing.size());
+
+    if (!agreeing.isEmpty()) {
+      Measurement fused = fuse(agreeing, velocity);
+      applyToEstimator(fused, velocity);
+      maybeHardReset(fused, velocity);
+      lastVisionTimestamp = Timer.getFPGATimestamp();
+      hasEverHadVision = true;
+      logFusion(fused, agreeing);
+    } else {
+      logNoVision();
+    }
+
+    healthyPub.set((Timer.getFPGATimestamp() - lastVisionTimestamp) < 0.5);
+    rejectCountPub.set(rejectCount);
+  }
+
+  private List<Measurement> collectMeasurements(double velocity) {
+    List<Measurement> list = new ArrayList<>();
+    for (int i = 0; i < 4; i++) {
+      var results = cameras[i].getAllUnreadResults();
+      camConnectedPub[i].set(cameras[i].isConnected());
+      camResultCountPub[i].set(results.size());
+
+      for (var result : results) {
+        camHasTargetsPub[i].set(result.hasTargets());
+        if (!result.hasTargets()) continue;
+
+        camTargetsSeenPub[i].set(result.getTargets().size());
+        camHasMultiTagPub[i].set(result.getMultiTagResult().isPresent());
+
+        Optional<EstimatedRobotPose> poseOpt = estimators[i].estimateCoprocMultiTagPose(result);
+        camMultiTagPosePub[i].set(poseOpt.isPresent());
+        if (poseOpt.isEmpty()) continue;
+
+        int tagCount = result.getTargets().size();
+        if (tagCount < 2) continue; // multi-tag only
+
+        Pose2d pose = poseOpt.get().estimatedPose.toPose2d();
+        double avgDist =
+            result.getTargets().stream()
+                .mapToDouble(t -> t.getBestCameraToTarget().getTranslation().getNorm())
+                .average()
+                .orElse(4.0);
+
+        Measurement m = new Measurement();
+        m.pose = pose;
+        m.score = computeScore(tagCount, avgDist, velocity);
+        m.tagCount = tagCount;
+        m.camIndex = i;
+        m.timestamp = poseOpt.get().timestampSeconds;
+        list.add(m);
+
+        logCamera(i, pose, tagCount, m.score);
       }
     }
+    return list;
   }
 
-  private boolean isPoseValid(Pose2d estPose) {
-    // 1. Field Boundary Check: 2026 REBUILT field is ~16.5m x 8.2m
-    if (estPose.getX() < -0.5
-        || estPose.getX() > 17.0
-        || estPose.getY() < -0.5
-        || estPose.getY() > 8.7) {
-      return false;
+  private double computeScore(int tagCount, double avgDist, double velocity) {
+    double tagWeight = tagCount * tagCount;
+    double distanceWeight = 1.0 / (avgDist * avgDist);
+    double velocityWeight = 1.0 / (1.0 + Math.pow(velocity / MAX_SPEED, 2));
+    return tagWeight * distanceWeight * velocityWeight;
+  }
+
+  private List<Measurement> mahalanobisGate(List<Measurement> measurements) {
+    List<Measurement> accepted = new ArrayList<>();
+    Pose2d current = drive.getPose();
+
+    for (Measurement m : measurements) {
+      double dx = m.pose.getX() - current.getX();
+      double dy = m.pose.getY() - current.getY();
+      double dtheta = m.pose.getRotation().minus(current.getRotation()).getRadians();
+      double variance = 0.5;
+      double d2 = (dx * dx + dy * dy + dtheta * dtheta) / variance;
+
+      m.mahalanobis = d2;
+      if (d2 < MAHALANOBIS_THRESHOLD) accepted.add(m);
+      else rejectCount++;
+
+      camMahalanobisPub[m.camIndex].set(d2);
     }
-
-    return true;
+    return accepted;
   }
 
-  private Transform3d createTrf(double x, double y, double z, double r, double p, double yw) {
-    return new Transform3d(
-        new Translation3d(x, y, z), // Variables are already in meters!
-        new Rotation3d(
-            Units.degreesToRadians(r), Units.degreesToRadians(p), Units.degreesToRadians(yw)));
-  }
+  private List<Measurement> agreementFilter(List<Measurement> list) {
+    // If we only have one measurement, we can't check for agreement,
+    // so we just return it.
+    if (list.size() <= 1) return list;
 
-  private void log() {
-    // ── Vision page ────────────────────────────────────────────────────────────
+    List<Measurement> agreeing = new ArrayList<>();
 
-    // 1. Update the main robot pose from your Drive subsystem
-    m_field.setRobotPose(drive.getPose());
+    // 1. ATTEMPT CONSENSUS: Look for two cameras that see the same thing
+    for (Measurement m : list) {
+      for (Measurement other : list) {
+        if (m == other) continue;
 
-    // 2. Log Front Camera Estimate (if present)
-    if (fData.pose.isPresent()) {
-      m_field.getObject("Front Cam Pose").setPose(fData.pose.get().estimatedPose.toPose2d());
-    } else {
-      // Optional: Move it off-field if lost to "hide" it
-      m_field.getObject("Front Cam Pose").setPoses();
-    }
+        double posDiff = m.pose.getTranslation().getDistance(other.pose.getTranslation());
+        double rotDiff =
+            Math.abs(m.pose.getRotation().minus(other.pose.getRotation()).getDegrees());
 
-    // Update persistent BACK PRESENT
-    backPresentEntry.setBoolean(bData.pose.isPresent());
-
-    // 3. Log Back Camera Estimate (if present)
-    if (bData.pose.isPresent()) {
-      m_field.getObject("Back Cam Pose").setPose(bData.pose.get().estimatedPose.toPose2d());
-    } else {
-      m_field.getObject("Back Cam Pose").setPoses();
-    }
-
-    boolean healthy = (Timer.getFPGATimestamp() - lastMeasurementTimestamp) < VISION_TIMEOUT;
-    visionHealthyEntry.setBoolean(healthy);
-
-    // Field2d widget (robot + camera poses) - only update value, don't re-put the widget
-    SmartDashboard.putData("Field", m_field);
-
-    logBestCameraSummary();
-  }
-
-  private void logBestCameraSummary() {
-    CameraData[] allCams = {fData, bData};
-    String[] names = {FRONT_NAME, BACK_NAME};
-
-    int bestCamIdx = -1;
-    int maxTags = 0;
-
-    // Find the camera seeing the most tags
-    for (int i = 0; i < allCams.length; i++) {
-      int tagCount = allCams[i].result.getTargets().size();
-      if (tagCount > maxTags) {
-        maxTags = tagCount;
-        bestCamIdx = i;
+        if (posDiff < AGREEMENT_POS_TOL && rotDiff < AGREEMENT_ROT_TOL_DEG) {
+          agreeing.add(m);
+          break; // This camera is "verified" by another
+        }
       }
     }
 
-    if (bestCamIdx != -1) {
-      activeSourceEntry.setString(names[bestCamIdx]);
-      tagsVisibleEntry.setDouble(maxTags);
+    // 2. FALLBACK: If no cameras agreed, pick the single most mathematically reliable one
+    if (agreeing.isEmpty() && !list.isEmpty()) {
+      Measurement best = list.get(0);
+      for (Measurement m : list) {
+        if (m.score > best.score) {
+          best = m;
+        }
+      }
 
-      // Get distance of the best target from the best camera
-      double dist =
-          allCams[bestCamIdx]
-              .result
-              .getBestTarget()
-              .getBestCameraToTarget()
-              .getTranslation()
-              .getNorm();
-      bestTargetDistEntry.setDouble(dist);
-    } else {
-      activeSourceEntry.setString("None");
-      tagsVisibleEntry.setDouble(0);
-      bestTargetDistEntry.setDouble(0.0);
+      // Accept the fallback only if it sees at least 2 tags
+      if (best.tagCount >= 2) {
+        agreeing.add(best);
+      }
     }
+
+    return agreeing;
   }
 
-  // --- FAST GETTERS (Updated for 4-Camera Data Structure) ---
+  private Measurement fuse(List<Measurement> list, double velocity) {
+    double totalWeight = 0, x = 0, y = 0, theta = 0;
+    int totalTags = 0;
+    double bestTimestamp = 0;
+    double bestScore = -1;
+    for (Measurement m : list) {
+      totalWeight += m.score;
+      x += m.pose.getX() * m.score;
+      y += m.pose.getY() * m.score;
+      theta += m.pose.getRotation().getRadians() * m.score;
+      totalTags += m.tagCount;
+      if (m.score > bestScore) {
+        bestScore = m.score;
+        bestTimestamp = m.timestamp;
+      }
+    }
+    x /= totalWeight;
+    y /= totalWeight;
+    theta /= totalWeight;
 
-  public boolean frontCameraHasTargets() {
-    return fData.result.hasTargets();
+    Measurement fused = new Measurement();
+    fused.pose = new Pose2d(x, y, new Rotation2d(theta));
+    fused.score = totalWeight;
+    fused.tagCount = totalTags;
+    fused.timestamp = bestTimestamp;
+    return fused;
   }
 
-  public boolean backCameraHasTargets() {
-    return bData.result.hasTargets();
+  private void applyToEstimator(Measurement fused, double velocity) {
+    Vector<N3> stdDevs =
+        VecBuilder.fill(
+            0.05 * (1 + velocity / MAX_SPEED),
+            0.05 * (1 + velocity / MAX_SPEED),
+            0.1 * (1 + velocity / MAX_SPEED));
+    drive.addVisionMeasurement(fused.pose, fused.timestamp, stdDevs, "FUSED");
   }
 
-  // public boolean leftCameraHasTargets() {
-  //   return lData.result.hasTargets();
-  // }
+  private void maybeHardReset(Measurement fused, double velocity) {
+    if (velocity > RESET_SPEED_THRESHOLD) return;
+    if (fused.tagCount < 3) return;
+    if (Timer.getFPGATimestamp() - lastResetTime < RESET_STABILITY_TIME) return;
 
-  // public boolean rightCameraHasTargets() {
-  //   return rData.result.hasTargets();
-  // }
-
-  public int getFrontCameraBestTargetId() {
-    return fData.result.hasTargets() ? fData.result.getBestTarget().getFiducialId() : -1;
+    drive.resetPose(fused.pose);
+    lastResetTime = Timer.getFPGATimestamp();
+    resetTriggeredPub.set(true);
   }
 
-  public int getBackCameraBestTargetId() {
-    return bData.result.hasTargets() ? bData.result.getBestTarget().getFiducialId() : -1;
+  private void logCamera(int idx, Pose2d pose, int tagCount, double score) {
+    camXPub[idx].set(pose.getX());
+    camYPub[idx].set(pose.getY());
+    camThetaPub[idx].set(pose.getRotation().getDegrees());
+    camTagCountPub[idx].set(tagCount);
+    camScorePub[idx].set(score);
   }
 
-  public double getFrontCameraBestTargetArea() {
-    return fData.result.hasTargets() ? fData.result.getBestTarget().getArea() : 0.0;
+  private void logFusion(Measurement fused, List<Measurement> used) {
+    fusedXPub.set(fused.pose.getX());
+    fusedYPub.set(fused.pose.getY());
+    fusedThetaPub.set(fused.pose.getRotation().getDegrees());
+    fusedTagCountPub.set(fused.tagCount);
+    fusedUsedCamerasPub.set(used.size());
+    lastFusedTagCount = fused.tagCount;
   }
 
-  public double getBackCameraBestTargetArea() {
-    return bData.result.hasTargets() ? bData.result.getBestTarget().getArea() : 0.0;
+  private void logNoVision() {
+    fusedXPub.set(0);
+    fusedYPub.set(0);
+    fusedThetaPub.set(0);
+    fusedTagCountPub.set(0);
+    fusedUsedCamerasPub.set(0);
+    lastFusedTagCount = 0;
   }
 
-  public PhotonPipelineResult getLastFrontResult() {
-    return fData.result;
+  private void logDiagnostics(int collected, int afterGate, int afterAgreement) {
+    diagCollectedPub.set(collected);
+    diagAfterGatePub.set(afterGate);
+    diagAfterAgreementPub.set(afterAgreement);
+    diagHasEverVisionPub.set(hasEverHadVision);
   }
 
-  public PhotonPipelineResult getLastBackResult() {
-    return bData.result;
-  }
-
-  public Optional<EstimatedRobotPose> getLastFrontEstimatedPose() {
-    return fData.pose;
-  }
-
-  public Optional<EstimatedRobotPose> getLastBackEstimatedPose() {
-    return bData.pose;
-  }
-
-  // These can be calculated based on the result count stored in the cache
-  public Matrix<N3, N1> getLastFrontStdDevs() {
-    return fData.result.getTargets().size() > 1
-        ? MULTI_TAG
-        : (DriverStation.isAutonomous() ? SINGLE_TAG_AUTO : SINGLE_TAG_TELEOP);
+  public Optional<Translation2d> getTagPosition(int tagId) {
+    Optional<Pose3d> tagPose3d = fieldLayout.getTagPose(tagId);
+    return tagPose3d.map(p -> p.toPose2d().getTranslation());
   }
 
   public AprilTagFieldLayout getFieldLayout() {
     return fieldLayout;
   }
 
-  // Getters for the Transforms (using the estimators)
-  public Transform3d getRobotToFrontCamera() {
-    return frontEst.getRobotToCameraTransform();
-  }
-
-  public Transform3d getRobotToBackCamera() {
-    return backEst.getRobotToCameraTransform();
-  }
-
-  /** Get the last update time in microseconds for performance monitoring. */
-  public double getFrontCameraUpdateTimeMicros() {
-    return fData.loopTimeNanos / 1000.0;
-  }
-
-  public double getBackCameraUpdateTimeMicros() {
-    return bData.loopTimeNanos / 1000.0;
+  public int getFusedTagCount() {
+    return lastFusedTagCount;
   }
 }

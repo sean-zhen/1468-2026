@@ -32,7 +32,10 @@ public class DriveLockToHubCmd {
 
           // 3. Calculate the angle from robot to Hub
           Translation2d diff = targetHub.minus(robotPos);
-          return new Rotation2d(Math.atan2(diff.getY(), diff.getX()));
+          // return new Rotation2d(Math.atan2(diff.getY(), diff.getX()));
+
+          return new Rotation2d(Math.atan2(diff.getY(), diff.getX()))
+              .plus(Rotation2d.fromDegrees(90));
         });
   }
 }

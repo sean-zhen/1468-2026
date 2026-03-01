@@ -186,7 +186,7 @@ public final class Constants {
   public static final class Indexer {
     public static final int MOTOR_ID = 41;
     public static final double GEAR_RATIO = 1.0; // NEED TO INSERT
-    public static final double TARGET_RPS = 45.0; // NEED TO INSERT
+    public static final double TARGET_RPS = 22.5; // NEED TO INSERT
     public static final double[] POSITIONS = {
       0.0, 10.0, 20.0, 30.0, 40.0, 50.0
     }; // NEED TO INSERT (positions in rotations)
@@ -205,17 +205,17 @@ public final class Constants {
     //   public static final int RIGHT_MOTOR_ID = 62;  //TA TODO: 1 or 2 Clmbr Motors???
 
     public static final double FORWARD_SOFT_LIMIT_ROT = 200.0; // rotations
-    public static final double REVERSE_SOFT_LIMIT_ROT = 0.0; // rotations
+    public static final double REVERSE_SOFT_LIMIT_ROT = -1.0; // rotations
     public static final double UP_SPEED = 0.5;
-    public static final double DOWN_SPEED = -0.5;
+    public static final double DOWN_SPEED = -0.75;
     public static final double SMALL_MOVE_ROT = 0.5;
     public static final double HOME_POSITION_ROT = 0.0;
 
     // TODO: Tune these values
-    public static final double kP = 0.60; // 60 way too high
+    public static final double kP = 30; // 60 way too high
     public static final double kI = 0.0;
     public static final double kD = 0.0;
-    public static final double kV = 0.37;
+    public static final double kV = 1.57;
   }
 
   /////////////////////////// LED Constants

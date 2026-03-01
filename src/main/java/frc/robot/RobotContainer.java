@@ -150,7 +150,8 @@ public class RobotContainer {
 
     NamedCommands.registerCommand(
         "Fire",
-        (new Kick(kicker).alongWith(Commands.waitSeconds(0.2).andThen(new IndexerSpin(indexer)))));
+        (new Kick(kicker)
+            .alongWith(Commands.waitSeconds(0.2).andThen(new IndexerSpin(indexer, false)))));
 
     NamedCommands.registerCommand(
         "StopFire",
@@ -164,7 +165,7 @@ public class RobotContainer {
         "StopHarvest", (new HarvesterDeploy(harvester, DEPLOY_IN_ANGLE, 0.0)));
 
     NamedCommands.registerCommand(
-        "ClimberUp", (new InstantCommand(() -> climber.setPosition(40.0), climber)));
+        "ClimberUp", (new InstantCommand(() -> climber.setPosition(0.0), climber))); // 40.0
 
     NamedCommands.registerCommand(
         "ClimberDown", (new InstantCommand(() -> climber.setPosition(0.0), climber)));
@@ -293,6 +294,9 @@ public class RobotContainer {
     final JoystickButton manHoodBtn1 = new JoystickButton(operatorManualJoystick, 8);
     final JoystickButton manHoodBtn2 = new JoystickButton(operatorManualJoystick, 9);
     final JoystickButton manPrepareShtrBtn2 = new JoystickButton(operatorManualJoystick, 11);
+    final JoystickButton indexerSpinReverse = new JoystickButton(operatorManualJoystick, 6);
+    final JoystickButton harvesterSpinReverse = new JoystickButton(operatorManualJoystick, 7);
+    final JoystickButton resetHarvesterEncoder = new JoystickButton(operatorManualJoystick, 10);
 
     final JoystickButton fireBtn = new JoystickButton(operatorAutoJoystick, 1);
     final JoystickButton aimBtn = new JoystickButton(operatorAutoJoystick, 2);
@@ -328,6 +332,13 @@ public class RobotContainer {
                 drive)
             .ignoringDisable(true));
 
+    // resetOdom.onTrue(
+    //     Commands.runOnce(
+    //             () -> drive.setPoseWithVision(vision.ge),
+    //             drive)
+    //         .ignoringDisable(true)
+    // );
+
     // Lock Onto Hub
     // While holding Button 1 on the Right Joystick, lock heading to the Hub
     faceHubButton.whileTrue(
@@ -337,10 +348,12 @@ public class RobotContainer {
     harvestStartBtn.onTrue(new HarvesterDeploy(harvester, DEPLOY_OUT_ANGLE, 0.0));
     harvestStopBtn.onTrue(new HarvesterDeploy(harvester, DEPLOY_IN_ANGLE, 0.0));
 
+    resetHarvesterEncoder.onTrue(new InstantCommand(() -> harvester.zeroDeployEncoder()));
+
     // toggle LEDs on / off
     turnLEDsOff.onTrue(new InstantCommand(led::toggleLeds));
 
-    ManTurretBtn1.onTrue(new InstantCommand(() -> shooter.setTurretPosition(0.330)));
+    ManTurretBtn1.onTrue(new InstantCommand(() -> shooter.setTurretPosition(0.0)));
     ManTurretBtn1.onFalse(new InstantCommand(() -> shooter.setTurretPosition(0.0)));
     ManTurretBtn2.onTrue(new InstantCommand(() -> shooter.setTurretPosition(-0.25)));
     ManTurretBtn2.onFalse(new InstantCommand(() -> shooter.setTurretPosition(-0.50)));
@@ -367,10 +380,12 @@ public class RobotContainer {
     harvesterDeployBtn.onFalse(new HarvesterDeploy(harvester, DEPLOY_START_ANGLE, 0.0));
 
     // Harvester Spin
-    harvesterSpin.whileTrue(new HarvesterSpin(harvester));
+    harvesterSpin.whileTrue(new HarvesterSpin(harvester, false));
+    harvesterSpinReverse.whileTrue(new HarvesterSpin(harvester, true));
 
     // Indexer Spin
-    indexerSpin.whileTrue(new IndexerSpin(indexer));
+    indexerSpin.whileTrue(new IndexerSpin(indexer, false));
+    indexerSpinReverse.whileTrue(new IndexerSpin(indexer, true));
 
     // flyEntry = Shuffleboard.getTab("Shooter").add("Flywheel", 0).getEntry();
     // hoodEntry = Shuffleboard.getTab("Shooter").add("Hood", 0).getEntry();
@@ -403,7 +418,7 @@ public class RobotContainer {
                 Commands.waitSeconds(0.2)
                     // .andThen(new IndexerSpin(indexer).onlyIf(() ->
                     // shooter.isTurretAtPosition()))));
-                    .andThen(new IndexerSpin(indexer))));
+                    .andThen(new IndexerSpin(indexer, false))));
 
     fireBtn
         .debounce(0.10)
@@ -445,7 +460,7 @@ public class RobotContainer {
                 .alongWith(new InstantCommand(() -> shooter.setHoodPosition((0.0)))));
 
     // Moves to 4 rotations when button 9 is pressed
-    climberUpBtn.onTrue(new InstantCommand(() -> climber.setPosition(40.0), climber));
+    climberUpBtn.onTrue(new InstantCommand(() -> climber.setPosition(55.0), climber));
 
     // Returns to 0 rotations when button 10 is pressed
     climberDownBtn.onTrue(new InstantCommand(() -> climber.setPosition(0.0), climber));

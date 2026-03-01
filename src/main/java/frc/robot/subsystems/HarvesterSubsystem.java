@@ -238,4 +238,10 @@ public class HarvesterSubsystem extends SubsystemBase {
     // Uses the checks we already built using getStatus().isOK()
     return spinVelocitySignal.getStatus().isOK() && deployPositionSignal.getStatus().isOK();
   }
+
+  public void zeroDeployEncoder() {
+    // Reset the encoder to 0.0 rotations.
+    // The 0.05 is a timeout in seconds to ensure the CAN bus processes the request.
+    deployMotor.setPosition(0.0, 0.05);
+  }
 }

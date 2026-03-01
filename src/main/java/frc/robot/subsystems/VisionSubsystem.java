@@ -189,7 +189,17 @@ public class VisionSubsystem extends SubsystemBase {
       for (Measurement m : validMeasurements) {
         if (m.score > best.score) best = m;
       }
-      drive.resetPose(best.pose);
+
+      // --- ADDED SAFETY GATE ---
+      // If the pose is within 10cm of (0,0), it's a "Ghost Pose." Ignore it.
+      if (best.pose.getX() < 0.2
+          || best.pose.getX() > 17.0
+          || best.pose.getY() < 0.2
+          || best.pose.getY() > 9.0) {
+        return; // Wait for a realistic measurement
+      }
+
+      drive.setPoseWithVision(best.pose);
       hasEverHadVision = true;
       lastVisionTimestamp = Timer.getFPGATimestamp();
       lastResetTime = Timer.getFPGATimestamp();
@@ -210,7 +220,8 @@ public class VisionSubsystem extends SubsystemBase {
     if (!agreeing.isEmpty()) {
       Measurement fused = fuse(agreeing, velocity);
       applyToEstimator(fused, velocity);
-      maybeHardReset(fused, velocity);
+      // Boolean shouldHartRest = !hasEverHadVision || (!Timer.getFPGATimestamp() -)
+      // maybeHardReset(fused, velocity);
       lastVisionTimestamp = Timer.getFPGATimestamp();
       hasEverHadVision = true;
       logFusion(fused, agreeing);
@@ -222,18 +233,18 @@ public class VisionSubsystem extends SubsystemBase {
     rejectCountPub.set(rejectCount);
 
     // Reset hasEverHadVision if we haven't seen vision for 5+ seconds (allows re-bootstrap)
-    if (hasEverHadVision && (Timer.getFPGATimestamp() - lastVisionTimestamp) > 5.0) {
+    if (hasEverHadVision && (Timer.getFPGATimestamp() - lastVisionTimestamp) > 5) {
       hasEverHadVision = false;
     }
 
     // Update state-based indicators
     double currentTime = Timer.getFPGATimestamp();
-    
+
     // Pose Reset: Green for 0.5s after reset, then red
     boolean poseResetActive = (currentTime - lastPoseResetTime) < 0.5;
     poseResetPub.set(poseResetActive);
     SmartDashboard.putBoolean("Vision/Pose Reset", poseResetActive);
-    
+
     // Pose Updated: Green while actively updating, red if no update for 0.5s
     boolean poseUpdateActive = (currentTime - lastPoseUpdateTime) < 0.5;
     poseUpdatedPub.set(poseUpdateActive);
@@ -292,19 +303,21 @@ public class VisionSubsystem extends SubsystemBase {
   private List<Measurement> mahalanobisGate(List<Measurement> measurements) {
     List<Measurement> accepted = new ArrayList<>();
     Pose2d current = drive.getPose();
-    
+
     // Calculate velocity-dependent variances
-    double velocity = Math.hypot(
-        drive.getActualChassisSpeeds().vxMetersPerSecond,
-        drive.getActualChassisSpeeds().vyMetersPerSecond);
-    double posVariance = 0.1 * (1 + velocity / MAX_SPEED);  // Position variance scales with speed
-    double rotVariance = 0.05 * (1 + velocity / MAX_SPEED); // Rotation variance (radians²) scales with speed
+    double velocity =
+        Math.hypot(
+            drive.getActualChassisSpeeds().vxMetersPerSecond,
+            drive.getActualChassisSpeeds().vyMetersPerSecond);
+    double posVariance = 2.0 * (1 + velocity / MAX_SPEED); // Position variance scales with speed
+    double rotVariance =
+        2.0 * (1 + velocity / MAX_SPEED); // Rotation variance (radians²) scales with speed
 
     for (Measurement m : measurements) {
       double dx = m.pose.getX() - current.getX();
       double dy = m.pose.getY() - current.getY();
       double dtheta = m.pose.getRotation().minus(current.getRotation()).getRadians();
-      
+
       // Proper Mahalanobis distance with separate variances
       double d2 = (dx * dx + dy * dy) / posVariance + (dtheta * dtheta) / rotVariance;
 
@@ -389,9 +402,9 @@ public class VisionSubsystem extends SubsystemBase {
   private void applyToEstimator(Measurement fused, double velocity) {
     Vector<N3> stdDevs =
         VecBuilder.fill(
-            0.05 * (1 + velocity / MAX_SPEED),
-            0.05 * (1 + velocity / MAX_SPEED),
-            0.1 * (1 + velocity / MAX_SPEED));
+            0.01 * (1 + velocity / MAX_SPEED),
+            0.01 * (1 + velocity / MAX_SPEED),
+            0.02 * (1 + velocity / MAX_SPEED));
     drive.addVisionMeasurement(fused.pose, fused.timestamp, stdDevs, "FUSED");
     lastPoseUpdateTime = Timer.getFPGATimestamp();
     poseUpdatedPub.set(true);
@@ -400,10 +413,10 @@ public class VisionSubsystem extends SubsystemBase {
 
   private void maybeHardReset(Measurement fused, double velocity) {
     if (velocity > RESET_SPEED_THRESHOLD) return;
-    if (fused.tagCount < 3) return;
+    if (fused.tagCount < 2) return;
     if (Timer.getFPGATimestamp() - lastResetTime < RESET_STABILITY_TIME) return;
 
-    drive.resetPose(fused.pose);
+    drive.setPoseWithVision(fused.pose);
     lastResetTime = Timer.getFPGATimestamp();
     lastPoseResetTime = Timer.getFPGATimestamp();
     resetTriggeredPub.set(true);

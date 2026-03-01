@@ -292,14 +292,14 @@ public class ShooterSubsystem extends SubsystemBase {
     // If you have "huge friction", 0.25V is likely too low.
     // Increase this until the turret *just barely* moves when you enable, then back off 0.05.
     // For a sticky belt, this might need to be 0.45 - 0.60 Volts.
-    turretConfigs.Slot0.kS = 0.35;
+    turretConfigs.Slot0.kS = 0.25;
 
     // 3. VELOCITY FF (kV)
     // 0.12 Volts / (1 Rot/s) -> At max speed (9 RPS), this adds ~1.08V.
     // This seems low. Ideally, 12V should correspond to Max Speed.
     // Try: 12V / 9 RPS = ~1.33.
     // Start conservative:
-    turretConfigs.Slot0.kV = 0.9;
+    turretConfigs.Slot0.kV = 1.32;
 
     // 4. PROPORTIONAL (kP)
     // 200 is very "stiff" (200V per 1 rotation error).
@@ -318,7 +318,7 @@ public class ShooterSubsystem extends SubsystemBase {
 
     // Jerk: 100.0 or 0. Smooths the start/stop to prevent belt slip.
     // 0 = Infinite Jerk (Max Aggression). For vision, higher jerk is often better.
-    turretConfigs.MotionMagic.MotionMagicJerk = 100.0;
+    turretConfigs.MotionMagic.MotionMagicJerk = 0.0;
 
     // 6. DEADBAND
     turretConfigs.MotorOutput.DutyCycleNeutralDeadband = 0.001;
@@ -330,6 +330,7 @@ public class ShooterSubsystem extends SubsystemBase {
     turretConfigs.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
     turretConfigs.SoftwareLimitSwitch.ReverseSoftLimitThreshold =
         Shooter.TURRET_LEFT_SOFT_LIMIT_ROT;
+    turretConfigs.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
 
     turretMotor.getConfigurator().apply(turretConfigs);
 

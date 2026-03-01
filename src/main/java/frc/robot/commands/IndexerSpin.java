@@ -6,15 +6,18 @@ import frc.robot.subsystems.IndexerSubsystem;
 
 public class IndexerSpin extends Command {
   private final IndexerSubsystem indexer;
+  private final double directionMultiplier;
 
-  public IndexerSpin(IndexerSubsystem indexer) {
+  public IndexerSpin(IndexerSubsystem indexer, boolean reverse) {
     this.indexer = indexer;
+    this.directionMultiplier = reverse ? -1.0 : 1.0;
+
     addRequirements(indexer);
   }
 
   @Override
   public void execute() {
-    indexer.setVelocity(Indexer.TARGET_RPS);
+    indexer.setVelocity(Indexer.TARGET_RPS * directionMultiplier);
   }
 
   @Override

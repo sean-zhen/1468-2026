@@ -6,7 +6,9 @@ import com.ctre.phoenix6.BaseStatusSignal;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -27,6 +29,29 @@ public class PrepareShooterCmd extends Command {
   private final List<BaseStatusSignal> allSignals = new ArrayList<>();
   private final Field2d field = new Field2d();
 
+  // Trench coordinates: (x1, y1) to (x2, y2)
+  private final double[][] trenches = {
+    {3.96, 6.8, 5.25, 7.9}, // First trench
+    {3.96, 0, 5.25, 1.2}, // Second trench
+    {11.3, 0, 12.5, 1.2}, // Third trench
+    {11.3, 6.8, 12.5, 7.9} // Fourth trench
+  };
+  // Dashboard toggle to disable the safety if needed
+  private final GenericEntry trenchAutoMutedEntry =
+      Shuffleboard.getTab("Shooter")
+          .add("Trench Auto Muted", false)
+          .withWidget(BuiltInWidgets.kToggleSwitch)
+          .withPosition(10, 3)
+          .getEntry();
+
+  // Added: A dedicated entry to warn the driver when the safety is active
+  private final GenericEntry trenchWarningEntry =
+      Shuffleboard.getTab("Shooter")
+          .add("TRENCH SAFETY ACTIVE", false)
+          .withWidget(BuiltInWidgets.kBooleanBox)
+          .withPosition(10, 4)
+          .getEntry();
+
   // Overrides
   private final DoubleSupplier flyWheelRPSOverride;
   private final DoubleSupplier hoodAngleOverride;
@@ -34,6 +59,15 @@ public class PrepareShooterCmd extends Command {
 
   // ---> ADDED: Variable to store the calculated angle
   private Rotation2d cachedAimAngle = new Rotation2d();
+
+  // Shuffleboard entry to show whether aiming is active
+  private static final GenericEntry aimingActiveEntry =
+      Shuffleboard.getTab("Shooter")
+          .add("Aiming Active", false)
+          .withWidget(BuiltInWidgets.kBooleanBox)
+          .withPosition(9, 2)
+          .withSize(1, 1)
+          .getEntry();
 
   public PrepareShooterCmd(
       ShooterSubsystem shooter,
@@ -70,8 +104,24 @@ public class PrepareShooterCmd extends Command {
     BaseStatusSignal.waitForAll(0.020, allSignals);
 
     Pose2d robotPose = drive.getPose();
+    Translation2d pos = robotPose.getTranslation();
     field.setRobotPose(robotPose);
 
+    // 2. Check for Trench collision
+    boolean inTrench = false;
+    for (double[] trench : trenches) {
+      if (pos.getX() >= trench[0]
+          && pos.getX() <= trench[2]
+          && pos.getY() >= trench[1]
+          && pos.getY() <= trench[3]) {
+        inTrench = true;
+        break;
+      }
+    }
+
+    // Update the Dashboard Warning
+    boolean overrideMuted = trenchAutoMutedEntry.getBoolean(false);
+    trenchWarningEntry.setBoolean(inTrench && !overrideMuted);
     var alliance = DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue);
 
     // 2. Calculate turret field position
@@ -123,10 +173,15 @@ public class PrepareShooterCmd extends Command {
       shooter.setFlywheelViaTable(relTrans.getNorm(), getZone(robotPose.getX(), alliance));
     else shooter.setFlywheelRPS(flyWheelRPSOverride.getAsDouble());
 
-    if (hoodAngleOverride.getAsDouble() == DONT_OVERRIDE_VAL)
-      shooter.setHoodViaTable(relTrans.getNorm(), getZone(robotPose.getX(), alliance));
-    // Override value is in degrees, convert to rotations (0-20 Deg => 0-1.25 Rot)
-    else shooter.setHoodPosition(hoodAngleOverride.getAsDouble() / 20.0 * 1.25);
+    // Hood Logic with Trench Override
+    if (inTrench && !overrideMuted) {
+      // FORCE HOOD DOWN IN TRENCH
+      shooter.setHoodPosition(0.0);
+    } else {
+      if (hoodAngleOverride.getAsDouble() == DONT_OVERRIDE_VAL)
+        shooter.setHoodViaTable(relTrans.getNorm(), getZone(robotPose.getX(), alliance));
+      else shooter.setHoodPosition(hoodAngleOverride.getAsDouble() / 20.0 * 1.25);
+    }
 
     // double turretFF = -robotSpeeds.omegaRadiansPerSecond / (2 * Math.PI);
     // shooter.setTurretWithFF(odoRot, turretFF); // Using Magic Motion Now
@@ -156,6 +211,12 @@ public class PrepareShooterCmd extends Command {
         .setPoses(turretAimingPose, new Pose2d(virtualTarget, new Rotation2d()));
   }
 
+  @Override
+  public void initialize() {
+    // Mark aiming as active on Shuffleboard
+    aimingActiveEntry.setBoolean(true);
+  }
+
   private String getZone(double x, DriverStation.Alliance alliance) {
     if (alliance == DriverStation.Alliance.Blue) {
       if (x < 4.5) return "Alliance"; //
@@ -165,5 +226,18 @@ public class PrepareShooterCmd extends Command {
       if (x < 4.5) return "Opposition";
     }
     return "Neutral";
+  }
+
+  @Override
+  public void end(boolean interrupted) {
+    // Mark aiming inactive and ensure shooter stops when the command ends
+    aimingActiveEntry.setBoolean(false);
+    shooter.stop();
+  }
+
+  @Override
+  public boolean isFinished() {
+    // Keep running until explicitly interrupted (button release will cancel)
+    return false;
   }
 }

@@ -179,6 +179,23 @@ public final class Constants {
     public static final double spinkI = 0.0;
     public static final double spinkD = 0.0;
     public static final double spinkV = 0.37;
+
+    // Default homing/current-detection threshold for deploy (Amps). Use this for
+    // commands that detect mechanical stops via stator current.
+    public static final double DEPLOY_HOMING_CURRENT_AMPS = 35.0;
+    // Motion Magic tuning for deploy (mechanism output RPS)
+    // Cruise velocity in rotations-per-second (mechanism output)
+    public static final double DEPLOY_MM_CRUISE_RPS = 4.0;
+    // Motion Magic acceleration (rotations-per-second-per-second)
+    public static final double DEPLOY_MM_ACCEL_RPSPS = 2.0;
+    // Motion Magic jerk (rotations-per-second-per-second-per-second) - currently unused
+    public static final double DEPLOY_MM_JERK = 0.0;
+    // How many consecutive cycles the current must exceed the threshold to declare a hit
+    public static final int DEPLOY_HOMING_CONSECUTIVE_CYCLES = 4;
+    // Timeout for homing operation (seconds). <= 0 disables timeout.
+    public static final double DEPLOY_HOMING_TIMEOUT_S = 2.0;
+    // If true, zero the deploy encoder when homing finishes due to current-detection
+    public static final boolean DEPLOY_HOMING_ZERO_ON_STOP = true;
   }
 
   //////////////////////////    INDEXER     /////////////////////////////////////////

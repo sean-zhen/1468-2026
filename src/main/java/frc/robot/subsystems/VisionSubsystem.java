@@ -23,6 +23,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.subsystems.drive.Drive;
 import java.util.*;
+import org.littletonrobotics.junction.Logger;
 import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
@@ -85,6 +86,18 @@ public class VisionSubsystem extends SubsystemBase {
   private final IntegerPublisher diagAfterGatePub;
   private final IntegerPublisher diagAfterAgreementPub;
   private final BooleanPublisher diagHasEverVisionPub;
+  // Timestamp debug publishers
+  private final DoublePublisher diagPhotonTsPub;
+  private final DoublePublisher diagPhotonFpgaDiffPub;
+  private final DoublePublisher diagPhotonOffsetPub;
+  private final DoublePublisher diagPhotonCorrectedDiffPub;
+  private final BooleanPublisher diagPhotonOffsetAlertPub;
+
+  // Photon timestamp offset estimator
+  private final ArrayDeque<Double> photonDiffSamples = new ArrayDeque<>();
+  private static final int PHOTON_OFFSET_SAMPLE_WINDOW = 31; // use odd window for median
+  private volatile double photonTimestampOffset =
+      0.0; // seconds to add to photon ts to map to FPGA time
 
   private static class Measurement {
     Pose2d pose;
@@ -171,6 +184,12 @@ public class VisionSubsystem extends SubsystemBase {
     diagAfterGatePub = diagTable.getIntegerTopic("AfterMahalanobisGate").publish();
     diagAfterAgreementPub = diagTable.getIntegerTopic("AfterAgreementFilter").publish();
     diagHasEverVisionPub = diagTable.getBooleanTopic("HasEverHadVision").publish();
+    // Photon timestamp debug: publish raw photon timestamp and difference to FPGA time
+    diagPhotonTsPub = diagTable.getDoubleTopic("PhotonTimestampSec").publish();
+    diagPhotonFpgaDiffPub = diagTable.getDoubleTopic("PhotonVsFPGADiffSec").publish();
+    diagPhotonOffsetPub = diagTable.getDoubleTopic("PhotonEstimatedOffsetSec").publish();
+    diagPhotonCorrectedDiffPub = diagTable.getDoubleTopic("PhotonCorrectedVsFPGADiffSec").publish();
+    diagPhotonOffsetAlertPub = diagTable.getBooleanTopic("PhotonOffsetAlert").publish();
   }
 
   @Override
@@ -200,6 +219,24 @@ public class VisionSubsystem extends SubsystemBase {
       }
 
       drive.setPoseWithVision(best.pose);
+      // Publish Photon timestamp and the difference to FPGA time for verification/debugging
+      diagPhotonTsPub.set(best.timestamp);
+      double rawDiff = Timer.getFPGATimestamp() - best.timestamp;
+      diagPhotonFpgaDiffPub.set(rawDiff);
+      SmartDashboard.putNumber("Vision/LastPhotonTimestampSec", best.timestamp);
+      SmartDashboard.putNumber("Vision/LastPhotonVsFPGADiffSec", rawDiff);
+
+      // Update offset estimator and publish results
+      updatePhotonOffsetEstimator(rawDiff);
+      diagPhotonOffsetPub.set(photonTimestampOffset);
+      double correctedDiff = Timer.getFPGATimestamp() - (best.timestamp + photonTimestampOffset);
+      diagPhotonCorrectedDiffPub.set(correctedDiff);
+      diagPhotonOffsetAlertPub.set(Math.abs(correctedDiff) > 0.2);
+      SmartDashboard.putNumber("Vision/PhotonEstimatedOffsetSec", photonTimestampOffset);
+      SmartDashboard.putNumber("Vision/PhotonCorrectedVsFPGADiffSec", correctedDiff);
+
+      // Log the hard reset event for post-match debugging
+      Logger.recordOutput("Vision/HardResetPose", best.pose);
       hasEverHadVision = true;
       lastVisionTimestamp = Timer.getFPGATimestamp();
       lastResetTime = Timer.getFPGATimestamp();
@@ -405,7 +442,23 @@ public class VisionSubsystem extends SubsystemBase {
             0.01 * (1 + velocity / MAX_SPEED),
             0.01 * (1 + velocity / MAX_SPEED),
             0.02 * (1 + velocity / MAX_SPEED));
-    drive.addVisionMeasurement(fused.pose, fused.timestamp, stdDevs, "FUSED");
+    // Correct Photon timestamp to rover (FPGA) time using estimated offset, then feed estimator
+    double rawTs = fused.timestamp;
+    diagPhotonTsPub.set(rawTs);
+    double rawDiff = Timer.getFPGATimestamp() - rawTs;
+    diagPhotonFpgaDiffPub.set(rawDiff);
+    updatePhotonOffsetEstimator(rawDiff);
+    diagPhotonOffsetPub.set(photonTimestampOffset);
+    double correctedTs = rawTs + photonTimestampOffset;
+    double correctedDiff = Timer.getFPGATimestamp() - correctedTs;
+    diagPhotonCorrectedDiffPub.set(correctedDiff);
+    diagPhotonOffsetAlertPub.set(Math.abs(correctedDiff) > 0.2);
+    SmartDashboard.putNumber("Vision/LastPhotonTimestampSec", rawTs);
+    SmartDashboard.putNumber("Vision/LastPhotonVsFPGADiffSec", rawDiff);
+    SmartDashboard.putNumber("Vision/PhotonEstimatedOffsetSec", photonTimestampOffset);
+    SmartDashboard.putNumber("Vision/PhotonCorrectedVsFPGADiffSec", correctedDiff);
+
+    drive.addVisionMeasurement(fused.pose, correctedTs, stdDevs, "FUSED");
     lastPoseUpdateTime = Timer.getFPGATimestamp();
     poseUpdatedPub.set(true);
     SmartDashboard.putBoolean("Vision/Pose Updated", true);
@@ -455,6 +508,23 @@ public class VisionSubsystem extends SubsystemBase {
     diagAfterGatePub.set(afterGate);
     diagAfterAgreementPub.set(afterAgreement);
     diagHasEverVisionPub.set(hasEverHadVision);
+  }
+
+  // Photon timestamp offset estimator: maintain rolling samples of (FPGA - photonTs)
+  private void updatePhotonOffsetEstimator(double rawDiff) {
+    synchronized (photonDiffSamples) {
+      photonDiffSamples.addLast(rawDiff);
+      if (photonDiffSamples.size() > PHOTON_OFFSET_SAMPLE_WINDOW) photonDiffSamples.removeFirst();
+      // Compute median
+      int n = photonDiffSamples.size();
+      if (n == 0) return;
+      Double[] arr = photonDiffSamples.toArray(new Double[0]);
+      Arrays.sort(arr);
+      double median;
+      if (n % 2 == 1) median = arr[n / 2];
+      else median = 0.5 * (arr[n / 2 - 1] + arr[n / 2]);
+      photonTimestampOffset = median;
+    }
   }
 
   public Optional<Translation2d> getTagPosition(int tagId) {

@@ -16,6 +16,8 @@ import com.pathplanner.lib.auto.NamedCommands;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.networktables.GenericEntry;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.XboxController;
@@ -30,8 +32,10 @@ import edu.wpi.first.wpilibj2.command.button.POVButton;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.DriveCommands;
 import frc.robot.commands.DriveLockToHubCmd;
+import frc.robot.commands.DriveToDepotCommandPP;
 import frc.robot.commands.DriveToHubCommandPP;
 import frc.robot.commands.HarvesterDeploy;
+import frc.robot.commands.HarvesterDeployVelocityStop;
 import frc.robot.commands.HarvesterSpin;
 import frc.robot.commands.IndexerSpin;
 import frc.robot.commands.Kick;
@@ -50,6 +54,7 @@ import frc.robot.subsystems.drive.GyroIOPigeon2;
 import frc.robot.subsystems.drive.ModuleIOTalonFX;
 import frc.robot.util.Elastic;
 import java.util.function.DoubleSupplier;
+import java.util.function.Supplier;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
 /**
@@ -163,6 +168,12 @@ public class RobotContainer {
 
     NamedCommands.registerCommand(
         "StopHarvest", (new HarvesterDeploy(harvester, DEPLOY_IN_ANGLE, 0.0)));
+
+    // Example homing command that runs the deploy inward slowly until the deploy hits the
+    // mechanical stop (detected by current). Parameters here are conservative defaults;
+    // tune on the bench.
+    NamedCommands.registerCommand(
+        "HomeHarvest", (new HarvesterDeployVelocityStop(harvester, -4.0)));
 
     NamedCommands.registerCommand(
         "ClimberUp", (new InstantCommand(() -> climber.setPosition(0.0), climber))); // 40.0
@@ -278,10 +289,10 @@ public class RobotContainer {
     // TODO: Decide on final button mappings
     final JoystickButton driveToHub = new JoystickButton(driverLeftJoystick, 5);
     final JoystickButton driveToDepot = new JoystickButton(driverLeftJoystick, 3);
-    final JoystickButton driveToOutpJoystickButton = new JoystickButton(driverLeftJoystick, 4);
+    final JoystickButton driveToOutpost = new JoystickButton(driverLeftJoystick, 4);
 
     final JoystickButton resetGyro = new JoystickButton(driverRightJoystick, 7);
-    final JoystickButton lockToZero = new JoystickButton(driverRightJoystick, 9);
+    final JoystickButton lockTo90 = new JoystickButton(driverRightJoystick, 9);
     final JoystickButton resetOdom = new JoystickButton(driverRightJoystick, 8);
     final JoystickButton faceHubButton = new JoystickButton(driverRightJoystick, 1);
     final JoystickButton turnLEDsOff = new JoystickButton(driverLeftJoystick, 11);
@@ -297,11 +308,13 @@ public class RobotContainer {
     final JoystickButton indexerSpinReverse = new JoystickButton(operatorManualJoystick, 6);
     final JoystickButton harvesterSpinReverse = new JoystickButton(operatorManualJoystick, 7);
     final JoystickButton resetHarvesterEncoder = new JoystickButton(operatorManualJoystick, 10);
+    final JoystickButton trenchOverrideBtn = new JoystickButton(operatorManualJoystick, 12);
 
     final JoystickButton fireBtn = new JoystickButton(operatorAutoJoystick, 1);
     final JoystickButton aimBtn = new JoystickButton(operatorAutoJoystick, 2);
     final JoystickButton harvestStartBtn = new JoystickButton(operatorAutoJoystick, 5);
     final JoystickButton harvestStopBtn = new JoystickButton(operatorAutoJoystick, 3);
+    final JoystickButton aimStopBtn = new JoystickButton(operatorAutoJoystick, 8);
     final JoystickButton climberUpBtn = new JoystickButton(operatorAutoJoystick, 9);
     final JoystickButton climberDownBtn = new JoystickButton(operatorAutoJoystick, 10);
     final JoystickButton ManTurretBtn1 = new JoystickButton(operatorAutoJoystick, 11);
@@ -315,15 +328,46 @@ public class RobotContainer {
             () -> -driverLeftJoystick.getX(),
             () -> -driverRightJoystick.getX()));
 
-    // Lock to 0° when 9 on driver right controller  is held
-    lockToZero.whileTrue(
+    //////////////////////////////////////////////////////////////
+    /// /////////////////////////////////////////////////////////
+
+    Supplier<Rotation2d> sweepRotationSupplier =
+        () -> {
+          // 1. Get the base vision angle
+          double targetAngle = shooter.getAngleToHub(drive.getPose()).getDegrees();
+
+          // 2. Determine strafe direction (X on the field)
+          double strafeVelocity = -driverLeftJoystick.getX();
+
+          // 3. Determine Alliance (Red is flipped)
+          boolean isRed = DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red;
+
+          // 4. Calculate Offset
+          // If moving "Right" relative to your perspective, add/sub 90
+          // to make the front of the robot lead the movement.
+          double offset = 0;
+          if (Math.abs(strafeVelocity) > 0.1) {
+            if (isRed) {
+              offset = (strafeVelocity > 0) ? -90 : 90;
+            } else {
+              offset = (strafeVelocity > 0) ? 90 : -90;
+            }
+          }
+
+          return Rotation2d.fromDegrees(targetAngle + offset);
+        };
+
+    // Lock to +/- 90° when 9 on driver right controller  is held
+    lockTo90.whileTrue(
         DriveCommands.joystickDriveAtAngle(
             drive,
             () -> -driverLeftJoystick.getY(),
             () -> -driverLeftJoystick.getX(),
-            () -> new Rotation2d()));
+            sweepRotationSupplier));
 
     driveToHub.onTrue(DriveToHubCommandPP.create(drive));
+    driveToDepot.onTrue(DriveToDepotCommandPP.create(drive));
+    driveToOutpost.onTrue(DriveToDepotCommandPP.create(drive));
 
     // Reset gyro to 0° when 7 on right joystick button is pressed
     resetGyro.onTrue(
@@ -399,13 +443,23 @@ public class RobotContainer {
             (DoubleSupplier) () -> hoodEntry.getDouble(999.0),
             (DoubleSupplier) () -> turretEntry.getDouble(999.0))));
 
-    aimBtn.whileTrue(
+    // Start preparing shooter when Aim button is pressed and keep running until interrupted
+    aimBtn.onTrue(
         (new PrepareShooterCmd(
             shooter,
             drive,
             (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
             (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
             (DoubleSupplier) () -> DONT_OVERRIDE_VAL)));
+
+    // Stop aiming and reset shooter outputs when Aim Stop button is pressed
+    aimStopBtn.onTrue(
+        new PrepareShooterCmd(
+            shooter,
+            drive,
+            (DoubleSupplier) () -> 0.0,
+            (DoubleSupplier) () -> 0.0,
+            (DoubleSupplier) () -> 0.0));
 
     // TODO TA: ***** Inhibiting shooting if turret is not at correct angle, test and decide whether
     // to keep
@@ -431,33 +485,45 @@ public class RobotContainer {
     new POVButton(operatorAutoJoystick, 0)
         .debounce(0.10)
         .onTrue(
-            new Shoot(shooter, () -> (0.50))
-                .alongWith(new InstantCommand(() -> shooter.setTurretPosition(0.0)))
-                .alongWith(new InstantCommand(() -> shooter.setHoodPosition((10 / 360)))));
+            new PrepareShooterCmd(
+                shooter,
+                drive,
+                (DoubleSupplier) () -> 0.0,
+                (DoubleSupplier) () -> 0.0,
+                (DoubleSupplier) () -> 0.0));
 
     // Prepare to shoot from Tower // TODO: TA - All parameters must be fixed
     new POVButton(operatorAutoJoystick, 180)
         .debounce(0.10)
         .onTrue(
-            new Shoot(shooter, () -> (0.50))
-                .alongWith(new InstantCommand(() -> shooter.setTurretPosition(0.25)))
-                .alongWith(new InstantCommand(() -> shooter.setHoodPosition((15 / 360)))));
+            new PrepareShooterCmd(
+                shooter,
+                drive,
+                (DoubleSupplier) () -> 0.0,
+                (DoubleSupplier) () -> 0.0,
+                (DoubleSupplier) () -> 0.0));
 
     // Prepare to shoot from Depot // TODO: TA - All parameters must be fixed
     new POVButton(operatorAutoJoystick, 90)
         .debounce(0.10)
         .onTrue(
-            new Shoot(shooter, () -> (0.50))
-                .alongWith(new InstantCommand(() -> shooter.setTurretPosition(0.5)))
-                .alongWith(new InstantCommand(() -> shooter.setHoodPosition((20 / 360)))));
+            new PrepareShooterCmd(
+                shooter,
+                drive,
+                (DoubleSupplier) () -> 0.0,
+                (DoubleSupplier) () -> 0.0,
+                (DoubleSupplier) () -> 0.0));
 
     // Prepare to shoot from Outpost // TODO: TA - All parameters must be fixed
     new POVButton(operatorAutoJoystick, 270)
         .debounce(0.10)
         .onTrue(
-            new Shoot(shooter, () -> (0.50))
-                .alongWith(new InstantCommand(() -> shooter.setTurretPosition(-0.25)))
-                .alongWith(new InstantCommand(() -> shooter.setHoodPosition((0.0)))));
+            new PrepareShooterCmd(
+                shooter,
+                drive,
+                (DoubleSupplier) () -> 0.0,
+                (DoubleSupplier) () -> 0.0,
+                (DoubleSupplier) () -> 0.0));
 
     // Moves to 4 rotations when button 9 is pressed
     climberUpBtn.onTrue(new InstantCommand(() -> climber.setPosition(55.0), climber));

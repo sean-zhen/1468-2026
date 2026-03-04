@@ -22,6 +22,7 @@ import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.Harvester;
+import java.util.Map;
 
 public class HarvesterSubsystem extends SubsystemBase {
   private final TalonFX deployMotor = new TalonFX(Harvester.DEPLOY_MOTOR_ID);
@@ -43,6 +44,13 @@ public class HarvesterSubsystem extends SubsystemBase {
   private final GenericEntry harvSpinTempEntry;
   private final GenericEntry harvDeployCanOkEntry;
   private final GenericEntry harvSpinCanOkEntry;
+  private final GenericEntry harvDeployCurrentEntry;
+  private final GenericEntry harvDeployEndstopEntry;
+  // Live tuners (safe, bounded) for homing / tuning
+  private final GenericEntry harvDeployHomingCurrentEntry;
+  private final GenericEntry harvDeployHomingConsecEntry;
+  private final GenericEntry harvDeployHomingTimeoutEntry;
+  private final GenericEntry harvDeployCruiseRPSEntry;
 
   private final MotionMagicVoltage m_mmReqLt = new MotionMagicVoltage(0);
 
@@ -75,12 +83,11 @@ public class HarvesterSubsystem extends SubsystemBase {
     /* Configure Motion Magic */
     MotionMagicConfigs mm = deployConfig.MotionMagic;
     mm.withMotionMagicCruiseVelocity(
-            RotationsPerSecond.of(4)) // s/b 10 (mechanism) rotations per second cruise
+            RotationsPerSecond.of(DEPLOY_MM_CRUISE_RPS)) // mechanism rotations per second cruise
         .withMotionMagicAcceleration(
-            RotationsPerSecondPerSecond.of(
-                2)) // s/b 4Take approximately 0.2 seconds to reach max vel
-        // Take approximately 0.2 seconds to reach max accel
-        .withMotionMagicJerk(RotationsPerSecondPerSecond.per(Second).of(0));
+            RotationsPerSecondPerSecond.of(DEPLOY_MM_ACCEL_RPSPS)) // mechanism rotations/sec^2
+        // Motion magic jerk (not critical for now)
+        .withMotionMagicJerk(RotationsPerSecondPerSecond.per(Second).of(DEPLOY_MM_JERK));
 
     deployConfig.withCurrentLimits(
         new CurrentLimitsConfigs()
@@ -156,6 +163,59 @@ public class HarvesterSubsystem extends SubsystemBase {
             .withSize(2, 1)
             .getEntry();
 
+    harvDeployCurrentEntry =
+        harvTab
+            .add("Harv Deploy Current (A)", deployMotor.getStatorCurrent().getValueAsDouble())
+            .withWidget(BuiltInWidgets.kTextView)
+            .withPosition(4, 1)
+            .withSize(2, 1)
+            .getEntry();
+
+    harvDeployEndstopEntry =
+        harvTab
+            .add("Harv Deploy Endstop Hit", false)
+            .withWidget(BuiltInWidgets.kBooleanBox)
+            .withPosition(6, 1)
+            .withSize(1, 1)
+            .getEntry();
+
+    // Tuners (number sliders / boxes) - use safe bounds via properties
+    harvDeployHomingCurrentEntry =
+        harvTab
+            .add("Deploy Homing Current (A)", Harvester.DEPLOY_HOMING_CURRENT_AMPS)
+            .withWidget(BuiltInWidgets.kNumberSlider)
+            .withPosition(0, 2)
+            .withSize(2, 1)
+            .withProperties(Map.of("min", 5, "max", 80))
+            .getEntry();
+
+    harvDeployHomingConsecEntry =
+        harvTab
+            .add("Deploy Homing Consecutive Cycles", Harvester.DEPLOY_HOMING_CONSECUTIVE_CYCLES)
+            .withWidget(BuiltInWidgets.kNumberSlider)
+            .withPosition(2, 2)
+            .withSize(2, 1)
+            .withProperties(Map.of("min", 1, "max", 20))
+            .getEntry();
+
+    harvDeployHomingTimeoutEntry =
+        harvTab
+            .add("Deploy Homing Timeout (s)", Harvester.DEPLOY_HOMING_TIMEOUT_S)
+            .withWidget(BuiltInWidgets.kNumberSlider)
+            .withPosition(4, 2)
+            .withSize(2, 1)
+            .withProperties(Map.of("min", 0, "max", 10))
+            .getEntry();
+
+    harvDeployCruiseRPSEntry =
+        harvTab
+            .add("Deploy Cruise RPS", Harvester.DEPLOY_MM_CRUISE_RPS)
+            .withWidget(BuiltInWidgets.kNumberSlider)
+            .withPosition(6, 2)
+            .withSize(2, 1)
+            .withProperties(Map.of("min", 0, "max", 6))
+            .getEntry();
+
     var canTab = Shuffleboard.getTab("CAN Status");
     harvDeployCanOkEntry =
         canTab
@@ -224,6 +284,9 @@ public class HarvesterSubsystem extends SubsystemBase {
         deployMotor.getVelocity().getValueAsDouble() / Harvester.DEPLOY_GEAR_RATIO);
     harvDeployTempEntry.setDouble(deployMotor.getDeviceTemp().getValueAsDouble());
 
+    harvDeployCurrentEntry.setDouble(deployMotor.getStatorCurrent().getValueAsDouble());
+    harvDeployEndstopEntry.setBoolean(deployEndstopHit);
+
     harvSpinVeloEntry.setDouble(
         spinMotor.getVelocity().getValueAsDouble() / Harvester.SPIN_GEAR_RATIO);
     harvSpinTempEntry.setDouble(spinMotor.getDeviceTemp().getValueAsDouble());
@@ -234,14 +297,63 @@ public class HarvesterSubsystem extends SubsystemBase {
     harvSpinCanOkEntry.setBoolean(spinOK);
   }
 
+  private volatile boolean deployEndstopHit = false;
+
+  /**
+   * Set the 'deploy endstop hit' flag (for Shuffleboard/telemetry). Commands should set this to
+   * true when they detect a stall/hit; clearing is handled on initialize of commands that perform
+   * homing.
+   */
+  public void setDeployEndstopHit(boolean hit) {
+    deployEndstopHit = hit;
+  }
+
+  public boolean getDeployEndstopHit() {
+    return deployEndstopHit;
+  }
+
   public boolean isHarvesterConnected() {
     // Uses the checks we already built using getStatus().isOK()
     return spinVelocitySignal.getStatus().isOK() && deployPositionSignal.getStatus().isOK();
+  }
+
+  // Tunable getters: read the Shuffleboard entries (fall back to Constants) and clamp to safe
+  // ranges.
+  public double getDeployHomingCurrentAmps() {
+    double val = harvDeployHomingCurrentEntry.getDouble(Harvester.DEPLOY_HOMING_CURRENT_AMPS);
+    // Clamp between 5 A and the stator limit (80 A)
+    return Math.max(5.0, Math.min(val, 80.0));
+  }
+
+  public int getDeployHomingConsecutiveCycles() {
+    double val = harvDeployHomingConsecEntry.getDouble(Harvester.DEPLOY_HOMING_CONSECUTIVE_CYCLES);
+    int v = (int) Math.round(val);
+    return Math.max(1, Math.min(v, 20));
+  }
+
+  public double getDeployHomingTimeoutS() {
+    double val = harvDeployHomingTimeoutEntry.getDouble(Harvester.DEPLOY_HOMING_TIMEOUT_S);
+    return Math.max(0.0, Math.min(val, 10.0));
+  }
+
+  public double getDeployCruiseRPS() {
+    double val = harvDeployCruiseRPSEntry.getDouble(Harvester.DEPLOY_MM_CRUISE_RPS);
+    return Math.max(0.0, Math.min(val, 6.0));
   }
 
   public void zeroDeployEncoder() {
     // Reset the encoder to 0.0 rotations.
     // The 0.05 is a timeout in seconds to ensure the CAN bus processes the request.
     deployMotor.setPosition(0.0, 0.05);
+  }
+
+  /** Returns the deploy motor stator current (in Amps) as reported by the motor controller. */
+  public double getDeployStatorCurrent() {
+    return deployMotor.getStatorCurrent().getValueAsDouble();
+  }
+
+  /** Convenience helper: true when absolute deploy stator current is >= the provided threshold. */
+  public boolean isDeployCurrentAbove(double amps) {
+    return Math.abs(getDeployStatorCurrent()) >= Math.abs(amps);
   }
 }

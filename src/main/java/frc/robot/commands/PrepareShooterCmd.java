@@ -36,21 +36,6 @@ public class PrepareShooterCmd extends Command {
     {11.3, 0, 12.5, 1.2}, // Third trench
     {11.3, 6.8, 12.5, 7.9} // Fourth trench
   };
-  // Dashboard toggle to disable the safety if needed
-  private final GenericEntry trenchAutoMutedEntry =
-      Shuffleboard.getTab("Shooter")
-          .add("Trench Auto Muted", false)
-          .withWidget(BuiltInWidgets.kToggleSwitch)
-          .withPosition(10, 3)
-          .getEntry();
-
-  // Added: A dedicated entry to warn the driver when the safety is active
-  private final GenericEntry trenchWarningEntry =
-      Shuffleboard.getTab("Shooter")
-          .add("TRENCH SAFETY ACTIVE", false)
-          .withWidget(BuiltInWidgets.kBooleanBox)
-          .withPosition(10, 4)
-          .getEntry();
 
   // Overrides
   private final DoubleSupplier flyWheelRPSOverride;
@@ -119,9 +104,6 @@ public class PrepareShooterCmd extends Command {
       }
     }
 
-    // Update the Dashboard Warning
-    boolean overrideMuted = trenchAutoMutedEntry.getBoolean(false);
-    trenchWarningEntry.setBoolean(inTrench && !overrideMuted);
     var alliance = DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue);
 
     // 2. Calculate turret field position
@@ -135,10 +117,10 @@ public class PrepareShooterCmd extends Command {
     if (!getZone(robotPose.getX(), alliance).equals("Alliance")) {
       if (alliance == DriverStation.Alliance.Red) {
         shootingTarget =
-            (robotPose.getX() < 4.035) ? Shooter.RED_DEPOT_POS : Shooter.RED_OUTPOST_POS;
+            (robotPose.getY() < 4.035) ? Shooter.RED_DEPOT_POS : Shooter.RED_OUTPOST_POS;
       } else {
         shootingTarget =
-            (robotPose.getX() < 4.035) ? Shooter.BLUE_OUTPOST_POS : Shooter.BLUE_HUB_POS;
+            (robotPose.getY() < 4.035) ? Shooter.BLUE_OUTPOST_POS : Shooter.BLUE_DEPOT_POS;
       }
     }
 
@@ -174,7 +156,7 @@ public class PrepareShooterCmd extends Command {
     else shooter.setFlywheelRPS(flyWheelRPSOverride.getAsDouble());
 
     // Hood Logic with Trench Override
-    if (inTrench && !overrideMuted) {
+    if (inTrench) {
       // FORCE HOOD DOWN IN TRENCH
       shooter.setHoodPosition(0.0);
     } else {

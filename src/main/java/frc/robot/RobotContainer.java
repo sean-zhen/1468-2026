@@ -29,18 +29,18 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import edu.wpi.first.wpilibj2.command.button.POVButton;
-import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import frc.robot.commands.AllMotorsBrake;
+import frc.robot.commands.AllMotorsCoast;
 import frc.robot.commands.DriveCommands;
 import frc.robot.commands.DriveLockToHubCmd;
 import frc.robot.commands.DriveToDepotCommandPP;
 import frc.robot.commands.DriveToHubCommandPP;
+import frc.robot.commands.HarvesterAgitate;
 import frc.robot.commands.HarvesterDeploy;
-import frc.robot.commands.HarvesterDeployVelocityStop;
 import frc.robot.commands.HarvesterSpin;
 import frc.robot.commands.IndexerSpin;
 import frc.robot.commands.Kick;
 import frc.robot.commands.PrepareShooterCmd;
-import frc.robot.commands.Shoot;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.ClimberSubsystem;
 import frc.robot.subsystems.HarvesterSubsystem;
@@ -124,21 +124,21 @@ public class RobotContainer {
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
 
-    // Set up SysId routines
-    autoChooser.addOption(
-        "Drive Wheel Radius Characterization", DriveCommands.wheelRadiusCharacterization(drive));
-    autoChooser.addOption(
-        "Drive Simple FF Characterization", DriveCommands.feedforwardCharacterization(drive));
-    autoChooser.addOption(
-        "Drive SysId (Quasistatic Forward)",
-        drive.sysIdQuasistatic(SysIdRoutine.Direction.kForward));
-    autoChooser.addOption(
-        "Drive SysId (Quasistatic Reverse)",
-        drive.sysIdQuasistatic(SysIdRoutine.Direction.kReverse));
-    autoChooser.addOption(
-        "Drive SysId (Dynamic Forward)", drive.sysIdDynamic(SysIdRoutine.Direction.kForward));
-    autoChooser.addOption(
-        "Drive SysId (Dynamic Reverse)", drive.sysIdDynamic(SysIdRoutine.Direction.kReverse));
+    // // Set up SysId routines
+    // autoChooser.addOption(
+    //     "Drive Wheel Radius Characterization", DriveCommands.wheelRadiusCharacterization(drive));
+    // autoChooser.addOption(
+    //     "Drive Simple FF Characterization", DriveCommands.feedforwardCharacterization(drive));
+    // autoChooser.addOption(
+    //     "Drive SysId (Quasistatic Forward)",
+    //     drive.sysIdQuasistatic(SysIdRoutine.Direction.kForward));
+    // autoChooser.addOption(
+    //     "Drive SysId (Quasistatic Reverse)",
+    //     drive.sysIdQuasistatic(SysIdRoutine.Direction.kReverse));
+    // autoChooser.addOption(
+    //     "Drive SysId (Dynamic Forward)", drive.sysIdDynamic(SysIdRoutine.Direction.kForward));
+    // autoChooser.addOption(
+    //     "Drive SysId (Dynamic Reverse)", drive.sysIdDynamic(SysIdRoutine.Direction.kReverse));
 
     /////////////////////////////////////////////////////////////////////////////////////////////
     // Register NamedCommands for PathPlanner Auto Routines
@@ -160,8 +160,8 @@ public class RobotContainer {
 
     NamedCommands.registerCommand(
         "StopFire",
-        (new InstantCommand(() -> kicker.stop())
-            .andThen(Commands.waitSeconds(0.2).andThen(new InstantCommand(() -> indexer.stop())))));
+        (new InstantCommand(() -> indexer.stop())
+            .andThen(Commands.waitSeconds(0.2).andThen(new InstantCommand(() -> kicker.stop())))));
 
     NamedCommands.registerCommand(
         "StartHarvest", (new HarvesterDeploy(harvester, DEPLOY_OUT_ANGLE, 0.0)));
@@ -172,8 +172,8 @@ public class RobotContainer {
     // Example homing command that runs the deploy inward slowly until the deploy hits the
     // mechanical stop (detected by current). Parameters here are conservative defaults;
     // tune on the bench.
-    NamedCommands.registerCommand(
-        "HomeHarvest", (new HarvesterDeployVelocityStop(harvester, -4.0)));
+    // NamedCommands.registerCommand(
+    //     "HomeHarvest", (new HarvesterDeployVelocityStop(harvester, -4.0)));
 
     NamedCommands.registerCommand(
         "ClimberUp", (new InstantCommand(() -> climber.setPosition(0.0), climber))); // 40.0
@@ -228,11 +228,11 @@ public class RobotContainer {
     // 1. Get the Tab
     ShuffleboardTab shooterTab = Shuffleboard.getTab("Shooter");
     // --- ROW 0: INSTRUCTIONAL LABELS (Width 3) ---
-    shooterTab.add("Flywheel RPS", "0-100 [999 = Auto]").withPosition(0, 0).withSize(3, 1);
+    // shooterTab.add("Flywheel RPS", "0-100 [999 = Auto]").withPosition(0, 0).withSize(3, 1);
 
-    shooterTab.add("Hood Deg", "(0-20°) [999 = Auto]").withPosition(3, 0).withSize(3, 1);
+    // shooterTab.add("Hood Deg", "(0-20°) [999 = Auto]").withPosition(3, 0).withSize(3, 1);
 
-    shooterTab.add("Turret Deg", "(±180°) [999 = Auto]").withPosition(6, 0).withSize(3, 1);
+    // shooterTab.add("Turret Deg", "(±180°) [999 = Auto]").withPosition(6, 0).withSize(3, 1);
 
     // --- ROW 1: INPUT BOXES (Width 3) ---
     flyEntry =
@@ -287,38 +287,50 @@ public class RobotContainer {
   private void configureButtonBindings() {
 
     // TODO: Decide on final button mappings
-    final JoystickButton driveToHub = new JoystickButton(driverLeftJoystick, 5);
+    ////////////////////////////////////////////////////////////////////////////////////////////
+    /// Driver Left Buttons (Joystick 0)
+    ////////////////////////////////////////////////////////////////////////////////////////////
+    final JoystickButton stopWithXPatBtn = new JoystickButton(driverLeftJoystick, 1);
     final JoystickButton driveToDepot = new JoystickButton(driverLeftJoystick, 3);
     final JoystickButton driveToOutpost = new JoystickButton(driverLeftJoystick, 4);
-
-    final JoystickButton resetGyro = new JoystickButton(driverRightJoystick, 7);
-    final JoystickButton lockTo90 = new JoystickButton(driverRightJoystick, 9);
-    final JoystickButton resetOdom = new JoystickButton(driverRightJoystick, 8);
-    final JoystickButton faceHubButton = new JoystickButton(driverRightJoystick, 1);
+    final JoystickButton driveToHub = new JoystickButton(driverLeftJoystick, 5);
+    final JoystickButton driveToTower = new JoystickButton(driverLeftJoystick, 6);
     final JoystickButton turnLEDsOff = new JoystickButton(driverLeftJoystick, 11);
+    ////////////////////////////////////////////////////////////////////////////////////////////
+    /// Driver Right Buttons (Joystick 1)
+    ////////////////////////////////////////////////////////////////////////////////////////////
+    final JoystickButton faceHubButton = new JoystickButton(driverRightJoystick, 1);
+    final JoystickButton lockTo90Btn = new JoystickButton(driverRightJoystick, 2);
+    final JoystickButton resetGyro = new JoystickButton(driverRightJoystick, 7);
+    final JoystickButton resetTurret = new JoystickButton(driverRightJoystick, 11);
 
+    // final JoystickButton resetOdom = new JoystickButton(driverRightJoystick, 8);
+    ////////////////////////////////////////////////////////////////////////////////////////////
+    /// Operator Left Buttons (Joystick 2) Manual / Override Buttons
+    ////////////////////////////////////////////////////////////////////////////////////////////
     final JoystickButton flyWheel = new JoystickButton(operatorManualJoystick, 1);
     final JoystickButton kickBtn = new JoystickButton(operatorManualJoystick, 2);
     final JoystickButton harvesterDeployBtn = new JoystickButton(operatorManualJoystick, 3);
     final JoystickButton harvesterSpin = new JoystickButton(operatorManualJoystick, 4);
     final JoystickButton indexerSpin = new JoystickButton(operatorManualJoystick, 5);
-    final JoystickButton manHoodBtn1 = new JoystickButton(operatorManualJoystick, 8);
-    final JoystickButton manHoodBtn2 = new JoystickButton(operatorManualJoystick, 9);
-    final JoystickButton manPrepareShtrBtn2 = new JoystickButton(operatorManualJoystick, 11);
-    final JoystickButton indexerSpinReverse = new JoystickButton(operatorManualJoystick, 6);
-    final JoystickButton harvesterSpinReverse = new JoystickButton(operatorManualJoystick, 7);
+    final JoystickButton harvesterSpinReverse = new JoystickButton(operatorManualJoystick, 6);
+    final JoystickButton indexerSpinReverse = new JoystickButton(operatorManualJoystick, 7);
+    final JoystickButton zeroHoodBtn = new JoystickButton(operatorManualJoystick, 8);
+    final JoystickButton zeroTurretBtn = new JoystickButton(operatorManualJoystick, 9);
     final JoystickButton resetHarvesterEncoder = new JoystickButton(operatorManualJoystick, 10);
-    final JoystickButton trenchOverrideBtn = new JoystickButton(operatorManualJoystick, 12);
-
+    final JoystickButton manPrepareShtrBtn2 = new JoystickButton(operatorManualJoystick, 11);
+    ////////////////////////////////////////////////////////////////////////////////////////////
+    /// Operator Right Buttons (Joystick 3) Automatic / Real Game Operation
+    ////////////////////////////////////////////////////////////////////////////////////////////
     final JoystickButton fireBtn = new JoystickButton(operatorAutoJoystick, 1);
     final JoystickButton aimBtn = new JoystickButton(operatorAutoJoystick, 2);
-    final JoystickButton harvestStartBtn = new JoystickButton(operatorAutoJoystick, 5);
     final JoystickButton harvestStopBtn = new JoystickButton(operatorAutoJoystick, 3);
+    final JoystickButton harvestStartBtn = new JoystickButton(operatorAutoJoystick, 5);
+    final JoystickButton harvestAgitate = new JoystickButton(operatorAutoJoystick, 6);
     final JoystickButton aimStopBtn = new JoystickButton(operatorAutoJoystick, 8);
     final JoystickButton climberUpBtn = new JoystickButton(operatorAutoJoystick, 9);
     final JoystickButton climberDownBtn = new JoystickButton(operatorAutoJoystick, 10);
-    final JoystickButton ManTurretBtn1 = new JoystickButton(operatorAutoJoystick, 11);
-    final JoystickButton ManTurretBtn2 = new JoystickButton(operatorAutoJoystick, 12);
+    ////////////////////////////////////////////////////////////////////////////////////////////
 
     // Default command, normal field-relative drive
     drive.setDefaultCommand(
@@ -329,7 +341,32 @@ public class RobotContainer {
             () -> -driverRightJoystick.getX()));
 
     //////////////////////////////////////////////////////////////
-    /// /////////////////////////////////////////////////////////
+    /// Driver Buttons / Commands Left Joystick (0)
+    //////////////////////////////////////////////////////////////
+
+    // Switch to X pattern
+    stopWithXPatBtn.onTrue(Commands.runOnce(drive::stopWithX, drive));
+
+    driveToDepot.onTrue(DriveToDepotCommandPP.create(drive));
+    driveToOutpost.onTrue(DriveToDepotCommandPP.create(drive));
+    driveToHub.onTrue(DriveToHubCommandPP.create(drive));
+    // driveToTower.onTrue(DriveToTowerCommandPP.create(drive));
+
+    // Stop! - This will stop a "on the fly" pathplanner path
+    new JoystickButton(driverLeftJoystick, 9).onTrue(Commands.runOnce(drive::stop, drive));
+
+    // toggle LEDs on / off
+    turnLEDsOff.onTrue(new InstantCommand(led::toggleLeds));
+
+    //////////////////////////////////////////////////////////////
+    /// Driver Buttons / Commands Right Joystick (1)
+    //////////////////////////////////////////////////////////////
+
+    // Lock Onto Hub
+    // While holding Button 1 on the Right Joystick, lock heading to the Hub
+    faceHubButton.whileTrue(
+        DriveLockToHubCmd.create(
+            drive, () -> -driverLeftJoystick.getY(), () -> -driverLeftJoystick.getX()));
 
     Supplier<Rotation2d> sweepRotationSupplier =
         () -> {
@@ -357,17 +394,13 @@ public class RobotContainer {
           return Rotation2d.fromDegrees(targetAngle + offset);
         };
 
-    // Lock to +/- 90° when 9 on driver right controller  is held
-    lockTo90.whileTrue(
+    // Lock to +/- 90° while button is held
+    lockTo90Btn.whileTrue(
         DriveCommands.joystickDriveAtAngle(
             drive,
             () -> -driverLeftJoystick.getY(),
             () -> -driverLeftJoystick.getX(),
             sweepRotationSupplier));
-
-    driveToHub.onTrue(DriveToHubCommandPP.create(drive));
-    driveToDepot.onTrue(DriveToDepotCommandPP.create(drive));
-    driveToOutpost.onTrue(DriveToDepotCommandPP.create(drive));
 
     // Reset gyro to 0° when 7 on right joystick button is pressed
     resetGyro.onTrue(
@@ -376,73 +409,39 @@ public class RobotContainer {
                 drive)
             .ignoringDisable(true));
 
-    // resetOdom.onTrue(
-    //     Commands.runOnce(
-    //             () -> drive.setPoseWithVision(vision.ge),
-    //             drive)
-    //         .ignoringDisable(true)
-    // );
+    new JoystickButton(driverRightJoystick, 10)
+        .onTrue(new AllMotorsBrake(harvester, shooter, indexer, drive));
+    new JoystickButton(driverRightJoystick, 11)
+        .onTrue(new AllMotorsCoast(harvester, shooter, indexer, drive));
 
-    // Lock Onto Hub
-    // While holding Button 1 on the Right Joystick, lock heading to the Hub
-    faceHubButton.whileTrue(
-        DriveLockToHubCmd.create(
-            drive, () -> -driverLeftJoystick.getY(), () -> -driverLeftJoystick.getX()));
+    // Reset Turret to 0
 
-    harvestStartBtn.onTrue(new HarvesterDeploy(harvester, DEPLOY_OUT_ANGLE, 0.0));
-    harvestStopBtn.onTrue(new HarvesterDeploy(harvester, DEPLOY_IN_ANGLE, 0.0));
+    // resetTurret.onTrue(
+    //     Command.runOnce
+    // )
 
-    resetHarvesterEncoder.onTrue(new InstantCommand(() -> harvester.zeroDeployEncoder()));
+    //////////////////////////////////////////////////////////////
+    /// Operator Automatic Buttons / Commands (Joystick 3 / Right Hand)
+    //////////////////////////////////////////////////////////////
 
-    // toggle LEDs on / off
-    turnLEDsOff.onTrue(new InstantCommand(led::toggleLeds));
-
-    ManTurretBtn1.onTrue(new InstantCommand(() -> shooter.setTurretPosition(0.0)));
-    ManTurretBtn1.onFalse(new InstantCommand(() -> shooter.setTurretPosition(0.0)));
-    ManTurretBtn2.onTrue(new InstantCommand(() -> shooter.setTurretPosition(-0.25)));
-    ManTurretBtn2.onFalse(new InstantCommand(() -> shooter.setTurretPosition(-0.50)));
-
-    manHoodBtn1.onTrue(new InstantCommand(() -> shooter.setHoodPosition(180.0 / 360.0)));
-    manHoodBtn1.onFalse(new InstantCommand(() -> shooter.setHoodPosition(0.0)));
-    manHoodBtn2.onTrue(new InstantCommand(() -> shooter.setHoodPosition(360.0 / 360.0)));
-    manHoodBtn2.onFalse(
-        new InstantCommand(() -> shooter.setHoodPosition(520.0 / 360.0))); // SW Stop Test
-
-    // Shooter
-    flyWheel.whileTrue(
-        new Shoot(
-            shooter,
-            // Flywheel Speed: Scale Z axis from 0 to 1
-            () -> (operatorManualJoystick.getZ() - 1) / 2.0));
-
-    // Kicker
-    kickBtn.whileTrue(new Kick(kicker));
-
-    // Harvester Deploy
-    // harvesterDeployBtn.onTrue(new HarvesterDeploy(harvester, DEPLOY_IN_ANGLE, 0.0));
-    harvesterDeployBtn.onTrue(new HarvesterDeploy(harvester, 45.0, 0.0));
-    harvesterDeployBtn.onFalse(new HarvesterDeploy(harvester, DEPLOY_START_ANGLE, 0.0));
-
-    // Harvester Spin
-    harvesterSpin.whileTrue(new HarvesterSpin(harvester, false));
-    harvesterSpinReverse.whileTrue(new HarvesterSpin(harvester, true));
-
-    // Indexer Spin
-    indexerSpin.whileTrue(new IndexerSpin(indexer, false));
-    indexerSpinReverse.whileTrue(new IndexerSpin(indexer, true));
-
-    // flyEntry = Shuffleboard.getTab("Shooter").add("Flywheel", 0).getEntry();
-    // hoodEntry = Shuffleboard.getTab("Shooter").add("Hood", 0).getEntry();
-    // turretEntry = Shuffleboard.getTab("Shooter").add("Turret", 0).getEntry();
-
-    manPrepareShtrBtn2.onTrue(
-        (new PrepareShooterCmd(
-            shooter,
-            drive,
-            (DoubleSupplier) () -> flyEntry.getDouble(999.0),
-            (DoubleSupplier) () -> hoodEntry.getDouble(999.0),
-            (DoubleSupplier) () -> turretEntry.getDouble(999.0))));
-
+    // TODO TA: ***** Inhibiting shooting if turret is not at correct angle, test and decide whether
+    // to keep
+    // possibly add a check for the hood and the flywheel also
+    // Start up Kicker First to get it up to speed, and then hand off Fuel from indexer to the
+    // kicker
+    fireBtn.whileTrue(
+        new Kick(kicker)
+            .alongWith(
+                Commands.waitSeconds(0.2)
+                    // .andThen(new IndexerSpin(indexer).onlyIf(() ->
+                    // shooter.isTurretAtPosition()))));
+                    .andThen(new IndexerSpin(indexer, false))));
+    fireBtn
+        .debounce(0.10)
+        .onFalse(
+            new InstantCommand(() -> indexer.stop())
+                .andThen(
+                    Commands.waitSeconds(0.2).andThen(new InstantCommand(() -> kicker.stop()))));
     // Start preparing shooter when Aim button is pressed and keep running until interrupted
     aimBtn.onTrue(
         (new PrepareShooterCmd(
@@ -461,25 +460,16 @@ public class RobotContainer {
             (DoubleSupplier) () -> 0.0,
             (DoubleSupplier) () -> 0.0));
 
-    // TODO TA: ***** Inhibiting shooting if turret is not at correct angle, test and decide whether
-    // to keep
-    // possibly add a check for the hood and the flywheel also
-    // Start up Kicker First to get it up to speed, and then hand off Fuel from indexer to the
-    // kicker
-    fireBtn.whileTrue(
-        new Kick(kicker)
-            .alongWith(
-                Commands.waitSeconds(0.2)
-                    // .andThen(new IndexerSpin(indexer).onlyIf(() ->
-                    // shooter.isTurretAtPosition()))));
-                    .andThen(new IndexerSpin(indexer, false))));
+    harvestStartBtn.onTrue(new HarvesterDeploy(harvester, DEPLOY_OUT_ANGLE, 0.0));
+    harvestStopBtn.onTrue(new HarvesterDeploy(harvester, DEPLOY_IN_ANGLE, 0.0));
 
-    fireBtn
-        .debounce(0.10)
-        .onFalse(
-            new InstantCommand(() -> kicker.stop())
-                .andThen(
-                    Commands.waitSeconds(0.2).andThen(new InstantCommand(() -> indexer.stop()))));
+    harvestAgitate.whileTrue(HarvesterAgitate.create(harvester));
+
+    // Moves to 4 rotations when button 9 is pressed
+    climberUpBtn.onTrue(new InstantCommand(() -> climber.setPosition(55.0), climber));
+
+    // Returns to 0 rotations when button 10 is pressed
+    climberDownBtn.onTrue(new InstantCommand(() -> climber.setPosition(0.0), climber));
 
     // Prepare to shoot from Hub // TODO: TA - All parameters must be fixed
     new POVButton(operatorAutoJoystick, 0)
@@ -525,11 +515,68 @@ public class RobotContainer {
                 (DoubleSupplier) () -> 0.0,
                 (DoubleSupplier) () -> 0.0));
 
-    // Moves to 4 rotations when button 9 is pressed
-    climberUpBtn.onTrue(new InstantCommand(() -> climber.setPosition(55.0), climber));
+    //////////////////////////////////////////////////////////////
+    /// Operator Manual Buttons / Commands (Joystick 2 / Left Hand)
+    //////////////////////////////////////////////////////////////
 
-    // Returns to 0 rotations when button 10 is pressed
-    climberDownBtn.onTrue(new InstantCommand(() -> climber.setPosition(0.0), climber));
+    flyWheel
+        .debounce(0.10)
+        .onTrue(
+            (new PrepareShooterCmd(
+                shooter,
+                drive,
+                (DoubleSupplier) () -> (operatorManualJoystick.getZ() - 1) / 2.0,
+                (DoubleSupplier) () -> hoodEntry.getDouble(999.0),
+                (DoubleSupplier) () -> turretEntry.getDouble(999.0))));
+
+    // Kicker
+    kickBtn.whileTrue(new Kick(kicker));
+
+    // Harvester Deploy
+    // harvesterDeployBtn.onTrue(new HarvesterDeploy(harvester, DEPLOY_IN_ANGLE, 0.0));
+    harvesterDeployBtn.onTrue(new HarvesterDeploy(harvester, 45.0, 0.0));
+    harvesterDeployBtn.onFalse(new HarvesterDeploy(harvester, DEPLOY_START_ANGLE, 0.0));
+
+    // Harvester Spin
+    harvesterSpin.whileTrue(new HarvesterSpin(harvester, false));
+    harvesterSpinReverse.whileTrue(new HarvesterSpin(harvester, true));
+
+    // Indexer Spin
+    indexerSpin.whileTrue(new IndexerSpin(indexer, false));
+    indexerSpinReverse.whileTrue(new IndexerSpin(indexer, true));
+
+    zeroHoodBtn
+        .debounce(0.10)
+        .onTrue(
+            (new PrepareShooterCmd(
+                shooter,
+                drive,
+                (DoubleSupplier) () -> flyEntry.getDouble(999.0),
+                (DoubleSupplier) () -> 0.0,
+                (DoubleSupplier) () -> turretEntry.getDouble(999.0))));
+
+    zeroTurretBtn
+        .debounce(0.10)
+        .onTrue(
+            (new PrepareShooterCmd(
+                shooter,
+                drive,
+                (DoubleSupplier) () -> flyEntry.getDouble(999.0),
+                (DoubleSupplier) () -> hoodEntry.getDouble(999.0),
+                (DoubleSupplier) () -> 0.0)));
+
+    resetHarvesterEncoder.onTrue(new InstantCommand(() -> harvester.zeroDeployEncoder()));
+
+    // flyEntry = Shuffleboard.getTab("Shooter").add("Flywheel", 0).getEntry();
+    // hoodEntry = Shuffleboard.getTab("Shooter").add("Hood", 0).getEntry();
+    // turretEntry = Shuffleboard.getTab("Shooter").add("Turret", 0).getEntry();
+    manPrepareShtrBtn2.onTrue(
+        (new PrepareShooterCmd(
+            shooter,
+            drive,
+            (DoubleSupplier) () -> flyEntry.getDouble(999.0),
+            (DoubleSupplier) () -> hoodEntry.getDouble(999.0),
+            (DoubleSupplier) () -> turretEntry.getDouble(999.0))));
   }
 
   /**

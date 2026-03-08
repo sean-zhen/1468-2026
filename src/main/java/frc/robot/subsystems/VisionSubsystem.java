@@ -137,7 +137,7 @@ public class VisionSubsystem extends SubsystemBase {
 
   public VisionSubsystem(Drive drive) {
     this.drive = drive;
-    fieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltAndymark);
+    fieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltWelded);
 
     for (int i = 0; i < 4; i++) {
       cameras[i] = new PhotonCamera(CAM_NAMES[i]);

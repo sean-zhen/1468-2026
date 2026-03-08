@@ -238,10 +238,22 @@ public class HarvesterSubsystem extends SubsystemBase {
     log();
   }
 
+  public void setCoastMode() {
+    deployMotor.setNeutralMode(NeutralModeValue.Coast);
+  }
+
+  public void setBrakeMode() {
+    deployMotor.setNeutralMode(NeutralModeValue.Brake);
+  }
+
   /* Set Deploy motor Position using Magic Motion*/
   public void setHarvDeployMagicMoPos(double pos) {
     deployMotor.setControl(
         m_mmReqLt.withPosition(pos).withSlot(0).withOverrideBrakeDurNeutral(true));
+  }
+
+  public double getDeployPositionDegrees() {
+    return deployMotor.getPosition().getValueAsDouble() / DEPLOY_DEGREES_TO_ROTATIONS;
   }
 
   // Deploy position control (shaft rotations at output)

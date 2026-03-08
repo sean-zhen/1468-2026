@@ -56,4 +56,12 @@ public interface ModuleIO {
   public default List<BaseStatusSignal> getSignals() {
     return List.of();
   }
+  // TA ADDED - BELOW
+  public default void setDriveCoast() {}
+
+  public default void setTurnCoast() {}
+
+  public default void setDriveBrake() {}
+
+  public default void setTurnBrake() {}
 }

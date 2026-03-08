@@ -10,9 +10,7 @@ package frc.robot.commands;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.filter.SlewRateLimiter;
-import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
@@ -41,20 +39,31 @@ public class DriveCommands {
   private static final double WHEEL_RADIUS_MAX_VELOCITY = 0.25; // Rad/Sec
   private static final double WHEEL_RADIUS_RAMP_RATE = 0.05; // Rad/Sec^2
 
+  private static final SlewRateLimiter omegaLimiter = new SlewRateLimiter(6.0);
+  private static final SlewRateLimiter xLimiter = new SlewRateLimiter(4.0);
+  private static final SlewRateLimiter yLimiter = new SlewRateLimiter(4.0);
+
   private DriveCommands() {}
 
   private static Translation2d getLinearVelocityFromJoysticks(double x, double y) {
-    // Apply deadband
-    double linearMagnitude = MathUtil.applyDeadband(Math.hypot(x, y), DEADBAND);
-    Rotation2d linearDirection = new Rotation2d(Math.atan2(y, x));
 
-    // Square magnitude for more precise control
-    linearMagnitude = linearMagnitude * linearMagnitude;
+    // Calculate joystick magnitude
+    double magnitude = Math.hypot(x, y);
 
-    // Return new linear velocity
-    return new Pose2d(Translation2d.kZero, linearDirection)
-        .transformBy(new Transform2d(linearMagnitude, 0.0, Rotation2d.kZero))
-        .getTranslation();
+    // Normalize so diagonals aren't faster
+    magnitude = Math.min(magnitude, 1.0);
+
+    // Apply radial deadband
+    magnitude = MathUtil.applyDeadband(magnitude, DEADBAND);
+
+    // Square magnitude for fine control
+    magnitude = magnitude * magnitude;
+
+    // Get joystick direction
+    Rotation2d direction = new Rotation2d(x, y);
+
+    // Convert back to X/Y velocity
+    return new Translation2d(magnitude * direction.getCos(), magnitude * direction.getSin());
   }
 
   /**
@@ -71,11 +80,18 @@ public class DriveCommands {
           Translation2d linearVelocity =
               getLinearVelocityFromJoysticks(xSupplier.getAsDouble(), ySupplier.getAsDouble());
 
+          // Apply translation slew rate limiting
+          linearVelocity =
+              new Translation2d(
+                  xLimiter.calculate(linearVelocity.getX()),
+                  yLimiter.calculate(linearVelocity.getY()));
+
           // Apply rotation deadband
           double omega = MathUtil.applyDeadband(omegaSupplier.getAsDouble(), DEADBAND);
 
           // Square rotation value for more precise control
           omega = Math.copySign(omega * omega, omega);
+          omega = omegaLimiter.calculate(omega);
 
           // Convert to field relative speeds & send command
           ChassisSpeeds speeds =
@@ -122,6 +138,12 @@ public class DriveCommands {
               // Get linear velocity
               Translation2d linearVelocity =
                   getLinearVelocityFromJoysticks(xSupplier.getAsDouble(), ySupplier.getAsDouble());
+
+              // Apply translation slew rate limiting
+              linearVelocity =
+                  new Translation2d(
+                      xLimiter.calculate(linearVelocity.getX()),
+                      yLimiter.calculate(linearVelocity.getY()));
 
               // Calculate angular speed
               double omega =

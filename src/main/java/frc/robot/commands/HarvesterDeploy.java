@@ -10,6 +10,7 @@ public class HarvesterDeploy extends Command {
   private final double targetPositionDegrees;
   private final double toleranceDegrees;
   private int counter = 0;
+  private boolean spinStarted = false;
 
   public HarvesterDeploy(
       HarvesterSubsystem harvester, double targetPositionDegrees, double toleranceDegrees) {
@@ -21,20 +22,30 @@ public class HarvesterDeploy extends Command {
 
   @Override
   public void initialize() {
-    // Set the target position for Motion Magic
     harvester.setHarvDeployMagicMoPos(targetPositionDegrees * DEPLOY_DEGREES_TO_ROTATIONS);
-    // Only spin while harv deployed out
-    if (targetPositionDegrees > 2 * DEPLOY_IN_ANGLE) harvester.setSpinVelocity(SPIN_TARGET_RPS);
-    else harvester.stopSpin();
-    counter = 0;
+    spinStarted = false;
   }
 
   @Override
-  public void execute() {}
+  public void execute() {
+
+    double currentDegrees = harvester.getDeployPositionDegrees();
+
+    // boolean atTarget =
+    //     Math.abs(currentDegrees - targetPositionDegrees) <= toleranceDegrees;
+
+    if (!spinStarted
+        && targetPositionDegrees > 2 * DEPLOY_IN_ANGLE
+        && currentDegrees > 2 * DEPLOY_IN_ANGLE) {
+      harvester.setSpinVelocity(SPIN_TARGET_RPS);
+      spinStarted = true;
+    }
+  }
 
   @Override
   public void end(boolean interrupted) {
     harvester.stopDeploy();
+    harvester.stopSpin();
   }
 
   @Override

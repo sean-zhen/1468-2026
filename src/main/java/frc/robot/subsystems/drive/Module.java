@@ -148,4 +148,15 @@ public class Module {
   public ModuleIOInputsAutoLogged getInputs() {
     return inputs;
   }
+
+  // TA ADDED - BELOW
+  public void setCoastMode() {
+    io.setDriveCoast();
+    io.setTurnCoast();
+  }
+
+  public void setBrakeMode() {
+    io.setDriveBrake();
+    io.setTurnBrake();
+  }
 }

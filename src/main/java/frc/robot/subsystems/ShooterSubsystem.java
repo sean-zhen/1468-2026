@@ -1,6 +1,9 @@
 package frc.robot.subsystems;
 
+import static edu.wpi.first.units.Units.*;
+
 import com.ctre.phoenix6.BaseStatusSignal;
+import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.*;
 import com.ctre.phoenix6.controls.Follower;
@@ -95,11 +98,17 @@ public class ShooterSubsystem extends SubsystemBase {
             .getEntry();
 
     configureMotors();
+
+    turretMotor.setPosition(0.0);
+
     setupTables();
 
     turretPositionSignal = turretMotor.getPosition();
     flywheelVelocitySignal = flywheelLead.getVelocity();
     hoodPositionSignal = hoodMotor.getPosition();
+
+    BaseStatusSignal.setUpdateFrequencyForAll(
+        50, turretPositionSignal, flywheelVelocitySignal, hoodPositionSignal);
 
     // Create persistent Shuffleboard widgets
     shtrAtSpdEntry =
@@ -265,6 +274,10 @@ public class ShooterSubsystem extends SubsystemBase {
     leadConfigs.Slot0.kV = 0.12;
     leadConfigs.MotorOutput.NeutralMode = NeutralModeValue.Coast;
     leadConfigs.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
+    leadConfigs.withCurrentLimits(
+        new CurrentLimitsConfigs()
+            .withStatorCurrentLimit(Amps.of(80))
+            .withStatorCurrentLimitEnable(true));
     flywheelLead.getConfigurator().apply(leadConfigs);
 
     // --- Follower Flywheel (Facing Lead) ---
@@ -280,6 +293,11 @@ public class ShooterSubsystem extends SubsystemBase {
     // Ensure follower is also in Coast mode
     TalonFXConfiguration followerConfigs = new TalonFXConfiguration();
     followerConfigs.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+
+    followerConfigs.withCurrentLimits(
+        new CurrentLimitsConfigs()
+            .withStatorCurrentLimit(Amps.of(80))
+            .withStatorCurrentLimitEnable(true));
     flywheelFollower.getConfigurator().apply(followerConfigs);
 
     // --- Turret (Motion Magic - 11:1 Ratio) ---
@@ -292,36 +310,41 @@ public class ShooterSubsystem extends SubsystemBase {
     // If you have "huge friction", 0.25V is likely too low.
     // Increase this until the turret *just barely* moves when you enable, then back off 0.05.
     // For a sticky belt, this might need to be 0.45 - 0.60 Volts.
-    turretConfigs.Slot0.kS = 0.25;
+    turretConfigs.Slot0.kS = 2.0; // 0.25 0.45 1.5
 
     // 3. VELOCITY FF (kV)
     // 0.12 Volts / (1 Rot/s) -> At max speed (9 RPS), this adds ~1.08V.
     // This seems low. Ideally, 12V should correspond to Max Speed.
     // Try: 12V / 9 RPS = ~1.33.
     // Start conservative:
-    turretConfigs.Slot0.kV = 1.32;
+    turretConfigs.Slot0.kV = 1.33;
 
     // 4. PROPORTIONAL (kP)
     // 200 is very "stiff" (200V per 1 rotation error).
     // With high friction, stiff is good, but 200 might cause the vibration.
     // If it buzzes, drop this to 80-120.
-    turretConfigs.Slot0.kP = 120.0;
+    turretConfigs.Slot0.kP = 160; // 120    // TA 3/7 was 180, saw oscillation
     turretConfigs.Slot0.kI = 0.0; // Keep zero!
     turretConfigs.Slot0.kD = 0.0; // Add small D (e.g., 5.0) only if it oscillates.
 
     // 5. MOTION MAGIC - UNLEASH THE SPEED
     // Cruise: 4.0 RPS (1440 deg/s) - Must be faster than Robot Spin (720 deg/s)
-    turretConfigs.MotionMagic.MotionMagicCruiseVelocity = 4.0;
+    turretConfigs.MotionMagic.MotionMagicCruiseVelocity = 5.0; // 4.0, 5.0; 10.0 may be too high
 
     // Accel: 10.0 RPS/s - Snap to target in < 0.2 seconds
-    turretConfigs.MotionMagic.MotionMagicAcceleration = 10.0;
+    turretConfigs.MotionMagic.MotionMagicAcceleration = 20.0; // 10, 20; 40.0 may be too high
 
     // Jerk: 100.0 or 0. Smooths the start/stop to prevent belt slip.
     // 0 = Infinite Jerk (Max Aggression). For vision, higher jerk is often better.
     turretConfigs.MotionMagic.MotionMagicJerk = 0.0;
 
     // 6. DEADBAND
-    turretConfigs.MotorOutput.DutyCycleNeutralDeadband = 0.001;
+    turretConfigs.MotorOutput.DutyCycleNeutralDeadband = 0.02;
+
+    turretConfigs.withCurrentLimits(
+        new CurrentLimitsConfigs()
+            .withStatorCurrentLimit(Amps.of(80)) // 120 amps is too high
+            .withStatorCurrentLimitEnable(true));
 
     // ... Limits & Inverts ...
     turretConfigs.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
@@ -354,14 +377,29 @@ public class ShooterSubsystem extends SubsystemBase {
 
     hoodConfigs.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
     hoodConfigs.MotorOutput.NeutralMode = NeutralModeValue.Brake; // Keep Brake for hood
-    hoodConfigs.MotorOutput.DutyCycleNeutralDeadband = 0.001; // Help reach the final point
+    hoodConfigs.MotorOutput.DutyCycleNeutralDeadband = 0.01; // Help reach the final point
 
     hoodConfigs.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
     hoodConfigs.SoftwareLimitSwitch.ForwardSoftLimitThreshold = Shooter.HOOD_TOP_SOFT_LIMIT_ROT;
     hoodConfigs.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
     hoodConfigs.SoftwareLimitSwitch.ReverseSoftLimitThreshold = Shooter.HOOD_BOTTOM_SOFT_LIMIT_ROT;
+
+    hoodConfigs.withCurrentLimits(
+        new CurrentLimitsConfigs()
+            .withStatorCurrentLimit(Amps.of(80))
+            .withStatorCurrentLimitEnable(true));
     hoodMotor.getConfigurator().apply(hoodConfigs);
     hoodMotor.setNeutralMode(NeutralModeValue.Brake);
+  }
+
+  public void setCoastMode() {
+    hoodMotor.setNeutralMode(NeutralModeValue.Coast);
+    turretMotor.setNeutralMode(NeutralModeValue.Coast);
+  }
+
+  public void setBrakeMode() {
+    hoodMotor.setNeutralMode(NeutralModeValue.Brake);
+    turretMotor.setNeutralMode(NeutralModeValue.Brake);
   }
 
   // Flywheel velocity (RPS at output) - this is for testing, using joystick Z axis for velo
@@ -455,6 +493,11 @@ public class ShooterSubsystem extends SubsystemBase {
         tomClamp(rotations);
     turretMotor.setControl(m_mmReq.withPosition(clampedRot));
   }
+
+  public void setTurretToZero() {
+    turretMotor.setPosition(0.0);
+  }
+
   // Currently not used
   public void setTurretWithFF(double rotations, double feedforwardRPS) {
     double clamped =
@@ -470,19 +513,23 @@ public class ShooterSubsystem extends SubsystemBase {
   }
 
   public double tomClamp(double rotations) {
-    double clampedRot;
+    // 1. Handle wrap-around for inputs exceeding a full rotation
     if (rotations > 1) rotations = rotations % 1;
     if (rotations < -1) rotations = rotations % 1;
+
     this.targetTurretPositionRot = rotations;
-    clampedRot = rotations;
-    if (rotations > Shooter.TURRET_LIMIT_ROT)
-      clampedRot = (0.5 - rotations) * Shooter.TURRET_CLAMP_FACTOR;
-    if (rotations < -Shooter.TURRET_LIMIT_ROT)
-      clampedRot = (-0.5 - rotations) * Shooter.TURRET_CLAMP_FACTOR;
+    double clampedRot = rotations;
+
+    // 2. Apply asymmetrical limits
+    // Note: Typically Right is positive and Left is negative in FRC coordinate systems
+    if (rotations > Shooter.TURRET_RIGHT_SOFT_LIMIT_ROT) {
+      clampedRot = (0.5 - rotations) * Shooter.TURRET_RIGHT_CLAMP_FACTOR;
+    } else if (rotations < Shooter.TURRET_LEFT_SOFT_LIMIT_ROT) {
+      clampedRot = (-0.5 - rotations) * Shooter.TURRET_LEFT_CLAMP_FACTOR;
+    }
 
     return clampedRot;
   }
-  ;
 
   // Turret velocity (RPS at output)
   public void setTurretVelocity(double rps) {
@@ -565,26 +612,27 @@ public class ShooterSubsystem extends SubsystemBase {
     flyAlliance.put(0.0, 40.0);
     flyAlliance.put(1.0, 40.0); // ABOUT THE SHORTEST SHOT IN OUR ALLIANCE ZONE
     flyAlliance.put(2.0, 45.0);
-    flyAlliance.put(4.0, 50.0);
-    flyAlliance.put(6.0, 55.0); // ABOUT THE LONGEST SHOT IN OUR ALLIANCE ZONE
-    flyAlliance.put(8.0, 60.0);
+    flyAlliance.put(3.86, 50.0);
+    flyAlliance.put(5.62, 57.0); // outpost
+    // flyAlliance.put(6.0, 60.0); // ABOUT THE LONGEST SHOT IN OUR ALLIANCE ZONE
+    flyAlliance.put(8.0, 70.0);
 
     // parameters are distance to Hub in METERS and Hood angle in rotations
     hoodAlliance.put(0.0, 0.0 / Shooter.HOOD_DEG_PER_ROTATION);
     hoodAlliance.put(1.0, 0.0 / Shooter.HOOD_DEG_PER_ROTATION);
-    hoodAlliance.put(2.0, 5.0 / Shooter.HOOD_DEG_PER_ROTATION);
+    hoodAlliance.put(2.56, 0.35);
     hoodAlliance.put(4.0, 10.0 / Shooter.HOOD_DEG_PER_ROTATION);
     hoodAlliance.put(6.0, 15.0 / Shooter.HOOD_DEG_PER_ROTATION);
     hoodAlliance.put(8.0, 20.0 / Shooter.HOOD_DEG_PER_ROTATION);
 
     // Neutral Zone Flywheel and Hood Tables // TODO TA: Must empirically obtain values
     // parameters are distance to Hub in METERS and RPS velocity of the flywheel
-    flyNeutral.put(0.0, 55.0);
-    flyNeutral.put(4.0, 55.0); // ABOUT THE SHORTEST SHOT IN THE NEUTRAL ZONE
-    flyNeutral.put(7.0, 60.0);
-    flyNeutral.put(10.0, 65.0);
-    flyNeutral.put(12.0, 70.0); // ABOUT THE LONGEST SHOT IN THE NEUTRAL ZONE
-    flyNeutral.put(15.0, 75.0);
+    flyNeutral.put(0.0, 50.0);
+    flyNeutral.put(4.0, 52.0); // ABOUT THE SHORTEST SHOT IN THE NEUTRAL ZONE
+    flyNeutral.put(7.0, 65.0);
+    flyNeutral.put(10.0, 75.0);
+    flyNeutral.put(12.0, 80.0); // ABOUT THE LONGEST SHOT IN THE NEUTRAL ZONE
+    flyNeutral.put(15.0, 85.0);
 
     // parameters are distance to Hub in METERS and Hood angle in rotation
     hoodNeutral.put(0.0, 10.0 / Shooter.HOOD_DEG_PER_ROTATION);
@@ -597,10 +645,10 @@ public class ShooterSubsystem extends SubsystemBase {
     // Opposition Zone Flywheel and Hood Tables // TODO TA: Must empirically obtain values
     // parameters are distance to Hub in METERS and RPS velocity of the flywheel
     flyOpposition.put(0.0, 65.0);
-    flyOpposition.put(10.0, 65.0); // ABOUT THE SHORTEST SHOT IN OPPONENTS ZONE
-    flyOpposition.put(12.0, 70.0);
-    flyOpposition.put(15.0, 75.0);
-    flyOpposition.put(20.0, 80.0);
+    flyOpposition.put(10.0, 75.0); // ABOUT THE SHORTEST SHOT IN OPPONENTS ZONE
+    flyOpposition.put(12.0, 80.0);
+    flyOpposition.put(15.0, 85.0); // ABOUT THE LONGEST SHOT IN OPPONENTS ZONE
+    flyOpposition.put(20.0, 90.0);
 
     // parameters are distance to Hub in METERS and Hood angle in rotation
     hoodOpposition.put(0.0, 15.0 / Shooter.HOOD_DEG_PER_ROTATION);

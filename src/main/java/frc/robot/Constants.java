@@ -79,8 +79,8 @@ public final class Constants {
     public static final Translation2d BLUE_OUTPOST_POS = new Translation2d(1.0, 1.0);
     public static final Translation2d RED_OUTPOST_POS = new Translation2d(15.0, 7.0);
     // Turret Offset from Robot Center (Inches to Meters)
-    public static final double TURRET_OFFSET_X = 0.0; // 5.5 * 0.0254; // TODO: TA get real offset
-    public static final double TURRET_OFFSET_Y = 0.0; // 5.5 * 0.0254;
+    public static final double TURRET_OFFSET_X = -5.5 * 0.0254; // Back TODO: TA get real offset
+    public static final double TURRET_OFFSET_Y = -5.5 * 0.0254; // Right
     public static final Translation2d TURRET_TO_ROBOT =
         new Translation2d(TURRET_OFFSET_X, TURRET_OFFSET_Y);
 
@@ -123,12 +123,16 @@ public final class Constants {
     public static final double TURRET_kD = 0.0;
     public static final double TURRET_kV = 0.0;
 
-    public static final double TURRET_LIMIT_ROT = 95.0 / 360.0; // +/- .375 Rotstions
+    public static final double TURRET_RIGHT_LIMIT_ROT = 135.0 / 360.0; // +/- .375 Rotstions
+    public static final double TURRET_LEFT_LIMIT_ROT = 182.0 / 360.0; // +/- .375 Rotstions
+
     // This multiplier is used to smooth the turret motion over angles that cant be used due to
     // wiring
-    public static final double TURRET_CLAMP_FACTOR = 0.5 / (0.5 - TURRET_LIMIT_ROT);
-    public static final double TURRET_RIGHT_SOFT_LIMIT_ROT = TURRET_LIMIT_ROT;
-    public static final double TURRET_LEFT_SOFT_LIMIT_ROT = -TURRET_LIMIT_ROT;
+    public static final double TURRET_RIGHT_CLAMP_FACTOR = 0.5 / (0.5 - TURRET_RIGHT_LIMIT_ROT);
+    public static final double TURRET_LEFT_CLAMP_FACTOR = 0.5 / (0.5 - TURRET_LEFT_LIMIT_ROT);
+
+    public static final double TURRET_RIGHT_SOFT_LIMIT_ROT = TURRET_RIGHT_LIMIT_ROT;
+    public static final double TURRET_LEFT_SOFT_LIMIT_ROT = -TURRET_LEFT_LIMIT_ROT;
 
     public static final double TURRET_TRACKING_TOLERANCE_DEG = 2.0; // DEGREE TOLERANCE
     public static final double TURRET_MAX_VELOCITY_RPS = 5.0; // Max turret rotation speed
@@ -138,7 +142,7 @@ public final class Constants {
 
   public static final class Kicker {
     public static final int KICKER_MOTOR_ID = 42;
-    public static final double KICKER_TARGET_RPS = 30.0;
+    public static final double KICKER_TARGET_RPS = 45.0;
     public static final double KICKER_GEAR_RATIO = 3.0; // NEED TO INSERT
 
     // TODO: Tune these values
@@ -167,7 +171,7 @@ public final class Constants {
 
     public static final int SPIN_MOTOR_ID = 32;
     public static final double SPIN_GEAR_RATIO = 3.0; // NEED TO INSERT
-    public static final double SPIN_TARGET_RPS = -30.0;
+    public static final double SPIN_TARGET_RPS = -25.0;
 
     // TODO: Tune these values
     public static final double deploykP = 0.89;
@@ -203,7 +207,7 @@ public final class Constants {
   public static final class Indexer {
     public static final int MOTOR_ID = 41;
     public static final double GEAR_RATIO = 1.0; // NEED TO INSERT
-    public static final double TARGET_RPS = 22.5; // NEED TO INSERT
+    public static final double TARGET_RPS = 45; // NEED TO INSERT //22.5
     public static final double[] POSITIONS = {
       0.0, 10.0, 20.0, 30.0, 40.0, 50.0
     }; // NEED TO INSERT (positions in rotations)

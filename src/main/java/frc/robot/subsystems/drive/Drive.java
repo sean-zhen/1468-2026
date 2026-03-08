@@ -476,4 +476,18 @@ public class Drive extends SubsystemBase {
 
     return allOk;
   }
+
+  public void setCoast() {
+
+    for (var module : modules) {
+      module.setCoastMode();
+    }
+  }
+
+  public void setBrake() {
+
+    for (var module : modules) {
+      module.setCoastMode();
+    }
+  }
 }

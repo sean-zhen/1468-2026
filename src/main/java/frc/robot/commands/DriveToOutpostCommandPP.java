@@ -59,7 +59,7 @@ public class DriveToOutpostCommandPP {
 
             // TODO: Update these to your actual Blue Outpost coordinates
             endPtX = 0.49;
-            endPtY = 0.696;
+            endPtY = 6.90;
             // 0 degrees points away from the Blue wall, out towards the field
             endPtHoloRotation = -90.0;
 

@@ -84,6 +84,14 @@ public class IndexerSubsystem extends SubsystemBase {
     log();
   }
 
+  public void setCoastMode() {
+    motor.setNeutralMode(NeutralModeValue.Coast);
+  }
+
+  public void setBrakeMode() {
+    motor.setNeutralMode(NeutralModeValue.Brake);
+  }
+
   // Position control (rotations at output)
   public void setPosition(double rotations) {
     double motorRotations = rotations * Indexer.GEAR_RATIO;

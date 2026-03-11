@@ -11,32 +11,45 @@ public class IndexerSpin extends Command {
   public IndexerSpin(IndexerSubsystem indexer, boolean reverse) {
     this.indexer = indexer;
     this.directionMultiplier = reverse ? -1.0 : 1.0;
-
     addRequirements(indexer);
   }
 
   @Override
   public void execute() {
-    indexer.setVelocity(Indexer.TARGET_RPS * directionMultiplier);
+
+    // If we're in the middle of a dither, let the subsystem run its state machine
+    if (!indexer.isDithering()) {
+      indexer.setVelocity(Indexer.TARGET_RPS * directionMultiplier);
+    }
+
+    if (indexer.isJammed()) {
+      indexer.startJamClear(); // logs + triggers dither
+    }
   }
 
   @Override
   public void end(boolean interrupted) {
+    if (interrupted) {
+      indexer.forceStopJamClear();
+      indexer.stop();
+      return;
+    }
 
-    // Find nearest position
     double currentPosition = indexer.getPosition();
     double modPosition = currentPosition % 9;
+
     double nearest = Indexer.POSITIONS[0];
     double minDiff = Math.abs(modPosition - nearest);
 
     for (double pos : Indexer.POSITIONS) {
-      double diff = Math.abs(currentPosition - pos);
+      double diff = Math.abs(modPosition - pos);
       if (diff < minDiff) {
         minDiff = diff;
         nearest = pos;
       }
     }
-    indexer.setPosition(currentPosition - modPosition);
+
+    indexer.setPosition(currentPosition - modPosition + nearest);
   }
 
   @Override

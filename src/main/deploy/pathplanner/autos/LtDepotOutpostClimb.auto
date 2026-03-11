@@ -117,14 +117,14 @@
                           }
                         ]
                       }
+                    },
+                    {
+                      "type": "named",
+                      "data": {
+                        "name": "ClimberDown"
+                      }
                     }
                   ]
-                }
-              },
-              {
-                "type": "named",
-                "data": {
-                  "name": "ClimberDown"
                 }
               }
             ]

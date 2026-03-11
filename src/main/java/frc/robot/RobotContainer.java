@@ -53,6 +53,7 @@ import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.GyroIOPigeon2;
 import frc.robot.subsystems.drive.ModuleIOTalonFX;
 import frc.robot.util.Elastic;
+import java.util.Set;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
@@ -121,9 +122,6 @@ public class RobotContainer {
 
     led = new LEDSubsystem(shooter, drive, vision);
 
-    // Set up auto routines
-    autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
-
     // // Set up SysId routines
     // autoChooser.addOption(
     //     "Drive Wheel Radius Characterization", DriveCommands.wheelRadiusCharacterization(drive));
@@ -146,28 +144,42 @@ public class RobotContainer {
     /////////////////////////////////////////////////////////////////////////////////////////////
     NamedCommands.registerCommand( // Only use in DEADLINE with a drive cmd as the DEADLINE
         "Aim",
-        (new PrepareShooterCmd(
-            shooter,
-            drive,
-            (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
-            (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
-            (DoubleSupplier) () -> DONT_OVERRIDE_VAL)));
+        Commands.defer(
+            () ->
+                new PrepareShooterCmd(
+                    shooter,
+                    drive,
+                    (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
+                    (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
+                    (DoubleSupplier) () -> DONT_OVERRIDE_VAL),
+            Set.of(shooter)));
 
     NamedCommands.registerCommand(
         "Fire",
-        (new Kick(kicker)
-            .alongWith(Commands.waitSeconds(0.2).andThen(new IndexerSpin(indexer, false)))));
+        Commands.defer(
+            () ->
+                new Kick(kicker)
+                    .alongWith(Commands.waitSeconds(0.2).andThen(new IndexerSpin(indexer, false))),
+            Set.of(kicker, indexer)));
 
     NamedCommands.registerCommand(
         "StopFire",
-        (new InstantCommand(() -> indexer.stop())
-            .andThen(Commands.waitSeconds(0.2).andThen(new InstantCommand(() -> kicker.stop())))));
+        Commands.defer(
+            () ->
+                new InstantCommand(() -> indexer.stop())
+                    .andThen(
+                        Commands.waitSeconds(0.2).andThen(new InstantCommand(() -> kicker.stop()))),
+            Set.of(kicker, indexer)));
 
     NamedCommands.registerCommand(
-        "StartHarvest", (new HarvesterDeploy(harvester, DEPLOY_OUT_ANGLE, 0.0)));
+        "StartHarvest",
+        Commands.defer(
+            () -> new HarvesterDeploy(harvester, DEPLOY_OUT_ANGLE, 0.0), Set.of(harvester)));
 
     NamedCommands.registerCommand(
-        "StopHarvest", (new HarvesterDeploy(harvester, DEPLOY_IN_ANGLE, 0.0)));
+        "StopHarvest",
+        Commands.defer(
+            () -> new HarvesterDeploy(harvester, DEPLOY_IN_ANGLE, 0.0), Set.of(harvester)));
 
     // Example homing command that runs the deploy inward slowly until the deploy hits the
     // mechanical stop (detected by current). Parameters here are conservative defaults;
@@ -176,10 +188,20 @@ public class RobotContainer {
     //     "HomeHarvest", (new HarvesterDeployVelocityStop(harvester, -4.0)));
 
     NamedCommands.registerCommand(
-        "ClimberUp", (new InstantCommand(() -> climber.setPosition(0.0), climber))); // 40.0
+        "ClimberUp",
+        Commands.defer(
+            () -> new InstantCommand(() -> climber.setPosition(55.0), climber),
+            Set.of(climber))); // 40.0
 
     NamedCommands.registerCommand(
-        "ClimberDown", (new InstantCommand(() -> climber.setPosition(0.0), climber)));
+        "ClimberDown",
+        Commands.defer(
+            () -> new InstantCommand(() -> climber.setPosition(0.0), climber), Set.of(climber)));
+
+    // ***** This must be after all NamedCommands are registered,
+    // ***** as AutoBuilder.buildAutoChooser() needs to access them to build
+    // Set up auto routines
+    autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
 
     // Initialize persistent CAN Status dashboard entries
     roboRioCanStatusEntry =
@@ -425,7 +447,7 @@ public class RobotContainer {
     //////////////////////////////////////////////////////////////
 
     // TODO TA: ***** Inhibiting shooting if turret is not at correct angle, test and decide whether
-    // to keep
+    // to keep - added a flywheel spinning check to insure balls dont get stuck
     // possibly add a check for the hood and the flywheel also
     // Start up Kicker First to get it up to speed, and then hand off Fuel from indexer to the
     // kicker
@@ -433,9 +455,10 @@ public class RobotContainer {
         new Kick(kicker)
             .alongWith(
                 Commands.waitSeconds(0.2)
-                    // .andThen(new IndexerSpin(indexer).onlyIf(() ->
-                    // shooter.isTurretAtPosition()))));
-                    .andThen(new IndexerSpin(indexer, false))));
+                    .andThen(
+                        new IndexerSpin(indexer, false)
+                            .onlyIf(() -> shooter.getFlywheelVeloRPS() > 0.30))));
+    // .andThen(new IndexerSpin(indexer, false))));
     fireBtn
         .debounce(0.10)
         .onFalse(

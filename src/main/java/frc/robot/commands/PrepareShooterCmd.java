@@ -106,11 +106,16 @@ public class PrepareShooterCmd extends Command {
 
     var alliance = DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue);
 
-    // 2. Calculate turret field position
-    Translation2d turretFieldPos =
-        robotPose.getTranslation().plus(Shooter.TURRET_TO_ROBOT.rotateBy(robotPose.getRotation()));
+    // ------------------------------
+    // 2. Turret field position
+    // ------------------------------
+    Rotation2d rot = robotPose.getRotation();
+    Translation2d turretOffsetField = Shooter.TURRET_TO_ROBOT.rotateBy(rot);
+    Translation2d turretFieldPos = robotPose.getTranslation().minus(turretOffsetField);
 
+    // ------------------------------
     // 3. Determine shooting target
+    // ------------------------------
     Translation2d shootingTarget =
         (alliance == DriverStation.Alliance.Red) ? Shooter.RED_HUB_POS : Shooter.BLUE_HUB_POS;
 
@@ -124,70 +129,77 @@ public class PrepareShooterCmd extends Command {
       }
     }
 
-    // 4. Velocity compensation
-    ChassisSpeeds robotSpeeds = drive.getActualChassisSpeeds();
+    // ------------------------------
+    // 4. Compute turret velocity in field frame
+    // ------------------------------
+    ChassisSpeeds robotFieldSpeeds =
+        ChassisSpeeds.fromRobotRelativeSpeeds(drive.getActualChassisSpeeds(), rot);
 
-    ChassisSpeeds fieldSpeeds =
-        ChassisSpeeds.fromRobotRelativeSpeeds(robotSpeeds, robotPose.getRotation());
+    // Rotational velocity contribution: ω × r
+    Translation2d turretRotVel =
+        new Translation2d(
+            -robotFieldSpeeds.omegaRadiansPerSecond * turretOffsetField.getY(),
+            robotFieldSpeeds.omegaRadiansPerSecond * turretOffsetField.getX());
 
-    // 4. Velocity Leading (Virtual Target)
-    double flightTime = turretFieldPos.getDistance(shootingTarget) / fuelVelocity;
-    Translation2d virtualTarget =
-        shootingTarget.minus(
-            new Translation2d(
-                fieldSpeeds.vxMetersPerSecond * flightTime,
-                fieldSpeeds.vyMetersPerSecond * flightTime));
+    // Total turret velocity in field frame
+    Translation2d turretVel =
+        new Translation2d(robotFieldSpeeds.vxMetersPerSecond, robotFieldSpeeds.vyMetersPerSecond)
+            .plus(turretRotVel);
 
-    // 5. Aim calculation
+    // ------------------------------
+    // 5. Compute virtual target (lead compensation)
+    // ------------------------------
+    double distance = turretFieldPos.getDistance(shootingTarget);
+    double flightTime = distance / fuelVelocity;
+
+    // Correct lead sign: subtract robot/turret velocity
+    Translation2d virtualTarget = shootingTarget.minus(turretVel.times(flightTime));
+
+    // ------------------------------
+    // 6. Compute aim angle
+    // ------------------------------
     Translation2d relTrans = virtualTarget.minus(turretFieldPos);
+    double targetAngle = Math.atan2(relTrans.getY(), relTrans.getX());
 
-    double odoTargetAngle = Math.atan2(relTrans.getY(), relTrans.getX());
+    cachedAimAngle = new Rotation2d(targetAngle);
 
-    // ---> ADDED: Save the result to our variable so we don't calculate it again
-    cachedAimAngle = new Rotation2d(odoTargetAngle);
-
-    double odoRot =
+    double turretRot =
         MathUtil.inputModulus(
-            (odoTargetAngle / (2 * Math.PI)) - robotPose.getRotation().getRotations(), -0.5, 0.5);
+            (targetAngle / (2 * Math.PI)) - robotPose.getRotation().getRotations(), -0.5, 0.5);
 
-    // shooter.setShooterParams(relTrans.getNorm(), getZone(robotPose.getX(), alliance));
+    // Apply turret angle (unless overridden)
+    if (TurretAngleOverride.getAsDouble() == DONT_OVERRIDE_VAL)
+      shooter.setTurretPosition(turretRot);
+    else shooter.setTurretPosition(TurretAngleOverride.getAsDouble() / 360.0);
+
+    // ------------------------------
+    // 7. Flywheel + Hood (lead‑compensated)
+    // ------------------------------
+    double shotDistance = virtualTarget.getDistance(turretFieldPos);
+    String zone = getZone(robotPose.getX(), alliance);
+
+    // Flywheel
     if (flyWheelRPSOverride.getAsDouble() == DONT_OVERRIDE_VAL)
-      shooter.setFlywheelViaTable(relTrans.getNorm(), getZone(robotPose.getX(), alliance));
+      shooter.setFlywheelViaTable(shotDistance, zone);
     else shooter.setFlywheelRPS(flyWheelRPSOverride.getAsDouble());
 
-    // Hood Logic with Trench Override
+    // Hood
     if (inTrench) {
-      // FORCE HOOD DOWN IN TRENCH
       shooter.setHoodPosition(0.0);
     } else {
       if (hoodAngleOverride.getAsDouble() == DONT_OVERRIDE_VAL)
-        shooter.setHoodViaTable(relTrans.getNorm(), getZone(robotPose.getX(), alliance));
+        shooter.setHoodViaTable(shotDistance, zone);
       else shooter.setHoodPosition(hoodAngleOverride.getAsDouble() / 20.0 * 1.25);
     }
 
-    // double turretFF = -robotSpeeds.omegaRadiansPerSecond / (2 * Math.PI);
-    // shooter.setTurretWithFF(odoRot, turretFF); // Using Magic Motion Now
-    if (TurretAngleOverride.getAsDouble() == DONT_OVERRIDE_VAL) shooter.setTurretPosition(odoRot);
-    // Override value is in degrees, convert to rotations (+/-180 Deg -> +/- 0.5 Rot), so just /
-    // 360.0
-    else shooter.setTurretPosition(TurretAngleOverride.getAsDouble() / 360.0);
+    // ------------------------------
+    // 8. Field Visualization
+    // ------------------------------
+    Pose2d turretAimingPose = new Pose2d(turretFieldPos, new Rotation2d(targetAngle));
 
-    // ---------------------------------------------------------
-    // Elastic Field Visualization
-    // ---------------------------------------------------------
-
-    Pose2d turretAimingPose = new Pose2d(turretFieldPos, new Rotation2d(odoTargetAngle));
-
-    // Turret
     field.getObject("Turret").setPose(turretAimingPose);
-
-    // Virtual target (lead compensated)
     field.getObject("VirtualTarget").setPose(new Pose2d(virtualTarget, new Rotation2d()));
-
-    // Real target
     field.getObject("RealTarget").setPose(new Pose2d(shootingTarget, new Rotation2d()));
-
-    // Shot trajectory line
     field
         .getObject("ShotTrajectory")
         .setPoses(turretAimingPose, new Pose2d(virtualTarget, new Rotation2d()));

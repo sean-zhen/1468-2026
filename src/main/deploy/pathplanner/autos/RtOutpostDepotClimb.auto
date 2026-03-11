@@ -57,19 +57,13 @@
                       }
                     },
                     {
-                      "type": "race",
+                      "type": "deadline",
                       "data": {
                         "commands": [
                           {
                             "type": "path",
                             "data": {
                               "pathName": "RtOutpostDepotClimb_P2"
-                            }
-                          },
-                          {
-                            "type": "named",
-                            "data": {
-                              "name": "StopHarvest"
                             }
                           },
                           {
@@ -111,14 +105,14 @@
                           }
                         ]
                       }
+                    },
+                    {
+                      "type": "named",
+                      "data": {
+                        "name": "ClimberDown"
+                      }
                     }
                   ]
-                }
-              },
-              {
-                "type": "named",
-                "data": {
-                  "name": "ClimberDown"
                 }
               }
             ]

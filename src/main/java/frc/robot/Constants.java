@@ -171,7 +171,9 @@ public final class Constants {
 
     public static final int SPIN_MOTOR_ID = 32;
     public static final double SPIN_GEAR_RATIO = 3.0; // NEED TO INSERT
-    public static final double SPIN_TARGET_RPS = -25.0;
+    public static final double SPIN_TARGET_RPS =
+        -90.0; // even .75 not fast enoughwas 25 TODO: TA - Tune this value (negative for correct
+    // direction)
 
     // TODO: Tune these values
     public static final double deploykP = 0.89;
@@ -207,7 +209,8 @@ public final class Constants {
   public static final class Indexer {
     public static final int MOTOR_ID = 41;
     public static final double GEAR_RATIO = 1.0; // NEED TO INSERT
-    public static final double TARGET_RPS = 45; // NEED TO INSERT //22.5
+    public static final double TARGET_RPS =
+        22.5 * 1.0; // 0.75; // NEED TO INSERT //22.5// was 45, too fast???
     public static final double[] POSITIONS = {
       0.0, 10.0, 20.0, 30.0, 40.0, 50.0
     }; // NEED TO INSERT (positions in rotations)

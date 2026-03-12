@@ -69,7 +69,7 @@ public class IndexerSubsystem extends SubsystemBase {
   private double ditherBasePosition = 0.0;
 
   // 60 degrees = 1/6 rotation at the indexer output
-  private static final double DITHER_AMPLITUDE_ROT = 1.0 / 6.0;
+  private static final double DITHER_AMPLITUDE_ROT = 1.0 / 12.0; // start small
 
   // Time per move (fast, but safe)
   private static final double DITHER_STEP_TIME = 0.06; // 60 ms per move

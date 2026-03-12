@@ -118,10 +118,17 @@ public final class Constants {
     //////////////////////////    TURRET     /////////////////////////////////////////
     // Turret PID and soft stops (Turret)
 
-    public static final double TURRET_kP = 2.5;
-    public static final double TURRET_kI = 0.0;
-    public static final double TURRET_kD = 0.0;
-    public static final double TURRET_kV = 0.0;
+    // public static final double TURRET_kP = 2.5;
+    // public static final double TURRET_kI = 0.0;
+    // public static final double TURRET_kD = 0.0;
+    // public static final double TURRET_kV = 0.0;
+
+    // constants in subsystem
+    public static final double TURRET_kP = 60;
+    public static final double TURRET_kI = 0;
+    public static final double TURRET_kD = 2;
+    public static final double TURRET_kV = 1.33;
+    // public static final double TURRET_kS = 0.4;
 
     public static final double TURRET_RIGHT_LIMIT_ROT = 135.0 / 360.0; // +/- .375 Rotstions
     public static final double TURRET_LEFT_LIMIT_ROT = 182.0 / 360.0; // +/- .375 Rotstions

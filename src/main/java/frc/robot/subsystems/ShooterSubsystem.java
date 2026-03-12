@@ -310,7 +310,8 @@ public class ShooterSubsystem extends SubsystemBase {
     // If you have "huge friction", 0.25V is likely too low.
     // Increase this until the turret *just barely* moves when you enable, then back off 0.05.
     // For a sticky belt, this might need to be 0.45 - 0.60 Volts.
-    turretConfigs.Slot0.kS = 2.0; // 0.25 0.45 1.5
+    // turretConfigs.Slot0.kS = 2.0; // 0.25 0.45 1.5
+    turretConfigs.Slot0.kS = 0.4; // 0.25 0.45 1.5
 
     // 3. VELOCITY FF (kV)
     // 0.12 Volts / (1 Rot/s) -> At max speed (9 RPS), this adds ~1.08V.
@@ -323,27 +324,34 @@ public class ShooterSubsystem extends SubsystemBase {
     // 200 is very "stiff" (200V per 1 rotation error).
     // With high friction, stiff is good, but 200 might cause the vibration.
     // If it buzzes, drop this to 80-120.
-    turretConfigs.Slot0.kP = 160; // 120    // TA 3/7 was 180, saw oscillation
+    // turretConfigs.Slot0.kP = 160; // 120    // TA 3/7 was 180, saw oscillation
+    // turretConfigs.Slot0.kI = 0.0; // Keep zero!
+    // turretConfigs.Slot0.kD = 0.0; // Add small D (e.g., 5.0) only if it oscillates.
+    // new
+    turretConfigs.Slot0.kP = 60; // 120    // TA 3/7 was 180, saw oscillation
     turretConfigs.Slot0.kI = 0.0; // Keep zero!
-    turretConfigs.Slot0.kD = 0.0; // Add small D (e.g., 5.0) only if it oscillates.
+    turretConfigs.Slot0.kD = 2.0; // Add small D (e.g., 5.0) only if it oscillates.
 
     // 5. MOTION MAGIC - UNLEASH THE SPEED
     // Cruise: 4.0 RPS (1440 deg/s) - Must be faster than Robot Spin (720 deg/s)
-    turretConfigs.MotionMagic.MotionMagicCruiseVelocity = 5.0; // 4.0, 5.0; 10.0 may be too high
+    // turretConfigs.MotionMagic.MotionMagicCruiseVelocity = 5.0; // 4.0, 5.0; 10.0 may be too high
+    turretConfigs.MotionMagic.MotionMagicCruiseVelocity = 4.0; // 4.0, 5.0; 10.0 may be too high
 
     // Accel: 10.0 RPS/s - Snap to target in < 0.2 seconds
-    turretConfigs.MotionMagic.MotionMagicAcceleration = 20.0; // 10, 20; 40.0 may be too high
+    // turretConfigs.MotionMagic.MotionMagicAcceleration = 20.0; // 10, 20; 40.0 may be too high
+    turretConfigs.MotionMagic.MotionMagicAcceleration = 7.0; // 10, 20; 40.0 may be too high
 
     // Jerk: 100.0 or 0. Smooths the start/stop to prevent belt slip.
     // 0 = Infinite Jerk (Max Aggression). For vision, higher jerk is often better.
-    turretConfigs.MotionMagic.MotionMagicJerk = 0.0;
+    // turretConfigs.MotionMagic.MotionMagicJerk = 0.0;
+    turretConfigs.MotionMagic.MotionMagicJerk = 80.0;
 
     // 6. DEADBAND
-    turretConfigs.MotorOutput.DutyCycleNeutralDeadband = 0.02;
+    turretConfigs.MotorOutput.DutyCycleNeutralDeadband = 0.03;
 
     turretConfigs.withCurrentLimits(
         new CurrentLimitsConfigs()
-            .withStatorCurrentLimit(Amps.of(80)) // 120 amps is too high
+            .withStatorCurrentLimit(Amps.of(70)) // 120 amps is too high// was 80
             .withStatorCurrentLimitEnable(true));
 
     // ... Limits & Inverts ...
@@ -491,7 +499,22 @@ public class ShooterSubsystem extends SubsystemBase {
     double clampedRot =
         //        MathUtil.clamp(rotations, -Shooter.TURRET_LIMIT_ROT, Shooter.TURRET_LIMIT_ROT);
         tomClamp(rotations);
-    turretMotor.setControl(m_mmReq.withPosition(clampedRot));
+
+    // new feedforward approach: add a bias voltage when we're outside the tolerance band, to help
+    // overcome friction and get to the target faster. This is especially helpful for the turret,
+    // which has to fight static friction to start moving.
+    double currentRot = turretMotor.getPosition().getValueAsDouble();
+    double error = clampedRot - currentRot;
+
+    double bias = 0.0;
+
+    if (Math.abs(error) > 0.01) {
+      bias = 0.7;
+    }
+
+    turretMotor.setControl(m_mmReq.withPosition(clampedRot).withFeedForward(bias));
+
+    //   turretMotor.setControl(m_mmReq.withPosition(clampedRot));
   }
 
   public void setTurretToZero() {

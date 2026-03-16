@@ -135,10 +135,9 @@ public class LEDSubsystem extends SubsystemBase {
 
     // Priority 4: Shooter Feedback
     boolean flyOk = m_shooter.isFLywheelAtVelocity();
-    boolean turretOk = m_shooter.isTurretAtPosition();
     boolean hoodOk = m_shooter.isHoodAtPosition();
 
-    if (flyOk && turretOk && hoodOk) {
+    if (flyOk && hoodOk) {
 
       if (m_vision.getFusedTagCount() >= 3) {
         m_candle.setControl(m_strobeGold);
@@ -150,7 +149,8 @@ public class LEDSubsystem extends SubsystemBase {
       // RGB Mix: Red(Fly), Green(Hood), Blue(Turret)
       int r = flyOk ? 255 : 0;
       int g = hoodOk ? 255 : 0;
-      int b = turretOk ? 255 : 0;
+      // int b = turretOk ? 255 : 0;
+      int b = 0; // TODO: TA - Work in robot angle indicator
       m_candle.setControl(
           new SolidColor(START_IDX, LED_COUNT).withColor(new RGBWColor(r, g, b, 0)));
     }

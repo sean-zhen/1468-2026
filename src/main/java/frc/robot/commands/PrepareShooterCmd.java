@@ -110,8 +110,7 @@ public class PrepareShooterCmd extends Command {
     // 2. Turret field position
     // ------------------------------
     Rotation2d rot = robotPose.getRotation();
-    Translation2d turretOffsetField = Shooter.TURRET_TO_ROBOT.rotateBy(rot);
-    Translation2d turretFieldPos = robotPose.getTranslation().minus(turretOffsetField);
+    Translation2d robotFieldPos = robotPose.getTranslation();
 
     // ------------------------------
     // 3. Determine shooting target
@@ -135,21 +134,14 @@ public class PrepareShooterCmd extends Command {
     ChassisSpeeds robotFieldSpeeds =
         ChassisSpeeds.fromRobotRelativeSpeeds(drive.getActualChassisSpeeds(), rot);
 
-    // Rotational velocity contribution: ω × r
-    Translation2d turretRotVel =
-        new Translation2d(
-            -robotFieldSpeeds.omegaRadiansPerSecond * turretOffsetField.getY(),
-            robotFieldSpeeds.omegaRadiansPerSecond * turretOffsetField.getX());
-
-    // Total turret velocity in field frame
+    // Total robot velocity in field frame
     Translation2d turretVel =
-        new Translation2d(robotFieldSpeeds.vxMetersPerSecond, robotFieldSpeeds.vyMetersPerSecond)
-            .plus(turretRotVel);
+        new Translation2d(robotFieldSpeeds.vxMetersPerSecond, robotFieldSpeeds.vyMetersPerSecond);
 
     // ------------------------------
     // 5. Compute virtual target (lead compensation)
     // ------------------------------
-    double distance = turretFieldPos.getDistance(shootingTarget);
+    double distance = robotFieldPos.getDistance(shootingTarget);
     double flightTime = distance / fuelVelocity;
 
     // Correct lead sign: subtract robot/turret velocity
@@ -158,24 +150,24 @@ public class PrepareShooterCmd extends Command {
     // ------------------------------
     // 6. Compute aim angle
     // ------------------------------
-    Translation2d relTrans = virtualTarget.minus(turretFieldPos);
+    Translation2d relTrans = virtualTarget.minus(robotFieldPos);
     double targetAngle = Math.atan2(relTrans.getY(), relTrans.getX());
 
     cachedAimAngle = new Rotation2d(targetAngle);
 
-    double turretRot =
+    double robotRot =
         MathUtil.inputModulus(
             (targetAngle / (2 * Math.PI)) - robotPose.getRotation().getRotations(), -0.5, 0.5);
 
-    // Apply turret angle (unless overridden)
-    if (TurretAngleOverride.getAsDouble() == DONT_OVERRIDE_VAL)
-      shooter.setTurretPosition(turretRot);
-    else shooter.setTurretPosition(TurretAngleOverride.getAsDouble() / 360.0);
+    // // Apply turret angle (unless overridden)
+    // if (TurretAngleOverride.getAsDouble() == DONT_OVERRIDE_VAL)
+    //   shooter.setTurretPosition(turretRot);
+    // else shooter.setTurretPosition(TurretAngleOverride.getAsDouble() / 360.0);
 
     // ------------------------------
     // 7. Flywheel + Hood (lead‑compensated)
     // ------------------------------
-    double shotDistance = virtualTarget.getDistance(turretFieldPos);
+    double shotDistance = virtualTarget.getDistance(robotFieldPos);
     String zone = getZone(robotPose.getX(), alliance);
 
     // Flywheel
@@ -195,7 +187,7 @@ public class PrepareShooterCmd extends Command {
     // ------------------------------
     // 8. Field Visualization
     // ------------------------------
-    Pose2d turretAimingPose = new Pose2d(turretFieldPos, new Rotation2d(targetAngle));
+    Pose2d turretAimingPose = new Pose2d(robotFieldPos, new Rotation2d(targetAngle));
 
     field.getObject("Turret").setPose(turretAimingPose);
     field.getObject("VirtualTarget").setPose(new Pose2d(virtualTarget, new Rotation2d()));

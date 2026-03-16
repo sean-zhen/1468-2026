@@ -34,19 +34,16 @@ public class ShooterSubsystem extends SubsystemBase {
   private final TalonFX flywheelLead = new TalonFX(Shooter.FLYWHEEL_LEAD_ID);
   private final TalonFX flywheelFollower = new TalonFX(Shooter.FLYWHEEL_FOLLOWER_ID);
   private final TalonFX hoodMotor = new TalonFX(Shooter.HOOD_MOTOR_ID);
-  private final TalonFX turretMotor = new TalonFX(Shooter.TURRET_MOTOR_ID);
 
   private final VelocityVoltage leadRequest = new VelocityVoltage(0);
   private final PositionVoltage hoodPositionRequest = new PositionVoltage(0);
   private final VelocityVoltage hoodVelocityRequest = new VelocityVoltage(0);
-  private final VelocityVoltage turretVelocityRequest = new VelocityVoltage(0);
 
   // --- Control Requests ---
   private final VelocityVoltage m_velocityReq = new VelocityVoltage(0);
   private final MotionMagicVoltage m_mmReq = new MotionMagicVoltage(0);
 
   private double targetFlyWheelVeloRPS = 0.0;
-  private double targetTurretPositionRot = 0.0;
   private double targetHoodPositionRot = 0.0;
 
   // 6 Interpolation Maps
@@ -57,16 +54,12 @@ public class ShooterSubsystem extends SubsystemBase {
   private final InterpolatingDoubleTreeMap flyOpposition = new InterpolatingDoubleTreeMap();
   private final InterpolatingDoubleTreeMap hoodOpposition = new InterpolatingDoubleTreeMap();
 
-  private double targetTurretRot = 0;
-
-  private final com.ctre.phoenix6.StatusSignal<Angle> turretPositionSignal;
   private final com.ctre.phoenix6.StatusSignal<AngularVelocity> flywheelVelocitySignal;
   private final com.ctre.phoenix6.StatusSignal<Angle> hoodPositionSignal;
   // Shuffleboard entries
   private final ShuffleboardTab shooterTab = Shuffleboard.getTab("Shooter");
   private final ShuffleboardTab canTab = Shuffleboard.getTab("CAN Status");
   private final GenericEntry shtrAtSpdEntry;
-  private final GenericEntry trrtAtPosEntry;
   private final GenericEntry hoodAtPosEntry;
   private final GenericEntry shtrLeadVeloEntry;
   private final GenericEntry shtrFlwrVeloEntry;
@@ -77,12 +70,8 @@ public class ShooterSubsystem extends SubsystemBase {
   private final GenericEntry hoodPosEntry;
   private final GenericEntry hoodVeloEntry;
   private final GenericEntry hoodTempEntry;
-  private final GenericEntry turretPosEntry;
-  private final GenericEntry turretVeloEntry;
-  private final GenericEntry turretTempEntry;
   private final GenericEntry shtrCanOkEntry;
   private final GenericEntry flywhCanOkEntry;
-  private final GenericEntry trrtCanOkEntry;
   private final GenericEntry hoodCanOkEntry;
   private final GenericEntry readyToShoot;
   private final GenericEntry distanceEntry;
@@ -99,16 +88,12 @@ public class ShooterSubsystem extends SubsystemBase {
 
     configureMotors();
 
-    turretMotor.setPosition(0.0);
-
     setupTables();
 
-    turretPositionSignal = turretMotor.getPosition();
     flywheelVelocitySignal = flywheelLead.getVelocity();
     hoodPositionSignal = hoodMotor.getPosition();
 
-    BaseStatusSignal.setUpdateFrequencyForAll(
-        50, turretPositionSignal, flywheelVelocitySignal, hoodPositionSignal);
+    BaseStatusSignal.setUpdateFrequencyForAll(50, flywheelVelocitySignal, hoodPositionSignal);
 
     // Create persistent Shuffleboard widgets
     shtrAtSpdEntry =
@@ -118,13 +103,7 @@ public class ShooterSubsystem extends SubsystemBase {
             .withPosition(0, 0)
             .withSize(2, 1)
             .getEntry();
-    trrtAtPosEntry =
-        shooterTab
-            .add("Trrt Is At Pos", isTurretAtPosition())
-            .withWidget(BuiltInWidgets.kBooleanBox)
-            .withPosition(2, 0)
-            .withSize(2, 1)
-            .getEntry();
+
     hoodAtPosEntry =
         shooterTab
             .add("Hood Is At Pos", isHoodAtPosition())
@@ -208,30 +187,6 @@ public class ShooterSubsystem extends SubsystemBase {
             .withSize(2, 1)
             .getEntry();
 
-    turretPosEntry =
-        shooterTab
-            .add(
-                "Shtr Turret Pos (deg, output)",
-                turretMotor.getPosition().getValueAsDouble() * 360.0)
-            .withWidget(BuiltInWidgets.kTextView)
-            .withPosition(0, 4)
-            .withSize(2, 1)
-            .getEntry();
-    turretVeloEntry =
-        shooterTab
-            .add("Shtr Turret Velo (RPS, output)", turretMotor.getVelocity().getValueAsDouble())
-            .withWidget(BuiltInWidgets.kTextView)
-            .withPosition(2, 4)
-            .withSize(2, 1)
-            .getEntry();
-    turretTempEntry =
-        shooterTab
-            .add("Turret Temp", turretMotor.getDeviceTemp().getValueAsDouble())
-            .withWidget(BuiltInWidgets.kTextView)
-            .withPosition(4, 4)
-            .withSize(2, 1)
-            .getEntry();
-
     shtrCanOkEntry =
         canTab
             .add("Shtr CAN OK", flywheelVelocitySignal.getStatus().isOK())
@@ -244,13 +199,6 @@ public class ShooterSubsystem extends SubsystemBase {
             .add("FlyWh CAN OK", flywheelVelocitySignal.getStatus().isOK())
             .withWidget(BuiltInWidgets.kBooleanBox)
             .withPosition(2, 4)
-            .withSize(1, 1)
-            .getEntry();
-    trrtCanOkEntry =
-        canTab
-            .add("Trrt CAN OK", turretPositionSignal.getStatus().isOK())
-            .withWidget(BuiltInWidgets.kBooleanBox)
-            .withPosition(3, 4)
             .withSize(1, 1)
             .getEntry();
     hoodCanOkEntry =
@@ -300,73 +248,6 @@ public class ShooterSubsystem extends SubsystemBase {
             .withStatorCurrentLimitEnable(true));
     flywheelFollower.getConfigurator().apply(followerConfigs);
 
-    // --- Turret (Motion Magic - 11:1 Ratio) ---
-    TalonFXConfiguration turretConfigs = new TalonFXConfiguration();
-
-    // 1. RATIO: 11:1 on Belt drive
-    turretConfigs.Feedback.SensorToMechanismRatio = 11.0;
-
-    // 2. FRICTION (kS) - THE MOST IMPORTANT TUNING PARAMETER
-    // If you have "huge friction", 0.25V is likely too low.
-    // Increase this until the turret *just barely* moves when you enable, then back off 0.05.
-    // For a sticky belt, this might need to be 0.45 - 0.60 Volts.
-    // turretConfigs.Slot0.kS = 2.0; // 0.25 0.45 1.5
-    turretConfigs.Slot0.kS = 0.4; // 0.25 0.45 1.5
-
-    // 3. VELOCITY FF (kV)
-    // 0.12 Volts / (1 Rot/s) -> At max speed (9 RPS), this adds ~1.08V.
-    // This seems low. Ideally, 12V should correspond to Max Speed.
-    // Try: 12V / 9 RPS = ~1.33.
-    // Start conservative:
-    turretConfigs.Slot0.kV = 1.33;
-
-    // 4. PROPORTIONAL (kP)
-    // 200 is very "stiff" (200V per 1 rotation error).
-    // With high friction, stiff is good, but 200 might cause the vibration.
-    // If it buzzes, drop this to 80-120.
-    // turretConfigs.Slot0.kP = 160; // 120    // TA 3/7 was 180, saw oscillation
-    // turretConfigs.Slot0.kI = 0.0; // Keep zero!
-    // turretConfigs.Slot0.kD = 0.0; // Add small D (e.g., 5.0) only if it oscillates.
-    // new
-    turretConfigs.Slot0.kP = 75; // was 60 120    // TA 3/7 was 180, saw oscillation
-    turretConfigs.Slot0.kI = 0.0; // Keep zero!
-    turretConfigs.Slot0.kD = 2.0; // Add small D (e.g., 5.0) only if it oscillates.
-
-    // 5. MOTION MAGIC - UNLEASH THE SPEED
-    // Cruise: 4.0 RPS (1440 deg/s) - Must be faster than Robot Spin (720 deg/s)
-    // turretConfigs.MotionMagic.MotionMagicCruiseVelocity = 5.0; // 4.0, 5.0; 10.0 may be too high
-    turretConfigs.MotionMagic.MotionMagicCruiseVelocity = 5.0; // 4.0, 5.0; 10.0 may be too high
-
-    // Accel: 10.0 RPS/s - Snap to target in < 0.2 seconds
-    // turretConfigs.MotionMagic.MotionMagicAcceleration = 20.0; // 10, 20; 40.0 may be too high
-    turretConfigs.MotionMagic.MotionMagicAcceleration = 8.0; // 10, 20; 40.0 may be too high
-
-    // Jerk: 100.0 or 0. Smooths the start/stop to prevent belt slip.
-    // 0 = Infinite Jerk (Max Aggression). For vision, higher jerk is often better.
-    // turretConfigs.MotionMagic.MotionMagicJerk = 0.0;
-    turretConfigs.MotionMagic.MotionMagicJerk = 80.0;
-
-    // 6. DEADBAND
-    turretConfigs.MotorOutput.DutyCycleNeutralDeadband = 0.03;
-
-    turretConfigs.withCurrentLimits(
-        new CurrentLimitsConfigs()
-            .withStatorCurrentLimit(Amps.of(70)) // 120 amps is too high// was 80
-            .withStatorCurrentLimitEnable(true));
-
-    // ... Limits & Inverts ...
-    turretConfigs.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
-    turretConfigs.SoftwareLimitSwitch.ForwardSoftLimitThreshold =
-        Shooter.TURRET_RIGHT_SOFT_LIMIT_ROT;
-    turretConfigs.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
-    turretConfigs.SoftwareLimitSwitch.ReverseSoftLimitThreshold =
-        Shooter.TURRET_LEFT_SOFT_LIMIT_ROT;
-    turretConfigs.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
-
-    turretMotor.getConfigurator().apply(turretConfigs);
-
-    turretMotor.setNeutralMode(NeutralModeValue.Brake);
-
     // --- Hood (Motion Magic) ---
     TalonFXConfiguration hoodConfigs = new TalonFXConfiguration();
 
@@ -402,12 +283,10 @@ public class ShooterSubsystem extends SubsystemBase {
 
   public void setCoastMode() {
     hoodMotor.setNeutralMode(NeutralModeValue.Coast);
-    turretMotor.setNeutralMode(NeutralModeValue.Coast);
   }
 
   public void setBrakeMode() {
     hoodMotor.setNeutralMode(NeutralModeValue.Brake);
-    turretMotor.setNeutralMode(NeutralModeValue.Brake);
   }
 
   // Flywheel velocity (RPS at output) - this is for testing, using joystick Z axis for velo
@@ -494,106 +373,8 @@ public class ShooterSubsystem extends SubsystemBase {
     return Math.abs(currentPosition - targetHoodPositionRot) < Shooter.HOOD_TRACKING_TOLERANCE_ROT;
   }
 
-  public void setTurretPosition(double rotations) {
-    // SAFETY: Clamp to stop at +/- 135 degrees [Hardware Limit Check]
-    double clampedRot =
-        //        MathUtil.clamp(rotations, -Shooter.TURRET_LIMIT_ROT, Shooter.TURRET_LIMIT_ROT);
-        tomClamp(rotations);
-
-    // new feedforward approach: add a bias voltage when we're outside the tolerance band, to help
-    // overcome friction and get to the target faster. This is especially helpful for the turret,
-    // which has to fight static friction to start moving.
-    // double currentRot = turretMotor.getPosition().getValueAsDouble();
-    // double error = clampedRot - currentRot;
-
-    // double bias = 0.0;
-
-    // double velocity = turretMotor.getVelocity().getValueAsDouble();
-
-    // if (Math.abs(error) > 0.005 && Math.abs(velocity) < 0.02) {
-    //   bias = Math.signum(error) * 0.9;
-    // }
-
-    // turretMotor.setControl(m_mmReq.withPosition(clampedRot).withFeedForward(bias));
-
-    double currentRot = turretMotor.getPosition().getValueAsDouble();
-    double velocity = turretMotor.getVelocity().getValueAsDouble();
-
-    double error = clampedRot - currentRot;
-
-    // Aim deadband (prevents jitter near target)
-    if (Math.abs(error) < 0.003) {
-      turretMotor.setControl(m_mmReq.withPosition(currentRot).withFeedForward(0));
-      return;
-    }
-
-    double bias = 0.0;
-
-    if (Math.abs(error) > 0.005 && Math.abs(velocity) < 0.02) {
-      bias = Math.signum(error) * 0.9;
-    }
-
-    turretMotor.setControl(m_mmReq.withPosition(clampedRot).withFeedForward(bias));
-
-    //   turretMotor.setControl(m_mmReq.withPosition(clampedRot));
-  }
-
-  public void setTurretToZero() {
-    turretMotor.setPosition(0.0);
-  }
-
-  // Currently not used
-  public void setTurretWithFF(double rotations, double feedforwardRPS) {
-    double clamped =
-        //    MathUtil.clamp(rotations, -Shooter.TURRET_LIMIT_ROT, Shooter.TURRET_LIMIT_ROT);
-        tomClamp(rotations);
-    this.targetTurretRot = clamped;
-    double ffVolts = feedforwardRPS * Shooter.TURRET_kV;
-
-    // TODO: TA - Decide on Magic Motion or Straight PID for Turret angle
-    // turretMotor.setControl(
-    //     new PositionVoltage(clamped).withFeedForward(ffVolts));
-    turretMotor.setControl(m_mmReq.withPosition(clamped));
-  }
-
-  public double tomClamp(double rotations) {
-    // 1. Handle wrap-around for inputs exceeding a full rotation
-    if (rotations > 1) rotations = rotations % 1;
-    if (rotations < -1) rotations = rotations % 1;
-
-    this.targetTurretPositionRot = rotations;
-    double clampedRot = rotations;
-
-    // 2. Apply asymmetrical limits
-    // Note: Typically Right is positive and Left is negative in FRC coordinate systems
-    if (rotations > Shooter.TURRET_RIGHT_SOFT_LIMIT_ROT) {
-      clampedRot = (0.5 - rotations) * Shooter.TURRET_RIGHT_CLAMP_FACTOR;
-    } else if (rotations < Shooter.TURRET_LEFT_SOFT_LIMIT_ROT) {
-      clampedRot = (-0.5 - rotations) * Shooter.TURRET_LEFT_CLAMP_FACTOR;
-    }
-
-    return clampedRot;
-  }
-
-  // Turret velocity (RPS at output)
-  public void setTurretVelocity(double rps) {
-    double motorRPS = rps;
-    turretMotor.setControl(turretVelocityRequest.withVelocity(motorRPS));
-  }
-
-  // Turret position getter
-  public double getTurretPosition() {
-    return turretMotor.getPosition().getValueAsDouble();
-  }
-
-  public boolean isTurretAtPosition() {
-    double currentPosition = getTurretPosition();
-    double toleranceRot = Math.toRadians(Shooter.TURRET_TRACKING_TOLERANCE_DEG) / (2 * Math.PI);
-    return Math.abs(currentPosition - targetTurretPositionRot) < toleranceRot;
-  }
-
   public boolean isReadyToShoot() {
-    if (isTurretAtPosition() && isFLywheelAtVelocity() && isHoodAtPosition()) {
+    if (isFLywheelAtVelocity() && isHoodAtPosition()) {
       return true;
     } else {
       return false;
@@ -613,13 +394,11 @@ public class ShooterSubsystem extends SubsystemBase {
     flywheelLead.stopMotor();
     flywheelFollower.stopMotor();
     hoodMotor.stopMotor();
-    turretMotor.stopMotor();
   }
 
   public void log() {
     // Update persistent entries
     shtrAtSpdEntry.setBoolean(isFLywheelAtVelocity());
-    trrtAtPosEntry.setBoolean(isTurretAtPosition());
     hoodAtPosEntry.setBoolean(isHoodAtPosition());
 
     shtrLeadVeloEntry.setDouble(flywheelLead.getVelocity().getValueAsDouble());
@@ -634,19 +413,13 @@ public class ShooterSubsystem extends SubsystemBase {
     hoodVeloEntry.setDouble(hoodMotor.getVelocity().getValueAsDouble());
     hoodTempEntry.setDouble(hoodMotor.getDeviceTemp().getValueAsDouble());
 
-    turretPosEntry.setDouble(turretMotor.getPosition().getValueAsDouble() * 360.0);
-    turretVeloEntry.setDouble(turretMotor.getVelocity().getValueAsDouble());
-    turretTempEntry.setDouble(turretMotor.getDeviceTemp().getValueAsDouble());
-
     // ── CAN Status page ───────────────────────────────────────────────────────
     boolean shooterOK = flywheelVelocitySignal.getStatus().isOK();
-    boolean turretOK = turretPositionSignal.getStatus().isOK();
     boolean hoodOK = hoodPositionSignal.getStatus().isOK();
 
     // Update CAN status entries
-    shtrCanOkEntry.setBoolean(shooterOK && turretOK && hoodOK);
+    shtrCanOkEntry.setBoolean(shooterOK && hoodOK);
     flywhCanOkEntry.setBoolean(shooterOK);
-    trrtCanOkEntry.setBoolean(turretOK);
     hoodCanOkEntry.setBoolean(hoodOK);
   }
 
@@ -705,15 +478,11 @@ public class ShooterSubsystem extends SubsystemBase {
   public List<BaseStatusSignal> getSignals() {
     // Explicitly define the list type to avoid generic mismatch
     return List.of(
-        (BaseStatusSignal) turretPositionSignal,
-        (BaseStatusSignal) flywheelVelocitySignal,
-        (BaseStatusSignal) hoodPositionSignal);
+        (BaseStatusSignal) flywheelVelocitySignal, (BaseStatusSignal) hoodPositionSignal);
   }
 
   public boolean isShooterConnected() {
     // Uses the checks we already built using getStatus().isOK()
-    return flywheelVelocitySignal.getStatus().isOK()
-        && turretPositionSignal.getStatus().isOK()
-        && hoodPositionSignal.getStatus().isOK();
+    return flywheelVelocitySignal.getStatus().isOK() && hoodPositionSignal.getStatus().isOK();
   }
 }

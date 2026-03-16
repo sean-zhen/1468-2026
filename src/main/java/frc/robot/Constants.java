@@ -59,11 +59,6 @@ public final class Constants {
     public static final int FLYWHEEL_LEAD_ID = 51;
     public static final int FLYWHEEL_FOLLOWER_ID = 52;
     public static final int HOOD_MOTOR_ID = 54;
-    public static final int TURRET_MOTOR_ID = 53;
-
-    // Gear ratios setup in configureMotors
-    //    public static final double HOOD_GEAR_RATIO = 1.0;
-    //    public static final double TURRET_GEAR_RATIO = 1.0;
 
     // Sentinel Value: If a parameter equals this, use Auto-Calculation
     public static final double DONT_OVERRIDE_VAL = 999.0;
@@ -78,11 +73,6 @@ public final class Constants {
     public static final Translation2d RED_DEPOT_POS = new Translation2d(15.0, 2.0);
     public static final Translation2d BLUE_OUTPOST_POS = new Translation2d(1.0, 1.0);
     public static final Translation2d RED_OUTPOST_POS = new Translation2d(15.0, 7.0);
-    // Turret Offset from Robot Center (Inches to Meters)
-    public static final double TURRET_OFFSET_X = -5.5 * 0.0254; // Back TODO: TA get real offset
-    public static final double TURRET_OFFSET_Y = -5.5 * 0.0254; // Right
-    public static final Translation2d TURRET_TO_ROBOT =
-        new Translation2d(TURRET_OFFSET_X, TURRET_OFFSET_Y);
 
     // Vision
     public static final String CAMERA_NAME = "ShooterCam";
@@ -114,35 +104,6 @@ public final class Constants {
         HOOD_TOP_SOFT_LIMIT_ROT * 0.02; // 2% error tolerance
     public static final double HOOD_DEG_PER_ROTATION =
         20.0 / HOOD_TOP_SOFT_LIMIT_ROT; // DEGREE TOLERANCE
-
-    //////////////////////////    TURRET     /////////////////////////////////////////
-    // Turret PID and soft stops (Turret)
-
-    // public static final double TURRET_kP = 2.5;
-    // public static final double TURRET_kI = 0.0;
-    // public static final double TURRET_kD = 0.0;
-    // public static final double TURRET_kV = 0.0;
-
-    // constants in subsystem
-    public static final double TURRET_kP = 60;
-    public static final double TURRET_kI = 0;
-    public static final double TURRET_kD = 2;
-    public static final double TURRET_kV = 1.33;
-    // public static final double TURRET_kS = 0.4;
-
-    public static final double TURRET_RIGHT_LIMIT_ROT = 135.0 / 360.0; // +/- .375 Rotstions
-    public static final double TURRET_LEFT_LIMIT_ROT = 182.0 / 360.0; // +/- .375 Rotstions
-
-    // This multiplier is used to smooth the turret motion over angles that cant be used due to
-    // wiring
-    public static final double TURRET_RIGHT_CLAMP_FACTOR = 0.5 / (0.5 - TURRET_RIGHT_LIMIT_ROT);
-    public static final double TURRET_LEFT_CLAMP_FACTOR = 0.5 / (0.5 - TURRET_LEFT_LIMIT_ROT);
-
-    public static final double TURRET_RIGHT_SOFT_LIMIT_ROT = TURRET_RIGHT_LIMIT_ROT;
-    public static final double TURRET_LEFT_SOFT_LIMIT_ROT = -TURRET_LEFT_LIMIT_ROT;
-
-    public static final double TURRET_TRACKING_TOLERANCE_DEG = 2.0; // DEGREE TOLERANCE
-    public static final double TURRET_MAX_VELOCITY_RPS = 5.0; // Max turret rotation speed
   }
 
   //////////////////////////    KICKER     /////////////////////////////////////////
@@ -227,26 +188,6 @@ public final class Constants {
     public static final double kI = 0.0;
     public static final double kD = 0.0;
     public static final double kV = 0.37;
-  }
-
-  //////////////////////////    CLIMBER     /////////////////////////////////////////'
-
-  public static final class Climber {
-    public static final int LEFT_MOTOR_ID = 61;
-    //   public static final int RIGHT_MOTOR_ID = 62;  //TA TODO: 1 or 2 Clmbr Motors???
-
-    public static final double FORWARD_SOFT_LIMIT_ROT = 200.0; // rotations
-    public static final double REVERSE_SOFT_LIMIT_ROT = -1.0; // rotations
-    public static final double UP_SPEED = 0.5;
-    public static final double DOWN_SPEED = -0.75;
-    public static final double SMALL_MOVE_ROT = 0.5;
-    public static final double HOME_POSITION_ROT = 0.0;
-
-    // TODO: Tune these values
-    public static final double kP = 30; // 60 way too high
-    public static final double kI = 0.0;
-    public static final double kD = 0.0;
-    public static final double kV = 1.57;
   }
 
   /////////////////////////// LED Constants

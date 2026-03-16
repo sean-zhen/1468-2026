@@ -42,7 +42,6 @@ import frc.robot.commands.IndexerSpin;
 import frc.robot.commands.Kick;
 import frc.robot.commands.PrepareShooterCmd;
 import frc.robot.generated.TunerConstants;
-import frc.robot.subsystems.ClimberSubsystem;
 import frc.robot.subsystems.HarvesterSubsystem;
 import frc.robot.subsystems.IndexerSubsystem;
 import frc.robot.subsystems.KickerSubsystem;
@@ -72,7 +71,6 @@ public class RobotContainer {
   private final KickerSubsystem kicker;
   private final HarvesterSubsystem harvester;
   private final IndexerSubsystem indexer;
-  private final ClimberSubsystem climber;
   private final LEDSubsystem led;
 
   // Controller
@@ -108,7 +106,6 @@ public class RobotContainer {
     kicker = new KickerSubsystem();
     harvester = new HarvesterSubsystem();
     indexer = new IndexerSubsystem();
-    climber = new ClimberSubsystem();
 
     drive =
         new Drive(
@@ -180,23 +177,6 @@ public class RobotContainer {
         "StopHarvest",
         Commands.defer(
             () -> new HarvesterDeploy(harvester, DEPLOY_IN_ANGLE, 0.0), Set.of(harvester)));
-
-    // Example homing command that runs the deploy inward slowly until the deploy hits the
-    // mechanical stop (detected by current). Parameters here are conservative defaults;
-    // tune on the bench.
-    // NamedCommands.registerCommand(
-    //     "HomeHarvest", (new HarvesterDeployVelocityStop(harvester, -4.0)));
-
-    NamedCommands.registerCommand(
-        "ClimberUp",
-        Commands.defer(
-            () -> new InstantCommand(() -> climber.setPosition(55.0), climber),
-            Set.of(climber))); // 40.0
-
-    NamedCommands.registerCommand(
-        "ClimberDown",
-        Commands.defer(
-            () -> new InstantCommand(() -> climber.setPosition(0.0), climber), Set.of(climber)));
 
     // ***** This must be after all NamedCommands are registered,
     // ***** as AutoBuilder.buildAutoChooser() needs to access them to build
@@ -488,12 +468,6 @@ public class RobotContainer {
 
     harvestAgitate.whileTrue(HarvesterAgitate.create(harvester));
 
-    // Moves to 4 rotations when button 9 is pressed
-    climberUpBtn.onTrue(new InstantCommand(() -> climber.setPosition(55.0), climber));
-
-    // Returns to 0 rotations when button 10 is pressed
-    climberDownBtn.onTrue(new InstantCommand(() -> climber.setPosition(0.0), climber));
-
     // Prepare to shoot from Hub // TODO: TA - All parameters must be fixed
     new POVButton(operatorAutoJoystick, 0)
         .debounce(0.10)
@@ -616,7 +590,6 @@ public class RobotContainer {
 
     // 1. Get RoboRio CAN Health
     boolean shooterHealthy = shooter.isShooterConnected();
-    boolean climberHealthy = climber.isClimberConnected();
     boolean kickerHealthy = kicker.isKickerConnected();
     boolean indexerHealthy = indexer.isIndexerConnected();
     boolean harvesterHealthy = harvester.isHarvesterConnected();
@@ -627,12 +600,7 @@ public class RobotContainer {
 
     // 3. The Master Status
     boolean robotCanOk =
-        harvesterHealthy
-            && indexerHealthy
-            && kickerHealthy
-            && shooterHealthy
-            && climberHealthy
-            && ledHealthy;
+        harvesterHealthy && indexerHealthy && kickerHealthy && shooterHealthy && ledHealthy;
 
     // Update master CAN indicators on the CAN Status tab
     roboRioCanStatusEntry.setBoolean(robotCanOk);

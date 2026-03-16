@@ -11,7 +11,7 @@
               {
                 "type": "path",
                 "data": {
-                  "pathName": "AARtJustSht"
+                  "pathName": "CtrDepot_P1"
                 }
               },
               {
@@ -30,7 +30,7 @@
               {
                 "type": "wait",
                 "data": {
-                  "waitTime": 4.0
+                  "waitTime": 6.5
                 }
               },
               {
@@ -46,7 +46,7 @@
                     {
                       "type": "wait",
                       "data": {
-                        "waitTime": 0.5
+                        "waitTime": 1.0
                       }
                     },
                     {
@@ -68,26 +68,7 @@
               {
                 "type": "path",
                 "data": {
-                  "pathName": "ARtDubSwp_P1"
-                }
-              },
-              {
-                "type": "named",
-                "data": {
-                  "name": "StopFire"
-                }
-              }
-            ]
-          }
-        },
-        {
-          "type": "deadline",
-          "data": {
-            "commands": [
-              {
-                "type": "path",
-                "data": {
-                  "pathName": "ARtDubSwp_P2"
+                  "pathName": "CtrDepot_P2"
                 }
               },
               {
@@ -106,7 +87,7 @@
               {
                 "type": "wait",
                 "data": {
-                  "waitTime": 6.0
+                  "waitTime": 2.0
                 }
               },
               {
@@ -118,7 +99,57 @@
               {
                 "type": "named",
                 "data": {
-                  "name": "Shoot"
+                  "name": "StartHarvest"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "type": "deadline",
+          "data": {
+            "commands": [
+              {
+                "type": "path",
+                "data": {
+                  "pathName": "CtrDepot_P3"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "Aim"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "StartHarvest"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "type": "deadline",
+          "data": {
+            "commands": [
+              {
+                "type": "wait",
+                "data": {
+                  "waitTime": 10.0
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "Aim"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "Fire"
                 }
               }
             ]

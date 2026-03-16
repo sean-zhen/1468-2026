@@ -501,8 +501,8 @@ public class RobotContainer {
             new PrepareShooterCmd(
                 shooter,
                 drive,
-                (DoubleSupplier) () -> 0.0,
-                (DoubleSupplier) () -> 0.0,
+                (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
+                (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
                 (DoubleSupplier) () -> 0.0));
 
     // Prepare to shoot from Tower // TODO: TA - All parameters must be fixed
@@ -512,9 +512,9 @@ public class RobotContainer {
             new PrepareShooterCmd(
                 shooter,
                 drive,
-                (DoubleSupplier) () -> 0.0,
-                (DoubleSupplier) () -> 0.0,
-                (DoubleSupplier) () -> 0.0));
+                (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
+                (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
+                (DoubleSupplier) () -> DONT_OVERRIDE_VAL));
 
     // Prepare to shoot from Depot // TODO: TA - All parameters must be fixed
     new POVButton(operatorAutoJoystick, 90)
@@ -523,9 +523,9 @@ public class RobotContainer {
             new PrepareShooterCmd(
                 shooter,
                 drive,
-                (DoubleSupplier) () -> 0.0,
-                (DoubleSupplier) () -> 0.0,
-                (DoubleSupplier) () -> 0.0));
+                (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
+                (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
+                (DoubleSupplier) () -> -90.0));
 
     // Prepare to shoot from Outpost // TODO: TA - All parameters must be fixed
     new POVButton(operatorAutoJoystick, 270)
@@ -534,9 +534,9 @@ public class RobotContainer {
             new PrepareShooterCmd(
                 shooter,
                 drive,
-                (DoubleSupplier) () -> 0.0,
-                (DoubleSupplier) () -> 0.0,
-                (DoubleSupplier) () -> 0.0));
+                (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
+                (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
+                (DoubleSupplier) () -> 90.0));
 
     //////////////////////////////////////////////////////////////
     /// Operator Manual Buttons / Commands (Joystick 2 / Left Hand)

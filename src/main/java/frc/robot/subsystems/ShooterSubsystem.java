@@ -276,7 +276,7 @@ public class ShooterSubsystem extends SubsystemBase {
     leadConfigs.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
     leadConfigs.withCurrentLimits(
         new CurrentLimitsConfigs()
-            .withStatorCurrentLimit(Amps.of(80))
+            .withStatorCurrentLimit(Amps.of(70))
             .withStatorCurrentLimitEnable(true));
     flywheelLead.getConfigurator().apply(leadConfigs);
 
@@ -296,7 +296,7 @@ public class ShooterSubsystem extends SubsystemBase {
 
     followerConfigs.withCurrentLimits(
         new CurrentLimitsConfigs()
-            .withStatorCurrentLimit(Amps.of(80))
+            .withStatorCurrentLimit(Amps.of(70))
             .withStatorCurrentLimitEnable(true));
     flywheelFollower.getConfigurator().apply(followerConfigs);
 
@@ -328,18 +328,18 @@ public class ShooterSubsystem extends SubsystemBase {
     // turretConfigs.Slot0.kI = 0.0; // Keep zero!
     // turretConfigs.Slot0.kD = 0.0; // Add small D (e.g., 5.0) only if it oscillates.
     // new
-    turretConfigs.Slot0.kP = 60; // 120    // TA 3/7 was 180, saw oscillation
+    turretConfigs.Slot0.kP = 75; // was 60 120    // TA 3/7 was 180, saw oscillation
     turretConfigs.Slot0.kI = 0.0; // Keep zero!
     turretConfigs.Slot0.kD = 2.0; // Add small D (e.g., 5.0) only if it oscillates.
 
     // 5. MOTION MAGIC - UNLEASH THE SPEED
     // Cruise: 4.0 RPS (1440 deg/s) - Must be faster than Robot Spin (720 deg/s)
     // turretConfigs.MotionMagic.MotionMagicCruiseVelocity = 5.0; // 4.0, 5.0; 10.0 may be too high
-    turretConfigs.MotionMagic.MotionMagicCruiseVelocity = 4.0; // 4.0, 5.0; 10.0 may be too high
+    turretConfigs.MotionMagic.MotionMagicCruiseVelocity = 5.0; // 4.0, 5.0; 10.0 may be too high
 
     // Accel: 10.0 RPS/s - Snap to target in < 0.2 seconds
     // turretConfigs.MotionMagic.MotionMagicAcceleration = 20.0; // 10, 20; 40.0 may be too high
-    turretConfigs.MotionMagic.MotionMagicAcceleration = 7.0; // 10, 20; 40.0 may be too high
+    turretConfigs.MotionMagic.MotionMagicAcceleration = 8.0; // 10, 20; 40.0 may be too high
 
     // Jerk: 100.0 or 0. Smooths the start/stop to prevent belt slip.
     // 0 = Infinite Jerk (Max Aggression). For vision, higher jerk is often better.
@@ -394,7 +394,7 @@ public class ShooterSubsystem extends SubsystemBase {
 
     hoodConfigs.withCurrentLimits(
         new CurrentLimitsConfigs()
-            .withStatorCurrentLimit(Amps.of(80))
+            .withStatorCurrentLimit(Amps.of(60))
             .withStatorCurrentLimitEnable(true));
     hoodMotor.getConfigurator().apply(hoodConfigs);
     hoodMotor.setNeutralMode(NeutralModeValue.Brake);
@@ -503,13 +503,34 @@ public class ShooterSubsystem extends SubsystemBase {
     // new feedforward approach: add a bias voltage when we're outside the tolerance band, to help
     // overcome friction and get to the target faster. This is especially helpful for the turret,
     // which has to fight static friction to start moving.
+    // double currentRot = turretMotor.getPosition().getValueAsDouble();
+    // double error = clampedRot - currentRot;
+
+    // double bias = 0.0;
+
+    // double velocity = turretMotor.getVelocity().getValueAsDouble();
+
+    // if (Math.abs(error) > 0.005 && Math.abs(velocity) < 0.02) {
+    //   bias = Math.signum(error) * 0.9;
+    // }
+
+    // turretMotor.setControl(m_mmReq.withPosition(clampedRot).withFeedForward(bias));
+
     double currentRot = turretMotor.getPosition().getValueAsDouble();
+    double velocity = turretMotor.getVelocity().getValueAsDouble();
+
     double error = clampedRot - currentRot;
+
+    // Aim deadband (prevents jitter near target)
+    if (Math.abs(error) < 0.003) {
+      turretMotor.setControl(m_mmReq.withPosition(currentRot).withFeedForward(0));
+      return;
+    }
 
     double bias = 0.0;
 
-    if (Math.abs(error) > 0.01) {
-      bias = 0.7;
+    if (Math.abs(error) > 0.005 && Math.abs(velocity) < 0.02) {
+      bias = Math.signum(error) * 0.9;
     }
 
     turretMotor.setControl(m_mmReq.withPosition(clampedRot).withFeedForward(bias));

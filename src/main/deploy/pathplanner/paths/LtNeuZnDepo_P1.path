@@ -3,12 +3,12 @@
   "waypoints": [
     {
       "anchor": {
-        "x": 3.6,
+        "x": 2.6,
         "y": 7.4
       },
       "prevControl": null,
       "nextControl": {
-        "x": 4.099992587666189,
+        "x": 3.099992587666189,
         "y": 7.397277449932734
       },
       "isLocked": false,
@@ -80,35 +80,23 @@
     },
     {
       "anchor": {
-        "x": 0.876026612058725,
+        "x": 0.6,
         "y": 7.361657863454112
       },
       "prevControl": {
-        "x": 1.0788931277738942,
-        "y": 7.507757749838691
-      },
-      "nextControl": {
-        "x": 0.5408268250322414,
-        "y": 7.12025454153053
-      },
-      "isLocked": false,
-      "linkedName": null
-    },
-    {
-      "anchor": {
-        "x": 0.5079863705414642,
-        "y": 5.0
-      },
-      "prevControl": {
-        "x": 0.509401408450705,
-        "y": 6.596507428002907
+        "x": 1.62718309859155,
+        "y": 6.813485915492958
       },
       "nextControl": null,
       "isLocked": false,
-      "linkedName": "LtEndPt1"
+      "linkedName": "LtEndPt5"
     }
   ],
   "rotationTargets": [
+    {
+      "waypointRelativePos": 0.6642512077294687,
+      "rotationDegrees": 0.0
+    },
     {
       "waypointRelativePos": 2.5,
       "rotationDegrees": -90.0
@@ -129,7 +117,12 @@
       "name": "Aim",
       "waypointRelativePos": 0,
       "endWaypointRelativePos": null,
-      "command": null
+      "command": {
+        "type": "named",
+        "data": {
+          "name": "Aim"
+        }
+      }
     },
     {
       "name": "StartHarvest",
@@ -152,47 +145,12 @@
           "name": "StopHarvest"
         }
       }
-    },
-    {
-      "name": "StHarAndSht",
-      "waypointRelativePos": 4.173134328358216,
-      "endWaypointRelativePos": null,
-      "command": {
-        "type": "parallel",
-        "data": {
-          "commands": [
-            {
-              "type": "named",
-              "data": {
-                "name": "StartHarvest"
-              }
-            },
-            {
-              "type": "named",
-              "data": {
-                "name": "Shoot"
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "name": "StopHarvest",
-      "waypointRelativePos": 6.0,
-      "endWaypointRelativePos": null,
-      "command": {
-        "type": "named",
-        "data": {
-          "name": "StopHarvest"
-        }
-      }
     }
   ],
   "globalConstraints": {
-    "maxVelocity": 2.0,
-    "maxAcceleration": 2.5,
-    "maxAngularVelocity": 540.0,
+    "maxVelocity": 3.0,
+    "maxAcceleration": 3.0,
+    "maxAngularVelocity": 400.0,
     "maxAngularAcceleration": 720.0,
     "nominalVoltage": 12.0,
     "unlimited": false
@@ -205,7 +163,7 @@
   "folder": null,
   "idealStartingState": {
     "velocity": 0,
-    "rotation": -90.0
+    "rotation": 0.0
   },
-  "useDefaultConstraints": false
+  "useDefaultConstraints": true
 }

@@ -173,13 +173,13 @@ public final class Constants {
     public static final double DEPLOY_DEGREES_TO_ROTATIONS = 2.5 / 360.0;
 
     public static final double DEPLOY_START_ANGLE = 0.0; // Degrees
-    public static final double DEPLOY_IN_ANGLE = 25.0; // Degrees
+    public static final double DEPLOY_IN_ANGLE = 2.0; // Degrees  was 12
     public static final double DEPLOY_OUT_ANGLE = 100.0; // Degrees
 
     public static final int SPIN_MOTOR_ID = 32;
     public static final double SPIN_GEAR_RATIO = 3.0; // NEED TO INSERT
     public static final double SPIN_TARGET_RPS =
-        -90.0; // even .75 not fast enoughwas 25 TODO: TA - Tune this value (negative for correct
+        -20.0; // even .75 not fast enoughwas 25 TODO: TA - using old hopper have to retune
     // direction)
 
     // TODO: Tune these values
@@ -217,7 +217,7 @@ public final class Constants {
     public static final int MOTOR_ID = 41;
     public static final double GEAR_RATIO = 1.0; // NEED TO INSERT
     public static final double TARGET_RPS =
-        22.5 * 1.0; // 0.75; // NEED TO INSERT //22.5// was 45, too fast???
+        22.5 * 1.5; // 0.75; // NEED TO INSERT //22.5// was 45, too fast???
     public static final double[] POSITIONS = {
       0.0, 10.0, 20.0, 30.0, 40.0, 50.0
     }; // NEED TO INSERT (positions in rotations)

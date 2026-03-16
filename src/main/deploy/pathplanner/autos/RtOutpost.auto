@@ -5,6 +5,25 @@
     "data": {
       "commands": [
         {
+          "type": "deadline",
+          "data": {
+            "commands": [
+              {
+                "type": "path",
+                "data": {
+                  "pathName": "AARtJustSht"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "Aim"
+                }
+              }
+            ]
+          }
+        },
+        {
           "type": "race",
           "data": {
             "commands": [
@@ -19,41 +38,9 @@
                 "data": {
                   "commands": [
                     {
-                      "type": "race",
+                      "type": "wait",
                       "data": {
-                        "commands": [
-                          {
-                            "type": "path",
-                            "data": {
-                              "pathName": "RtOutpostDepotClimb_P1"
-                            }
-                          },
-                          {
-                            "type": "named",
-                            "data": {
-                              "name": "StartHarvest"
-                            }
-                          }
-                        ]
-                      }
-                    },
-                    {
-                      "type": "race",
-                      "data": {
-                        "commands": [
-                          {
-                            "type": "wait",
-                            "data": {
-                              "waitTime": 3.0
-                            }
-                          },
-                          {
-                            "type": "named",
-                            "data": {
-                              "name": "Fire"
-                            }
-                          }
-                        ]
+                        "waitTime": 0.5
                       }
                     },
                     {
@@ -61,40 +48,9 @@
                       "data": {
                         "commands": [
                           {
-                            "type": "path",
-                            "data": {
-                              "pathName": "RtOutpostDepotClimb_P2"
-                            }
-                          },
-                          {
-                            "type": "named",
-                            "data": {
-                              "name": "ClimberUp"
-                            }
-                          }
-                        ]
-                      }
-                    },
-                    {
-                      "type": "wait",
-                      "data": {
-                        "waitTime": 2.0
-                      }
-                    },
-                    {
-                      "type": "path",
-                      "data": {
-                        "pathName": "RtOutpostDepotClimb_P3"
-                      }
-                    },
-                    {
-                      "type": "race",
-                      "data": {
-                        "commands": [
-                          {
                             "type": "wait",
                             "data": {
-                              "waitTime": 3.0
+                              "waitTime": 4.0
                             }
                           },
                           {
@@ -107,9 +63,28 @@
                       }
                     },
                     {
-                      "type": "named",
+                      "type": "path",
                       "data": {
-                        "name": "ClimberDown"
+                        "pathName": "RtOutpost"
+                      }
+                    },
+                    {
+                      "type": "deadline",
+                      "data": {
+                        "commands": [
+                          {
+                            "type": "wait",
+                            "data": {
+                              "waitTime": 15.0
+                            }
+                          },
+                          {
+                            "type": "named",
+                            "data": {
+                              "name": "Fire"
+                            }
+                          }
+                        ]
                       }
                     }
                   ]

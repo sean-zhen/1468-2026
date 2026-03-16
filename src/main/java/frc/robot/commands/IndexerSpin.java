@@ -23,7 +23,7 @@ public class IndexerSpin extends Command {
     }
 
     if (indexer.isJammed()) {
-      indexer.startJamClear(); // logs + triggers dither
+      indexer.logJamEvent(); // analytics only
     }
   }
 

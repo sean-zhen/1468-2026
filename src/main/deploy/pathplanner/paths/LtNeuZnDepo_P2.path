@@ -3,41 +3,25 @@
   "waypoints": [
     {
       "anchor": {
-        "x": 0.4980322003605778,
-        "y": 0.6357781753181473
+        "x": 0.6,
+        "y": 7.361657863454112
       },
       "prevControl": null,
       "nextControl": {
-        "x": 0.9847942754889353,
-        "y": 1.7066547406020376
+        "x": 0.5892429577464796,
+        "y": 6.350404929577464
       },
       "isLocked": false,
-      "linkedName": "RtEndPt1"
+      "linkedName": "LtEndPt5"
     },
     {
       "anchor": {
-        "x": 2.38017889087355,
-        "y": 0.7655813953426458
+        "x": 0.49343309859155016,
+        "y": 5.088908450704225
       },
       "prevControl": {
-        "x": 2.1205724508019936,
-        "y": 1.6417531305841488
-      },
-      "nextControl": {
-        "x": 2.4512009732963933,
-        "y": 0.525881867165549
-      },
-      "isLocked": false,
-      "linkedName": null
-    },
-    {
-      "anchor": {
-        "x": 1.0462670728175263,
-        "y": 2.845038760899274
-      },
-      "prevControl": {
-        "x": 1.0462670728175263,
-        "y": 2.434244380456943
+        "x": 0.52536971830986,
+        "y": 5.8553873239436625
       },
       "nextControl": null,
       "isLocked": false,
@@ -49,8 +33,30 @@
   "pointTowardsZones": [],
   "eventMarkers": [
     {
+      "name": "Aim",
+      "waypointRelativePos": 0.0,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "named",
+        "data": {
+          "name": "Aim"
+        }
+      }
+    },
+    {
+      "name": "StartHarvest",
+      "waypointRelativePos": 0.0,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "named",
+        "data": {
+          "name": "StartHarvest"
+        }
+      }
+    },
+    {
       "name": "StopHarvest",
-      "waypointRelativePos": 0,
+      "waypointRelativePos": 1.0,
       "endWaypointRelativePos": null,
       "command": {
         "type": "named",
@@ -58,23 +64,12 @@
           "name": "StopHarvest"
         }
       }
-    },
-    {
-      "name": "ClimberUp",
-      "waypointRelativePos": 0,
-      "endWaypointRelativePos": null,
-      "command": {
-        "type": "named",
-        "data": {
-          "name": "ClimberUp"
-        }
-      }
     }
   ],
   "globalConstraints": {
-    "maxVelocity": 2.0,
-    "maxAcceleration": 2.5,
-    "maxAngularVelocity": 540.0,
+    "maxVelocity": 3.0,
+    "maxAcceleration": 3.0,
+    "maxAngularVelocity": 400.0,
     "maxAngularAcceleration": 720.0,
     "nominalVoltage": 12.0,
     "unlimited": false
@@ -87,7 +82,7 @@
   "folder": null,
   "idealStartingState": {
     "velocity": 0,
-    "rotation": 90.0
+    "rotation": -90.0
   },
-  "useDefaultConstraints": false
+  "useDefaultConstraints": true
 }

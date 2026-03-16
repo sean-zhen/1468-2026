@@ -401,6 +401,31 @@ public class IndexerSubsystem extends SubsystemBase {
     motor.stopMotor();
   }
 
+  public void logJamEvent() {
+
+    double now = Timer.getFPGATimestamp();
+    jamClearStart = now;
+    jamCount++;
+
+    if (lastJamTime > 0) {
+      double dt = now - lastJamTime;
+      if (dt > 0) {
+        jamRate = 60.0 / dt;
+      }
+    }
+
+    lastJamTime = now;
+
+    jamPeakCurrent = getStatorCurrent();
+
+    jamHistory[jamHistoryIndex] = now;
+    jamHistoryIndex = (jamHistoryIndex + 1) % jamHistory.length;
+
+    jamCountLog.append(jamCount);
+    jamRateLog.append(jamRate);
+    jamPeakLog.append(jamPeakCurrent);
+  }
+
   // -----------------------------
   // Logging
   // -----------------------------

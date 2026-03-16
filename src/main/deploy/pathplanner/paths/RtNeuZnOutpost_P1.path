@@ -3,12 +3,12 @@
   "waypoints": [
     {
       "anchor": {
-        "x": 3.6,
+        "x": 2.6,
         "y": 0.6
       },
       "prevControl": null,
       "nextControl": {
-        "x": 4.100000000000001,
+        "x": 3.1000000000000014,
         "y": 0.6
       },
       "isLocked": false,
@@ -94,6 +94,10 @@
   ],
   "rotationTargets": [
     {
+      "waypointRelativePos": 0.7004830917874398,
+      "rotationDegrees": 0.0
+    },
+    {
       "waypointRelativePos": 2.5,
       "rotationDegrees": 90.0
     },
@@ -113,7 +117,12 @@
       "name": "Aim",
       "waypointRelativePos": 0,
       "endWaypointRelativePos": null,
-      "command": null
+      "command": {
+        "type": "named",
+        "data": {
+          "name": "Aim"
+        }
+      }
     },
     {
       "name": "StartHarvest",
@@ -136,36 +145,12 @@
           "name": "StopHarvest"
         }
       }
-    },
-    {
-      "name": "StHarAndSht",
-      "waypointRelativePos": 4.173134328358216,
-      "endWaypointRelativePos": null,
-      "command": {
-        "type": "parallel",
-        "data": {
-          "commands": [
-            {
-              "type": "named",
-              "data": {
-                "name": "StartHarvest"
-              }
-            },
-            {
-              "type": "named",
-              "data": {
-                "name": "Shoot"
-              }
-            }
-          ]
-        }
-      }
     }
   ],
   "globalConstraints": {
-    "maxVelocity": 2.0,
-    "maxAcceleration": 2.5,
-    "maxAngularVelocity": 540.0,
+    "maxVelocity": 3.0,
+    "maxAcceleration": 3.0,
+    "maxAngularVelocity": 400.0,
     "maxAngularAcceleration": 720.0,
     "nominalVoltage": 12.0,
     "unlimited": false
@@ -178,7 +163,7 @@
   "folder": null,
   "idealStartingState": {
     "velocity": 0,
-    "rotation": 90.0
+    "rotation": 0.0
   },
-  "useDefaultConstraints": false
+  "useDefaultConstraints": true
 }

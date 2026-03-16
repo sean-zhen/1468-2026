@@ -4,12 +4,12 @@
     {
       "anchor": {
         "x": 3.6,
-        "y": 7.45
+        "y": 4.0
       },
       "prevControl": null,
       "nextControl": {
         "x": 3.35,
-        "y": 7.45
+        "y": 4.0
       },
       "isLocked": false,
       "linkedName": null
@@ -17,15 +17,15 @@
     {
       "anchor": {
         "x": 2.6,
-        "y": 7.45
+        "y": 4.0
       },
       "prevControl": {
-        "x": 3.1681208318357967,
-        "y": 7.45
+        "x": 2.85,
+        "y": 4.0
       },
       "nextControl": null,
       "isLocked": false,
-      "linkedName": null
+      "linkedName": "ctrEnd1"
     }
   ],
   "rotationTargets": [],

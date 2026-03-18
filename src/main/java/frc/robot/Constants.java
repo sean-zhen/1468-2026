@@ -109,9 +109,10 @@ public final class Constants {
   //////////////////////////    KICKER     /////////////////////////////////////////
 
   public static final class Kicker {
-    public static final int KICKER_MOTOR_ID = 42;
+    public static final int KICKER1_MOTOR_ID = 42;
+    public static final int KICKER2_MOTOR_ID = 43;
     public static final double KICKER_TARGET_RPS = 45.0;
-    public static final double KICKER_GEAR_RATIO = 3.0; // NEED TO INSERT
+    public static final double KICKER_GEAR_RATIO = 5.0;
 
     // TODO: Tune these values
     public static final double kP = 0.89;
@@ -172,16 +173,14 @@ public final class Constants {
     public static final boolean DEPLOY_HOMING_ZERO_ON_STOP = true;
   }
 
-  //////////////////////////    INDEXER     /////////////////////////////////////////
+  //////////////////////////    Rollers     /////////////////////////////////////////
 
-  public static final class Indexer {
-    public static final int MOTOR_ID = 41;
-    public static final double GEAR_RATIO = 1.0; // NEED TO INSERT
-    public static final double TARGET_RPS =
-        22.5 * 1.5; // 0.75; // NEED TO INSERT //22.5// was 45, too fast???
-    public static final double[] POSITIONS = {
-      0.0, 10.0, 20.0, 30.0, 40.0, 50.0
-    }; // NEED TO INSERT (positions in rotations)
+  public static final class Rollers {
+    public static final int LEFT_ROLLER_MOTOR_ID = 44;
+    public static final int RIGHT_ROLLER_MOTOR_ID = 45;
+    public static final double GEAR_RATIO = 105.0 / 19.0; // todo: ta VERIFY
+    public static final double NORMAL_RPS = 5.0;
+    public static final double REVERSE_RPS = -2.0;
 
     // TODO: Tune these values
     public static final double kP = 0.189; // was.89

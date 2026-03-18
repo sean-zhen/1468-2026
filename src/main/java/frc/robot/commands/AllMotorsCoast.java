@@ -7,20 +7,23 @@ import frc.robot.subsystems.drive.Drive;
 public class AllMotorsCoast extends Command {
   private final HarvesterSubsystem harvester;
   private final ShooterSubsystem shooter;
-  private final IndexerSubsystem indexer;
+  private final RollerSubsystem rollers;
+  private final KickerSubsystem kicker;
   private final Drive drive;
 
   public AllMotorsCoast(
       HarvesterSubsystem harvester,
       ShooterSubsystem shooter,
-      IndexerSubsystem indexer,
+      RollerSubsystem rollers,
+      KickerSubsystem kicker,
       Drive drive) {
     this.harvester = harvester;
     this.shooter = shooter;
-    this.indexer = indexer;
+    this.rollers = rollers;
+    this.kicker = kicker;
     this.drive = drive;
 
-    addRequirements(harvester, shooter, indexer, drive);
+    addRequirements(harvester, shooter, rollers, kicker, drive);
   }
 
   @Override
@@ -28,7 +31,8 @@ public class AllMotorsCoast extends Command {
 
     harvester.setCoastMode();
     shooter.setCoastMode();
-    indexer.setCoastMode();
+    rollers.setCoastMode();
+    kicker.setCoastMode();
     drive.setCoast();
   }
 

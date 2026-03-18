@@ -31,10 +31,10 @@ public class PrepareShooterCmd extends Command {
 
   // Trench coordinates: (x1, y1) to (x2, y2)
   private final double[][] trenches = {
-    {3.96, 6.8, 5.25, 7.9}, // First trench
-    {3.96, 0, 5.25, 1.2}, // Second trench
-    {11.3, 0, 12.5, 1.2}, // Third trench
-    {11.3, 6.8, 12.5, 7.9} // Fourth trench
+    {3.0, 6.5, 6.0, 8.0}, // Blue Left Trench
+    {3.0, 0, 6.0, 1.5}, // Blue Right Trench
+    {10.5, 0.0, 13.5, 1.5}, // Red Right trench
+    {10.5, 6.5, 13.5, 8.0} // Red Left Trench
   };
 
   // Overrides
@@ -44,6 +44,9 @@ public class PrepareShooterCmd extends Command {
 
   // ---> ADDED: Variable to store the calculated angle
   private Rotation2d cachedAimAngle = new Rotation2d();
+
+  private Translation2d cachedVirtualTarget = new Translation2d();
+  private Translation2d filteredTarget = new Translation2d();
 
   // Shuffleboard entry to show whether aiming is active
   private static final GenericEntry aimingActiveEntry =
@@ -82,6 +85,11 @@ public class PrepareShooterCmd extends Command {
     return cachedAimAngle;
   }
 
+  public Translation2d getVirtualTarget() {
+    // return cachedVirtualTarget;
+    return filteredTarget;
+  }
+
   @Override
   public void execute() {
 
@@ -89,6 +97,22 @@ public class PrepareShooterCmd extends Command {
     BaseStatusSignal.waitForAll(0.020, allSignals);
 
     Pose2d robotPose = drive.getPose();
+
+    ChassisSpeeds speeds =
+        ChassisSpeeds.fromRobotRelativeSpeeds(
+            drive.getActualChassisSpeeds(), robotPose.getRotation());
+
+    double predictionTime = 0.04;
+
+    Translation2d predicted =
+        robotPose
+            .getTranslation()
+            .plus(
+                new Translation2d(
+                    speeds.vxMetersPerSecond * predictionTime,
+                    speeds.vyMetersPerSecond * predictionTime));
+
+    robotPose = new Pose2d(predicted, robotPose.getRotation());
     Translation2d pos = robotPose.getTranslation();
     field.setRobotPose(robotPose);
 
@@ -145,7 +169,12 @@ public class PrepareShooterCmd extends Command {
     double flightTime = distance / fuelVelocity;
 
     // Correct lead sign: subtract robot/turret velocity
-    Translation2d virtualTarget = shootingTarget.minus(turretVel.times(flightTime));
+    // Translation2d virtualTarget = shootingTarget.minus(turretVel.times(flightTime));
+    cachedVirtualTarget = shootingTarget.minus(turretVel.times(flightTime));
+    // Translation2d virtualTarget = cachedVirtualTarget;
+    filteredTarget = filteredTarget.interpolate(cachedVirtualTarget, 0.1);
+
+    Translation2d virtualTarget = filteredTarget;
 
     // ------------------------------
     // 6. Compute aim angle
@@ -201,6 +230,9 @@ public class PrepareShooterCmd extends Command {
   public void initialize() {
     // Mark aiming as active on Shuffleboard
     aimingActiveEntry.setBoolean(true);
+
+    // Initialize filter to current target to avoid jump
+    filteredTarget = cachedVirtualTarget;
   }
 
   private String getZone(double x, DriverStation.Alliance alliance) {

@@ -8,6 +8,7 @@
 package frc.robot;
 
 import static frc.robot.Constants.Harvester.*;
+import static frc.robot.Constants.Rollers.*;
 import static frc.robot.Constants.Shooter.*;
 
 import com.ctre.phoenix6.CANBus;
@@ -16,8 +17,6 @@ import com.pathplanner.lib.auto.NamedCommands;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.networktables.GenericEntry;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.XboxController;
@@ -32,20 +31,18 @@ import edu.wpi.first.wpilibj2.command.button.POVButton;
 import frc.robot.commands.AllMotorsBrake;
 import frc.robot.commands.AllMotorsCoast;
 import frc.robot.commands.DriveCommands;
-import frc.robot.commands.DriveLockToHubCmd;
 import frc.robot.commands.DriveToDepotCommandPP;
 import frc.robot.commands.DriveToHubCommandPP;
 import frc.robot.commands.HarvesterAgitate;
 import frc.robot.commands.HarvesterDeploy;
 import frc.robot.commands.HarvesterSpin;
-import frc.robot.commands.IndexerSpin;
 import frc.robot.commands.Kick;
 import frc.robot.commands.PrepareShooterCmd;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.HarvesterSubsystem;
-import frc.robot.subsystems.IndexerSubsystem;
 import frc.robot.subsystems.KickerSubsystem;
 import frc.robot.subsystems.LEDSubsystem;
+import frc.robot.subsystems.RollerSubsystem;
 import frc.robot.subsystems.ShooterSubsystem;
 import frc.robot.subsystems.VisionSubsystem;
 import frc.robot.subsystems.drive.Drive;
@@ -54,7 +51,6 @@ import frc.robot.subsystems.drive.ModuleIOTalonFX;
 import frc.robot.util.Elastic;
 import java.util.Set;
 import java.util.function.DoubleSupplier;
-import java.util.function.Supplier;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
 /**
@@ -70,8 +66,10 @@ public class RobotContainer {
   private final VisionSubsystem vision;
   private final KickerSubsystem kicker;
   private final HarvesterSubsystem harvester;
-  private final IndexerSubsystem indexer;
+  private final RollerSubsystem rollers;
   private final LEDSubsystem led;
+  // Commands
+  private final PrepareShooterCmd prepareShooterCmd;
 
   // Controller
   final Joystick driverLeftJoystick = new Joystick(0);
@@ -105,7 +103,7 @@ public class RobotContainer {
     shooter = new ShooterSubsystem();
     kicker = new KickerSubsystem();
     harvester = new HarvesterSubsystem();
-    indexer = new IndexerSubsystem();
+    rollers = new RollerSubsystem();
 
     drive =
         new Drive(
@@ -118,6 +116,8 @@ public class RobotContainer {
     vision = new VisionSubsystem(drive);
 
     led = new LEDSubsystem(shooter, drive, vision);
+
+    prepareShooterCmd = new PrepareShooterCmd(shooter, drive, null, null, null);
 
     // // Set up SysId routines
     // autoChooser.addOption(
@@ -151,22 +151,49 @@ public class RobotContainer {
                     (DoubleSupplier) () -> DONT_OVERRIDE_VAL),
             Set.of(shooter)));
 
+    NamedCommands.registerCommand( // Only use in DEADLINE with a drive cmd as the DEADLINE
+        "Aim225",
+        Commands.defer(
+            () ->
+                new PrepareShooterCmd(
+                    shooter,
+                    drive,
+                    (DoubleSupplier) () -> 46.0,
+                    (DoubleSupplier) () -> 0.33,
+                    (DoubleSupplier) () -> DONT_OVERRIDE_VAL),
+            Set.of(shooter)));
+
+    NamedCommands.registerCommand( // Only use in DEADLINE with a drive cmd as the DEADLINE
+        "HoodDown",
+        Commands.defer(
+            () ->
+                new PrepareShooterCmd(
+                    shooter,
+                    drive,
+                    (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
+                    (DoubleSupplier) () -> 0.0,
+                    (DoubleSupplier) () -> DONT_OVERRIDE_VAL),
+            Set.of(shooter)));
+
     NamedCommands.registerCommand(
         "Fire",
         Commands.defer(
             () ->
                 new Kick(kicker)
-                    .alongWith(Commands.waitSeconds(0.2).andThen(new IndexerSpin(indexer, false))),
-            Set.of(kicker, indexer)));
+                    .alongWith(
+                        Commands.waitSeconds(0.2)
+                            .andThen(
+                                () -> new InstantCommand(() -> rollers.setVelocity(NORMAL_RPS)))),
+            Set.of(kicker, rollers)));
 
     NamedCommands.registerCommand(
         "StopFire",
         Commands.defer(
             () ->
-                new InstantCommand(() -> indexer.stop())
+                new InstantCommand(() -> rollers.stop())
                     .andThen(
                         Commands.waitSeconds(0.2).andThen(new InstantCommand(() -> kicker.stop()))),
-            Set.of(kicker, indexer)));
+            Set.of(kicker, rollers)));
 
     NamedCommands.registerCommand(
         "StartHarvest",
@@ -302,7 +329,7 @@ public class RobotContainer {
     /// Driver Right Buttons (Joystick 1)
     ////////////////////////////////////////////////////////////////////////////////////////////
     final JoystickButton faceHubButton = new JoystickButton(driverRightJoystick, 1);
-    final JoystickButton lockTo90Btn = new JoystickButton(driverRightJoystick, 2);
+    final JoystickButton lockToTargetBtn = new JoystickButton(driverRightJoystick, 2);
     final JoystickButton resetGyro = new JoystickButton(driverRightJoystick, 7);
     final JoystickButton resetTurret = new JoystickButton(driverRightJoystick, 11);
 
@@ -314,9 +341,9 @@ public class RobotContainer {
     final JoystickButton kickBtn = new JoystickButton(operatorManualJoystick, 2);
     final JoystickButton harvesterDeployBtn = new JoystickButton(operatorManualJoystick, 3);
     final JoystickButton harvesterSpin = new JoystickButton(operatorManualJoystick, 4);
-    final JoystickButton indexerSpin = new JoystickButton(operatorManualJoystick, 5);
+    final JoystickButton rollersSpin = new JoystickButton(operatorManualJoystick, 5);
     final JoystickButton harvesterSpinReverse = new JoystickButton(operatorManualJoystick, 6);
-    final JoystickButton indexerSpinReverse = new JoystickButton(operatorManualJoystick, 7);
+    final JoystickButton rollersSpinReverse = new JoystickButton(operatorManualJoystick, 7);
     final JoystickButton zeroHoodBtn = new JoystickButton(operatorManualJoystick, 8);
     final JoystickButton zeroTurretBtn = new JoystickButton(operatorManualJoystick, 9);
     final JoystickButton resetHarvesterEncoder = new JoystickButton(operatorManualJoystick, 10);
@@ -366,43 +393,63 @@ public class RobotContainer {
 
     // Lock Onto Hub
     // While holding Button 1 on the Right Joystick, lock heading to the Hub
+    // faceHubButton.whileTrue(
+    //     DriveLockToHubCmd.create(
+    //         drive, () -> -driverLeftJoystick.getY(), () -> -driverLeftJoystick.getX()));
+
+    // Supplier<Rotation2d> sweepRotationSupplier =
+    //     () -> {
+    //       // 1. Get the base vision angle
+    //       double targetAngle = shooter.getAngleToHub(drive.getPose()).getDegrees();
+
+    //       // 2. Determine strafe direction (X on the field)
+    //       double strafeVelocity = -driverLeftJoystick.getX();
+
+    //       // 3. Determine Alliance (Red is flipped)
+    //       boolean isRed = DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red;
+
+    //       // 4. Calculate Offset
+    //       // If moving "Right" relative to your perspective, add/sub 90
+    //       // to make the front of the robot lead the movement.
+    //       double offset = 0;
+    //       if (Math.abs(strafeVelocity) > 0.1) {
+    //         if (isRed) {
+    //           offset = (strafeVelocity > 0) ? -90 : 90;
+    //         } else {
+    //           offset = (strafeVelocity > 0) ? 90 : -90;
+    //         }
+    //       }
+
+    //       return Rotation2d.fromDegrees(targetAngle + offset);
+    //     };
+
+    // Lock to Hub / target while button is held
     faceHubButton.whileTrue(
-        DriveLockToHubCmd.create(
-            drive, () -> -driverLeftJoystick.getY(), () -> -driverLeftJoystick.getX()));
-
-    Supplier<Rotation2d> sweepRotationSupplier =
-        () -> {
-          // 1. Get the base vision angle
-          double targetAngle = shooter.getAngleToHub(drive.getPose()).getDegrees();
-
-          // 2. Determine strafe direction (X on the field)
-          double strafeVelocity = -driverLeftJoystick.getX();
-
-          // 3. Determine Alliance (Red is flipped)
-          boolean isRed = DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red;
-
-          // 4. Calculate Offset
-          // If moving "Right" relative to your perspective, add/sub 90
-          // to make the front of the robot lead the movement.
-          double offset = 0;
-          if (Math.abs(strafeVelocity) > 0.1) {
-            if (isRed) {
-              offset = (strafeVelocity > 0) ? -90 : 90;
-            } else {
-              offset = (strafeVelocity > 0) ? 90 : -90;
-            }
-          }
-
-          return Rotation2d.fromDegrees(targetAngle + offset);
-        };
-
-    // Lock to +/- 90° while button is held
-    lockTo90Btn.whileTrue(
+        // DriveCommands.joystickDriveAtAngle(
+        //     drive,
+        //     () -> -driverLeftJoystick.getY(),
+        //     () -> -driverLeftJoystick.getX(),
+        //     sweepRotationSupplier));
         DriveCommands.joystickDriveAtAngle(
             drive,
             () -> -driverLeftJoystick.getY(),
             () -> -driverLeftJoystick.getX(),
-            sweepRotationSupplier));
+            () -> prepareShooterCmd.getAimAngle(),
+            () -> prepareShooterCmd.getVirtualTarget()));
+
+    // Lock to Hub / target while button is held
+    lockToTargetBtn.whileTrue(
+        // DriveCommands.joystickDriveAtAngle(
+        //     drive,
+        //     () -> -driverLeftJoystick.getY(),
+        //     () -> -driverLeftJoystick.getX(),
+        //     sweepRotationSupplier));
+        DriveCommands.joystickDriveAtAngle(
+            drive,
+            () -> -driverLeftJoystick.getY(),
+            () -> -driverLeftJoystick.getX(),
+            () -> prepareShooterCmd.getAimAngle(),
+            () -> prepareShooterCmd.getVirtualTarget()));
 
     // Reset gyro to 0° when 7 on right joystick button is pressed
     resetGyro.onTrue(
@@ -412,9 +459,9 @@ public class RobotContainer {
             .ignoringDisable(true));
 
     new JoystickButton(driverRightJoystick, 10)
-        .onTrue(new AllMotorsBrake(harvester, shooter, indexer, drive));
+        .onTrue(new AllMotorsBrake(harvester, shooter, rollers, kicker, drive));
     new JoystickButton(driverRightJoystick, 11)
-        .onTrue(new AllMotorsCoast(harvester, shooter, indexer, drive));
+        .onTrue(new AllMotorsCoast(harvester, shooter, rollers, kicker, drive));
 
     // Reset Turret to 0
 
@@ -429,20 +476,19 @@ public class RobotContainer {
     // TODO TA: ***** Inhibiting shooting if turret is not at correct angle, test and decide whether
     // to keep - added a flywheel spinning check to insure balls dont get stuck
     // possibly add a check for the hood and the flywheel also
-    // Start up Kicker First to get it up to speed, and then hand off Fuel from indexer to the
+    // Start up Kicker First to get it up to speed, and then hand off Fuel from rollers to the
     // kicker
     fireBtn.whileTrue(
         new Kick(kicker)
             .alongWith(
                 Commands.waitSeconds(0.2)
-                    .andThen(
-                        new IndexerSpin(indexer, false)
-                            .onlyIf(() -> shooter.getFlywheelVeloRPS() > 0.30))));
-    // .andThen(new IndexerSpin(indexer, false))));
+                    .andThen(new InstantCommand(() -> rollers.setVelocity(NORMAL_RPS)))
+                    .onlyIf(() -> shooter.getFlywheelVeloRPS() > 0.30)));
+    // .andThen(new rollersSpin(rollers, false))));
     fireBtn
         .debounce(0.10)
         .onFalse(
-            new InstantCommand(() -> indexer.stop())
+            new InstantCommand(() -> rollers.stop())
                 .andThen(
                     Commands.waitSeconds(0.2).andThen(new InstantCommand(() -> kicker.stop()))));
     // Start preparing shooter when Aim button is pressed and keep running until interrupted
@@ -538,9 +584,9 @@ public class RobotContainer {
     harvesterSpin.whileTrue(new HarvesterSpin(harvester, false));
     harvesterSpinReverse.whileTrue(new HarvesterSpin(harvester, true));
 
-    // Indexer Spin
-    indexerSpin.whileTrue(new IndexerSpin(indexer, false));
-    indexerSpinReverse.whileTrue(new IndexerSpin(indexer, true));
+    // rollers Spin
+    rollersSpin.whileTrue(new InstantCommand(() -> rollers.setVelocity(NORMAL_RPS)));
+    rollersSpinReverse.whileTrue(new InstantCommand(() -> rollers.setVelocity(REVERSE_RPS)));
 
     zeroHoodBtn
         .debounce(0.10)
@@ -591,7 +637,7 @@ public class RobotContainer {
     // 1. Get RoboRio CAN Health
     boolean shooterHealthy = shooter.isShooterConnected();
     boolean kickerHealthy = kicker.isKickerConnected();
-    boolean indexerHealthy = indexer.isIndexerConnected();
+    boolean rollersHealthy = rollers.isRollerConnected();
     boolean harvesterHealthy = harvester.isHarvesterConnected();
     boolean ledHealthy = led.isCanDleConnected();
 
@@ -600,7 +646,7 @@ public class RobotContainer {
 
     // 3. The Master Status
     boolean robotCanOk =
-        harvesterHealthy && indexerHealthy && kickerHealthy && shooterHealthy && ledHealthy;
+        harvesterHealthy && rollersHealthy && kickerHealthy && shooterHealthy && ledHealthy;
 
     // Update master CAN indicators on the CAN Status tab
     roboRioCanStatusEntry.setBoolean(robotCanOk);
@@ -629,7 +675,7 @@ public class RobotContainer {
             new Elastic.Notification(
                 Elastic.NotificationLevel.ERROR,
                 "CAN BUS FAULT",
-                "One or more RoboRIO CAN devices are disconnected! Check shooter, harvester, indexer, kicker, climber, or LED."));
+                "One or more RoboRIO CAN devices are disconnected! Check shooter, harvester, rollers, kicker, climber, or LED."));
         canFaultAlertSent = true; // Mark as sent so it doesn't repeat
       }
     } else {

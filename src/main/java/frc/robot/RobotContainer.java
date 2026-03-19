@@ -159,7 +159,19 @@ public class RobotContainer {
                     shooter,
                     drive,
                     (DoubleSupplier) () -> 46.0,
-                    (DoubleSupplier) () -> 0.33,
+                    (DoubleSupplier) () -> 0.30,
+                    (DoubleSupplier) () -> DONT_OVERRIDE_VAL),
+            Set.of(shooter)));
+
+    NamedCommands.registerCommand( // Only use in DEADLINE with a drive cmd as the DEADLINE
+        "Aim340",
+        Commands.defer(
+            () ->
+                new PrepareShooterCmd(
+                    shooter,
+                    drive,
+                    (DoubleSupplier) () -> 49.0,
+                    (DoubleSupplier) () -> 0.51,
                     (DoubleSupplier) () -> DONT_OVERRIDE_VAL),
             Set.of(shooter)));
 
@@ -473,31 +485,48 @@ public class RobotContainer {
     /// Operator Automatic Buttons / Commands (Joystick 3 / Right Hand)
     //////////////////////////////////////////////////////////////
 
-    // TODO TA: ***** Inhibiting shooting if turret is not at correct angle, test and decide whether
-    // to keep - added a flywheel spinning check to insure balls dont get stuck
-    // possibly add a check for the hood and the flywheel also
-    // Start up Kicker First to get it up to speed, and then hand off Fuel from rollers to the
+    // Start up Kicker to get it up to speed, alongWith getting the hood up (also insures flywheel
+    // up to speed and angle to target is calculated)
+    // and then start rollers which will start the actual shooting of the balls
     // kicker
     fireBtn.whileTrue(
         new Kick(kicker)
             .alongWith(
+                new PrepareShooterCmd(
+                    shooter,
+                    drive,
+                    (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
+                    (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
+                    (DoubleSupplier) () -> DONT_OVERRIDE_VAL))
+            .alongWith(
                 Commands.waitSeconds(0.2)
-                    .andThen(new InstantCommand(() -> rollers.setVelocity(NORMAL_RPS)))
-                    .onlyIf(() -> shooter.getFlywheelVeloRPS() > 0.30)));
-    // .andThen(new rollersSpin(rollers, false))));
+                    .andThen(new InstantCommand(() -> rollers.setVelocity(NORMAL_RPS)))));
+    //             .onlyIf(() -> shooter.getFlywheelVeloRPS() > 0.30)));
+
+    // letting go of the button, willstop shooting by first stopping the rollers, and
     fireBtn
         .debounce(0.10)
         .onFalse(
             new InstantCommand(() -> rollers.stop())
                 .andThen(
-                    Commands.waitSeconds(0.2).andThen(new InstantCommand(() -> kicker.stop()))));
-    // Start preparing shooter when Aim button is pressed and keep running until interrupted
+                    Commands.waitSeconds(0.2)
+                        .andThen(new InstantCommand(() -> kicker.stop()))
+                        .alongWith(
+                            new PrepareShooterCmd(
+                                shooter,
+                                drive,
+                                (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
+                                (DoubleSupplier) () -> 0.0,
+                                (DoubleSupplier) () -> DONT_OVERRIDE_VAL))));
+
+    // Start preparing flyywheel when Aim button is pressed and keep running until interrupted
+    // Keep hood at 0.0 for safety
     aimBtn.onTrue(
         (new PrepareShooterCmd(
             shooter,
             drive,
             (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
-            (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
+            (DoubleSupplier) () -> 0.0,
             (DoubleSupplier) () -> DONT_OVERRIDE_VAL)));
 
     // Stop aiming and reset shooter outputs when Aim Stop button is pressed
@@ -534,7 +563,7 @@ public class RobotContainer {
                 drive,
                 (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
                 (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
-                (DoubleSupplier) () -> DONT_OVERRIDE_VAL));
+                (DoubleSupplier) () -> 0.0));
 
     // Prepare to shoot from Depot // TODO: TA - All parameters must be fixed
     new POVButton(operatorAutoJoystick, 90)

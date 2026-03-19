@@ -31,7 +31,11 @@
   "bumperOffsetX": 0.0,
   "bumperOffsetY": 0.0,
   "robotFeatures": [
-    "{\"name\":\"Circle\",\"type\":\"circle\",\"data\":{\"center\":{\"x\":-0.15,\"y\":-0.15},\"radius\":0.15,\"strokeWidth\":0.02,\"filled\":false}}",
-    "{\"name\":\"Line\",\"type\":\"line\",\"data\":{\"start\":{\"x\":-0.15,\"y\":-0.15},\"end\":{\"x\":0.12,\"y\":-0.15},\"strokeWidth\":0.02}}"
+    "{\"name\":\"Line\",\"type\":\"line\",\"data\":{\"start\":{\"x\":-0.35,\"y\":-0.35},\"end\":{\"x\":-0.25,\"y\":-0.35},\"strokeWidth\":0.02}}",
+    "{\"name\":\"Line\",\"type\":\"line\",\"data\":{\"start\":{\"x\":-0.25,\"y\":0.35},\"end\":{\"x\":-0.35,\"y\":0.35},\"strokeWidth\":0.02}}",
+    "{\"name\":\"Line\",\"type\":\"line\",\"data\":{\"start\":{\"x\":-0.35,\"y\":0.35},\"end\":{\"x\":-0.35,\"y\":-0.35},\"strokeWidth\":0.02}}",
+    "{\"name\":\"Line\",\"type\":\"line\",\"data\":{\"start\":{\"x\":0.7,\"y\":-0.35},\"end\":{\"x\":0.7,\"y\":0.35},\"strokeWidth\":0.02}}",
+    "{\"name\":\"Line\",\"type\":\"line\",\"data\":{\"start\":{\"x\":0.7,\"y\":0.35},\"end\":{\"x\":0.4,\"y\":0.35},\"strokeWidth\":0.02}}",
+    "{\"name\":\"Line\",\"type\":\"line\",\"data\":{\"start\":{\"x\":0.7,\"y\":-0.35},\"end\":{\"x\":0.4,\"y\":-0.35},\"strokeWidth\":0.02}}"
   ]
 }

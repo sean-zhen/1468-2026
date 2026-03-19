@@ -117,7 +117,13 @@ public class RobotContainer {
 
     led = new LEDSubsystem(shooter, drive, vision);
 
-    prepareShooterCmd = new PrepareShooterCmd(shooter, drive, null, null, null);
+    prepareShooterCmd =
+        new PrepareShooterCmd(
+            shooter,
+            drive,
+            () -> DONT_OVERRIDE_VAL,
+            () -> DONT_OVERRIDE_VAL,
+            () -> DONT_OVERRIDE_VAL);
 
     // // Set up SysId routines
     // autoChooser.addOption(
@@ -489,19 +495,32 @@ public class RobotContainer {
     // up to speed and angle to target is calculated)
     // and then start rollers which will start the actual shooting of the balls
     // kicker
+    fireBtn
+        .onTrue(new InstantCommand(() -> prepareShooterCmd.setShootingMode(true)))
+        .onFalse(new InstantCommand(() -> prepareShooterCmd.setShootingMode(false)));
+
     fireBtn.whileTrue(
         new Kick(kicker)
-            .alongWith(
-                new PrepareShooterCmd(
-                    shooter,
-                    drive,
-                    (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
-                    (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
-                    (DoubleSupplier) () -> DONT_OVERRIDE_VAL))
+            .alongWith(prepareShooterCmd)
             .alongWith(
                 Commands.waitSeconds(0.2)
                     .andThen(new InstantCommand(() -> rollers.setVelocity(NORMAL_RPS)))));
-    //             .onlyIf(() -> shooter.getFlywheelVeloRPS() > 0.30)));
+    //     .onlyIf(() -> prepareShooterCmd.isAligned()));
+
+    // TODO: TA - add the onlyif logic when tested that everything works without it.
+    // fireBtn.whileTrue(
+    //     new Kick(kicker)
+    //         .alongWith(
+    //             new PrepareShooterCmd(
+    //                 shooter,
+    //                 drive,
+    //                 () -> DONT_OVERRIDE_VAL,
+    //                 () -> DONT_OVERRIDE_VAL,
+    //                 () -> DONT_OVERRIDE_VAL))
+    //         .alongWith(
+    //             Commands.waitSeconds(0.2)
+    //                 .andThen(new InstantCommand(() -> rollers.setVelocity(NORMAL_RPS))))
+    //         .onlyIf(() -> prepareShooterCmd.isAligned()));
 
     // letting go of the button, willstop shooting by first stopping the rollers, and
     fireBtn
@@ -522,12 +541,8 @@ public class RobotContainer {
     // Start preparing flyywheel when Aim button is pressed and keep running until interrupted
     // Keep hood at 0.0 for safety
     aimBtn.onTrue(
-        (new PrepareShooterCmd(
-            shooter,
-            drive,
-            (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
-            (DoubleSupplier) () -> 0.0,
-            (DoubleSupplier) () -> DONT_OVERRIDE_VAL)));
+        Commands.runOnce(() -> prepareShooterCmd.setShootingMode(false))
+            .andThen(prepareShooterCmd));
 
     // Stop aiming and reset shooter outputs when Aim Stop button is pressed
     aimStopBtn.onTrue(

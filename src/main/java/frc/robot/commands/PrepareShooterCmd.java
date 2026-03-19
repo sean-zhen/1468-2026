@@ -42,6 +42,8 @@ public class PrepareShooterCmd extends Command {
   private final DoubleSupplier hoodAngleOverride;
   private final DoubleSupplier TurretAngleOverride;
 
+  private boolean shootingMode = false;
+
   // ---> ADDED: Variable to store the calculated angle
   private Rotation2d cachedAimAngle = new Rotation2d();
 
@@ -205,7 +207,10 @@ public class PrepareShooterCmd extends Command {
     else shooter.setFlywheelRPS(flyWheelRPSOverride.getAsDouble());
 
     // Hood
-    if (inTrench) {
+    //   if (inTrench) {
+
+    if (!shootingMode) {
+      // ALWAYS Zero / safe unless actively shooting
       shooter.setHoodPosition(0.0);
     } else {
       if (hoodAngleOverride.getAsDouble() == DONT_OVERRIDE_VAL)
@@ -244,6 +249,41 @@ public class PrepareShooterCmd extends Command {
       if (x < 4.5) return "Opposition";
     }
     return "Neutral";
+  }
+
+  public void setShootingMode(boolean shooting) {
+    shootingMode = shooting;
+  }
+
+  // inside PrepareShooterCmd
+  private boolean lastAligned = false;
+
+  public boolean isAligned() {
+    Rotation2d robotRot = drive.getRotation();
+
+    // Compute angular error, wrapped to [-pi, pi]
+    double error = MathUtil.angleModulus(cachedAimAngle.minus(robotRot).getRadians());
+
+    // Current robot angular speed
+    double angularVel = drive.getActualChassisSpeeds().omegaRadiansPerSecond;
+
+    // Alignment thresholds
+    double ANGLE_TOLERANCE_RAD = Math.toRadians(2.0);
+    double ANGULAR_VEL_TOLERANCE_RAD = Math.toRadians(10.0);
+
+    // Base aligned check
+    boolean currentlyAligned =
+        Math.abs(error) < ANGLE_TOLERANCE_RAD && Math.abs(angularVel) < ANGULAR_VEL_TOLERANCE_RAD;
+
+    // Hysteresis: once aligned, require slightly bigger error to mark unaligned
+    if (lastAligned) {
+      currentlyAligned =
+          Math.abs(error) < Math.toRadians(3.0) && Math.abs(angularVel) < Math.toRadians(12.0);
+    }
+
+    // Store for next cycle
+    lastAligned = currentlyAligned;
+    return currentlyAligned;
   }
 
   @Override

@@ -437,10 +437,10 @@ public class ShooterSubsystem extends SubsystemBase {
     // parameters are distance to Hub in METERS and Hood angle in rotations
     hoodAlliance.put(0.0, 0.0 / Shooter.HOOD_DEG_PER_ROTATION);
     hoodAlliance.put(1.0, 0.0 / Shooter.HOOD_DEG_PER_ROTATION);
-    hoodAlliance.put(2.56, 0.35 / 2.0);
-    hoodAlliance.put(4.0, 8.0 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
-    hoodAlliance.put(6.0, 12.0 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
-    hoodAlliance.put(8.0, 14.0 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
+    hoodAlliance.put(2.56, 0.35 / 4.0);
+    hoodAlliance.put(4.0, 8.0 / 4.0 / Shooter.HOOD_DEG_PER_ROTATION);
+    hoodAlliance.put(6.0, 12.0 / 4.0 / Shooter.HOOD_DEG_PER_ROTATION);
+    hoodAlliance.put(8.0, 14.0 / 4.0 / Shooter.HOOD_DEG_PER_ROTATION);
 
     // Neutral Zone Flywheel and Hood Tables // TODO TA: Must empirically obtain values
     // parameters are distance to Hub in METERS and RPS velocity of the flywheel

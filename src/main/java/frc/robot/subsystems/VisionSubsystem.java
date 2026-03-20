@@ -111,10 +111,10 @@ public class VisionSubsystem extends SubsystemBase {
   private static final Transform3d[] CAMERA_TRANSFORMS = {
     new Transform3d(
         new Translation3d(
-            Units.inchesToMeters(-7.857),
-            Units.inchesToMeters(-12.293),
-            Units.inchesToMeters(8.181)),
-        new Rotation3d(0, Units.degreesToRadians(-18), Units.degreesToRadians(290))), // Cam 1
+            Units.inchesToMeters(-11.946),
+            Units.inchesToMeters(10.063),
+            Units.inchesToMeters(7.799)),
+        new Rotation3d(0, Units.degreesToRadians(-28), Units.degreesToRadians(220))), // Cam 3
     new Transform3d(
         new Translation3d(
             Units.inchesToMeters(-11.946),
@@ -123,10 +123,10 @@ public class VisionSubsystem extends SubsystemBase {
         new Rotation3d(0, Units.degreesToRadians(-28), Units.degreesToRadians(140))), // Cam 2
     new Transform3d(
         new Translation3d(
-            Units.inchesToMeters(-11.946),
-            Units.inchesToMeters(10.063),
-            Units.inchesToMeters(7.799)),
-        new Rotation3d(0, Units.degreesToRadians(-28), Units.degreesToRadians(220))), // Cam 3
+            Units.inchesToMeters(-7.857),
+            Units.inchesToMeters(-12.293),
+            Units.inchesToMeters(8.181)),
+        new Rotation3d(0, Units.degreesToRadians(-18), Units.degreesToRadians(290))), // Cam 1
     new Transform3d(
         new Translation3d(
             Units.inchesToMeters(-7.857),

@@ -135,7 +135,7 @@ public final class Constants {
     public static final double DEPLOY_DEGREES_TO_ROTATIONS = 2.5 / 360.0;
 
     public static final double DEPLOY_START_ANGLE = 0.0; // Degrees
-    public static final double DEPLOY_IN_ANGLE = 2.0; // Degrees  was 12
+    public static final double DEPLOY_IN_ANGLE = 12.0; // Degrees  was 12
     public static final double DEPLOY_OUT_ANGLE = 100.0; // Degrees
 
     public static final int SPIN_MOTOR_ID = 32;
@@ -179,7 +179,7 @@ public final class Constants {
     public static final int LEFT_ROLLER_MOTOR_ID = 44;
     public static final int RIGHT_ROLLER_MOTOR_ID = 45;
     public static final double GEAR_RATIO = 105.0 / 19.0; // todo: ta VERIFY
-    public static final double NORMAL_RPS = 5.0;
+    public static final double NORMAL_RPS = 25.0; // was 5.0
     public static final double REVERSE_RPS = -2.0;
 
     // TODO: Tune these values

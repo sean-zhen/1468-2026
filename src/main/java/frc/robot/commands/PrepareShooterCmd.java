@@ -174,7 +174,8 @@ public class PrepareShooterCmd extends Command {
     // Translation2d virtualTarget = shootingTarget.minus(turretVel.times(flightTime));
     cachedVirtualTarget = shootingTarget.minus(turretVel.times(flightTime));
     // Translation2d virtualTarget = cachedVirtualTarget;
-    filteredTarget = filteredTarget.interpolate(cachedVirtualTarget, 0.1);
+    // filteredTarget = filteredTarget.interpolate(cachedVirtualTarget, 0.1);
+    filteredTarget = filteredTarget.interpolate(cachedVirtualTarget, 0.5);
 
     Translation2d virtualTarget = filteredTarget;
 
@@ -209,13 +210,14 @@ public class PrepareShooterCmd extends Command {
     // Hood
     //   if (inTrench) {
 
-    if (!shootingMode) {
+    // if (!shootingMode) {
+    if (false) {
       // ALWAYS Zero / safe unless actively shooting
       shooter.setHoodPosition(0.0);
     } else {
       if (hoodAngleOverride.getAsDouble() == DONT_OVERRIDE_VAL)
         shooter.setHoodViaTable(shotDistance, zone);
-      else shooter.setHoodPosition(hoodAngleOverride.getAsDouble() / 20.0 * 1.25);
+      else shooter.setHoodPosition(hoodAngleOverride.getAsDouble()); // / 20.0 * 1.25
     }
 
     // ------------------------------

@@ -14,7 +14,7 @@ public class Kick extends Command {
 
   @Override
   public void execute() {
-    kicker.setVelocity(Kicker.KICKER_TARGET_RPS); // Set to 30 RPS
+    kicker.setVelocity(Kicker.KICKER_TARGET_RPS); // was 30 RPS
   }
 
   @Override

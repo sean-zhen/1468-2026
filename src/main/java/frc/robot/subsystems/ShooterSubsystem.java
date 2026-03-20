@@ -264,7 +264,7 @@ public class ShooterSubsystem extends SubsystemBase {
     hoodConfigs.MotionMagic.MotionMagicCruiseVelocity = 8; //  RPS
     hoodConfigs.MotionMagic.MotionMagicAcceleration = 040;
 
-    hoodConfigs.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
+    hoodConfigs.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
     hoodConfigs.MotorOutput.NeutralMode = NeutralModeValue.Brake; // Keep Brake for hood
     hoodConfigs.MotorOutput.DutyCycleNeutralDeadband = 0.01; // Help reach the final point
 
@@ -437,10 +437,10 @@ public class ShooterSubsystem extends SubsystemBase {
     // parameters are distance to Hub in METERS and Hood angle in rotations
     hoodAlliance.put(0.0, 0.0 / Shooter.HOOD_DEG_PER_ROTATION);
     hoodAlliance.put(1.0, 0.0 / Shooter.HOOD_DEG_PER_ROTATION);
-    hoodAlliance.put(2.56, 0.35);
-    hoodAlliance.put(4.0, 10.0 / Shooter.HOOD_DEG_PER_ROTATION);
-    hoodAlliance.put(6.0, 15.0 / Shooter.HOOD_DEG_PER_ROTATION);
-    hoodAlliance.put(8.0, 20.0 / Shooter.HOOD_DEG_PER_ROTATION);
+    hoodAlliance.put(2.56, 0.35 / 2.0);
+    hoodAlliance.put(4.0, 8.0 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
+    hoodAlliance.put(6.0, 12.0 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
+    hoodAlliance.put(8.0, 14.0 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
 
     // Neutral Zone Flywheel and Hood Tables // TODO TA: Must empirically obtain values
     // parameters are distance to Hub in METERS and RPS velocity of the flywheel
@@ -452,12 +452,12 @@ public class ShooterSubsystem extends SubsystemBase {
     flyNeutral.put(15.0, 85.0);
 
     // parameters are distance to Hub in METERS and Hood angle in rotation
-    hoodNeutral.put(0.0, 10.0 / Shooter.HOOD_DEG_PER_ROTATION);
-    hoodNeutral.put(4.0, 10.0 / Shooter.HOOD_DEG_PER_ROTATION);
-    hoodNeutral.put(7.0, 12.5 / Shooter.HOOD_DEG_PER_ROTATION);
-    hoodNeutral.put(10.0, 15.0 / Shooter.HOOD_DEG_PER_ROTATION);
-    hoodNeutral.put(12.0, 17.5 / Shooter.HOOD_DEG_PER_ROTATION);
-    hoodNeutral.put(15.0, 20.0 / Shooter.HOOD_DEG_PER_ROTATION);
+    hoodNeutral.put(0.0, 8.0 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
+    hoodNeutral.put(4.0, 8.0 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
+    hoodNeutral.put(7.0, 10.5 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
+    hoodNeutral.put(10.0, 13.0 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
+    hoodNeutral.put(12.0, 13.5 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
+    hoodNeutral.put(15.0, 14.0 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
 
     // Opposition Zone Flywheel and Hood Tables // TODO TA: Must empirically obtain values
     // parameters are distance to Hub in METERS and RPS velocity of the flywheel
@@ -468,11 +468,11 @@ public class ShooterSubsystem extends SubsystemBase {
     flyOpposition.put(20.0, 90.0);
 
     // parameters are distance to Hub in METERS and Hood angle in rotation
-    hoodOpposition.put(0.0, 15.0 / Shooter.HOOD_DEG_PER_ROTATION);
-    hoodOpposition.put(10.0, 15.0 / Shooter.HOOD_DEG_PER_ROTATION);
-    hoodOpposition.put(12.0, 17.5 / Shooter.HOOD_DEG_PER_ROTATION);
-    hoodOpposition.put(15.0, 20.0 / Shooter.HOOD_DEG_PER_ROTATION);
-    hoodOpposition.put(20.0, 20.0 / Shooter.HOOD_DEG_PER_ROTATION);
+    hoodOpposition.put(0.0, 13.0 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
+    hoodOpposition.put(10.0, 13.0 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
+    hoodOpposition.put(12.0, 13.5 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
+    hoodOpposition.put(15.0, 14.0 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
+    hoodOpposition.put(20.0, 14.5 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
   }
 
   public List<BaseStatusSignal> getSignals() {

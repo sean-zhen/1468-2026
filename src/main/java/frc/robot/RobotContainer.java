@@ -363,7 +363,7 @@ public class RobotContainer {
     final JoystickButton harvesterSpinReverse = new JoystickButton(operatorManualJoystick, 6);
     final JoystickButton rollersSpinReverse = new JoystickButton(operatorManualJoystick, 7);
     final JoystickButton zeroHoodBtn = new JoystickButton(operatorManualJoystick, 8);
-    final JoystickButton zeroTurretBtn = new JoystickButton(operatorManualJoystick, 9);
+    final JoystickButton shootBtn = new JoystickButton(operatorManualJoystick, 9);
     final JoystickButton resetHarvesterEncoder = new JoystickButton(operatorManualJoystick, 10);
     final JoystickButton manPrepareShtrBtn2 = new JoystickButton(operatorManualJoystick, 11);
     ////////////////////////////////////////////////////////////////////////////////////////////
@@ -495,13 +495,19 @@ public class RobotContainer {
     // up to speed and angle to target is calculated)
     // and then start rollers which will start the actual shooting of the balls
     // kicker
-    fireBtn
-        .onTrue(new InstantCommand(() -> prepareShooterCmd.setShootingMode(true)))
-        .onFalse(new InstantCommand(() -> prepareShooterCmd.setShootingMode(false)));
+    // fireBtn
+    //     .onTrue(new InstantCommand(() -> prepareShooterCmd.setShootingMode(true)))
+    //     .onFalse(new InstantCommand(() -> prepareShooterCmd.setShootingMode(false)));
 
     fireBtn.whileTrue(
         new Kick(kicker)
-            .alongWith(prepareShooterCmd)
+            .alongWith(
+                new PrepareShooterCmd(
+                    shooter,
+                    drive,
+                    () -> DONT_OVERRIDE_VAL,
+                    () -> DONT_OVERRIDE_VAL,
+                    () -> DONT_OVERRIDE_VAL))
             .alongWith(
                 Commands.waitSeconds(0.2)
                     .andThen(new InstantCommand(() -> rollers.setVelocity(NORMAL_RPS)))));
@@ -540,9 +546,14 @@ public class RobotContainer {
 
     // Start preparing flyywheel when Aim button is pressed and keep running until interrupted
     // Keep hood at 0.0 for safety
+    // aimBtn.onTrue(Commands.runOnce(() -> prepareShooterCmd.setShootingMode(false)));
     aimBtn.onTrue(
-        Commands.runOnce(() -> prepareShooterCmd.setShootingMode(false))
-            .andThen(prepareShooterCmd));
+        new PrepareShooterCmd(
+            shooter,
+            drive,
+            (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
+            (DoubleSupplier) () -> 0.0,
+            (DoubleSupplier) () -> DONT_OVERRIDE_VAL));
 
     // Stop aiming and reset shooter outputs when Aim Stop button is pressed
     aimStopBtn.onTrue(
@@ -558,49 +569,49 @@ public class RobotContainer {
 
     harvestAgitate.whileTrue(HarvesterAgitate.create(harvester));
 
-    // Prepare to shoot from Hub // TODO: TA - All parameters must be fixed
+    // Prepare to shoot from Hub - 1 meter// TODO: TA - All parameters must be fixed
     new POVButton(operatorAutoJoystick, 0)
         .debounce(0.10)
         .onTrue(
             new PrepareShooterCmd(
                 shooter,
                 drive,
-                (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
-                (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
-                (DoubleSupplier) () -> 0.0));
+                (DoubleSupplier) () -> 40.0,
+                (DoubleSupplier) () -> 0.0,
+                (DoubleSupplier) () -> DONT_OVERRIDE_VAL));
 
-    // Prepare to shoot from Tower // TODO: TA - All parameters must be fixed
+    // Prepare to shoot from Tower - 3.4 meters// TODO: TA - All parameters must be fixed
     new POVButton(operatorAutoJoystick, 180)
         .debounce(0.10)
         .onTrue(
             new PrepareShooterCmd(
                 shooter,
                 drive,
-                (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
-                (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
-                (DoubleSupplier) () -> 0.0));
+                (DoubleSupplier) () -> 49.0,
+                (DoubleSupplier) () -> 0.51 / 2.0,
+                (DoubleSupplier) () -> DONT_OVERRIDE_VAL));
 
-    // Prepare to shoot from Depot // TODO: TA - All parameters must be fixed
+    // Prepare to shoot from Depot - 2.25 meters // TODO: TA - All parameters must be fixed
     new POVButton(operatorAutoJoystick, 90)
         .debounce(0.10)
         .onTrue(
             new PrepareShooterCmd(
                 shooter,
                 drive,
-                (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
-                (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
-                (DoubleSupplier) () -> -90.0));
+                (DoubleSupplier) () -> 46.0,
+                (DoubleSupplier) () -> 0.3 / 2.0,
+                (DoubleSupplier) () -> DONT_OVERRIDE_VAL));
 
-    // Prepare to shoot from Outpost // TODO: TA - All parameters must be fixed
+    // Prepare to shoot from Outpost 5.5 meters // TODO: TA - All parameters must be fixed
     new POVButton(operatorAutoJoystick, 270)
         .debounce(0.10)
         .onTrue(
             new PrepareShooterCmd(
                 shooter,
                 drive,
-                (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
-                (DoubleSupplier) () -> DONT_OVERRIDE_VAL,
-                (DoubleSupplier) () -> 90.0));
+                (DoubleSupplier) () -> 56.0,
+                (DoubleSupplier) () -> 0.85 / 2.0,
+                (DoubleSupplier) () -> DONT_OVERRIDE_VAL));
 
     //////////////////////////////////////////////////////////////
     /// Operator Manual Buttons / Commands (Joystick 2 / Left Hand)
@@ -642,15 +653,13 @@ public class RobotContainer {
                 (DoubleSupplier) () -> 0.0,
                 (DoubleSupplier) () -> turretEntry.getDouble(999.0))));
 
-    zeroTurretBtn
+    shootBtn
         .debounce(0.10)
-        .onTrue(
-            (new PrepareShooterCmd(
-                shooter,
-                drive,
-                (DoubleSupplier) () -> flyEntry.getDouble(999.0),
-                (DoubleSupplier) () -> hoodEntry.getDouble(999.0),
-                (DoubleSupplier) () -> 0.0)));
+        .whileTrue(
+            new Kick(kicker)
+                .alongWith(
+                    Commands.waitSeconds(0.2)
+                        .andThen(new InstantCommand(() -> rollers.setVelocity(NORMAL_RPS)))));
 
     resetHarvesterEncoder.onTrue(new InstantCommand(() -> harvester.zeroDeployEncoder()));
 

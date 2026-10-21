@@ -31,13 +31,16 @@ import edu.wpi.first.wpilibj2.command.button.POVButton;
 import frc.robot.commands.AllMotorsBrake;
 import frc.robot.commands.AllMotorsCoast;
 import frc.robot.commands.DriveCommands;
+import frc.robot.commands.DriveLockToHubCmd;
 import frc.robot.commands.DriveToDepotCommandPP;
 import frc.robot.commands.DriveToHubCommandPP;
+import frc.robot.commands.DriveToOutpostCommandPP;
 import frc.robot.commands.HarvesterAgitate;
 import frc.robot.commands.HarvesterDeploy;
 import frc.robot.commands.HarvesterSpin;
 import frc.robot.commands.Kick;
 import frc.robot.commands.PrepareShooterCmd;
+import frc.robot.commands.Roll;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.HarvesterSubsystem;
 import frc.robot.subsystems.KickerSubsystem;
@@ -164,8 +167,8 @@ public class RobotContainer {
                 new PrepareShooterCmd(
                     shooter,
                     drive,
-                    (DoubleSupplier) () -> 46.0,
-                    (DoubleSupplier) () -> 0.30,
+                    (DoubleSupplier) () -> 43.0,
+                    (DoubleSupplier) () -> 0.00,
                     (DoubleSupplier) () -> DONT_OVERRIDE_VAL),
             Set.of(shooter)));
 
@@ -176,8 +179,8 @@ public class RobotContainer {
                 new PrepareShooterCmd(
                     shooter,
                     drive,
-                    (DoubleSupplier) () -> 49.0,
-                    (DoubleSupplier) () -> 0.51,
+                    (DoubleSupplier) () -> 45.0,
+                    (DoubleSupplier) () -> 0.18,
                     (DoubleSupplier) () -> DONT_OVERRIDE_VAL),
             Set.of(shooter)));
 
@@ -196,12 +199,7 @@ public class RobotContainer {
     NamedCommands.registerCommand(
         "Fire",
         Commands.defer(
-            () ->
-                new Kick(kicker)
-                    .alongWith(
-                        Commands.waitSeconds(0.2)
-                            .andThen(
-                                () -> new InstantCommand(() -> rollers.setVelocity(NORMAL_RPS)))),
+            () -> new Kick(kicker).alongWith(Commands.waitSeconds(0.2).andThen(new Roll(rollers))),
             Set.of(kicker, rollers)));
 
     NamedCommands.registerCommand(
@@ -222,6 +220,10 @@ public class RobotContainer {
         "StopHarvest",
         Commands.defer(
             () -> new HarvesterDeploy(harvester, DEPLOY_IN_ANGLE, 0.0), Set.of(harvester)));
+
+    NamedCommands.registerCommand(
+        "HarvestMid",
+        Commands.defer(() -> new HarvesterDeploy(harvester, 12.0, 0.0), Set.of(harvester)));
 
     // ***** This must be after all NamedCommands are registered,
     // ***** as AutoBuilder.buildAutoChooser() needs to access them to build
@@ -346,8 +348,8 @@ public class RobotContainer {
     ////////////////////////////////////////////////////////////////////////////////////////////
     /// Driver Right Buttons (Joystick 1)
     ////////////////////////////////////////////////////////////////////////////////////////////
-    final JoystickButton faceHubButton = new JoystickButton(driverRightJoystick, 1);
-    final JoystickButton lockToTargetBtn = new JoystickButton(driverRightJoystick, 2);
+    final JoystickButton turboButton = new JoystickButton(driverRightJoystick, 1);
+    final JoystickButton faceHubButton = new JoystickButton(driverRightJoystick, 2);
     final JoystickButton resetGyro = new JoystickButton(driverRightJoystick, 7);
     final JoystickButton resetTurret = new JoystickButton(driverRightJoystick, 11);
 
@@ -356,15 +358,19 @@ public class RobotContainer {
     /// Operator Left Buttons (Joystick 2) Manual / Override Buttons
     ////////////////////////////////////////////////////////////////////////////////////////////
     final JoystickButton flyWheel = new JoystickButton(operatorManualJoystick, 1);
-    final JoystickButton kickBtn = new JoystickButton(operatorManualJoystick, 2);
-    final JoystickButton harvesterDeployBtn = new JoystickButton(operatorManualJoystick, 3);
+    // final JoystickButton kickBtn = new JoystickButton(operatorManualJoystick, 2);
+    final JoystickButton resetHarvesterEncoder = new JoystickButton(operatorManualJoystick, 3);
+    // final JoystickButton harvesterDeployBtn = new JoystickButton(operatorManualJoystick, 3);
     final JoystickButton harvesterSpin = new JoystickButton(operatorManualJoystick, 4);
     final JoystickButton rollersSpin = new JoystickButton(operatorManualJoystick, 5);
     final JoystickButton harvesterSpinReverse = new JoystickButton(operatorManualJoystick, 6);
     final JoystickButton rollersSpinReverse = new JoystickButton(operatorManualJoystick, 7);
-    final JoystickButton zeroHoodBtn = new JoystickButton(operatorManualJoystick, 8);
-    final JoystickButton shootBtn = new JoystickButton(operatorManualJoystick, 9);
-    final JoystickButton resetHarvesterEncoder = new JoystickButton(operatorManualJoystick, 10);
+    // final JoystickButton zeroHoodBtn = new JoystickButton(operatorManualJoystick, 8);
+    final JoystickButton shootBtn = new JoystickButton(operatorManualJoystick, 10);
+
+    final JoystickButton harvestIncrementUp = new JoystickButton(operatorManualJoystick, 8);
+    final JoystickButton harvestIncrementDown = new JoystickButton(operatorManualJoystick, 9);
+
     final JoystickButton manPrepareShtrBtn2 = new JoystickButton(operatorManualJoystick, 11);
     ////////////////////////////////////////////////////////////////////////////////////////////
     /// Operator Right Buttons (Joystick 3) Automatic / Real Game Operation
@@ -375,17 +381,18 @@ public class RobotContainer {
     final JoystickButton harvestStartBtn = new JoystickButton(operatorAutoJoystick, 5);
     final JoystickButton harvestAgitate = new JoystickButton(operatorAutoJoystick, 6);
     final JoystickButton aimStopBtn = new JoystickButton(operatorAutoJoystick, 8);
-    final JoystickButton climberUpBtn = new JoystickButton(operatorAutoJoystick, 9);
-    final JoystickButton climberDownBtn = new JoystickButton(operatorAutoJoystick, 10);
+    final JoystickButton deployHarvZero = new JoystickButton(operatorAutoJoystick, 12);
+    // final JoystickButton climberUpBtn = new JoystickButton(operatorAutoJoystick, 9);
+    // final JoystickButton climberDownBtn = new JoystickButton(operatorAutoJoystick, 10);
     ////////////////////////////////////////////////////////////////////////////////////////////
 
     // Default command, normal field-relative drive
     drive.setDefaultCommand(
         DriveCommands.joystickDrive(
             drive,
-            () -> -driverLeftJoystick.getY(),
-            () -> -driverLeftJoystick.getX(),
-            () -> -driverRightJoystick.getX()));
+            () -> (-driverLeftJoystick.getY() * 0.75),
+            () -> (-driverLeftJoystick.getX() * 0.75),
+            () -> (-driverRightJoystick.getX() * 0.75)));
 
     //////////////////////////////////////////////////////////////
     /// Driver Buttons / Commands Left Joystick (0)
@@ -395,7 +402,7 @@ public class RobotContainer {
     stopWithXPatBtn.onTrue(Commands.runOnce(drive::stopWithX, drive));
 
     driveToDepot.onTrue(DriveToDepotCommandPP.create(drive));
-    driveToOutpost.onTrue(DriveToDepotCommandPP.create(drive));
+    driveToOutpost.onTrue(DriveToOutpostCommandPP.create(drive));
     driveToHub.onTrue(DriveToHubCommandPP.create(drive));
     // driveToTower.onTrue(DriveToTowerCommandPP.create(drive));
 
@@ -411,9 +418,9 @@ public class RobotContainer {
 
     // Lock Onto Hub
     // While holding Button 1 on the Right Joystick, lock heading to the Hub
-    // faceHubButton.whileTrue(
-    //     DriveLockToHubCmd.create(
-    //         drive, () -> -driverLeftJoystick.getY(), () -> -driverLeftJoystick.getX()));
+    faceHubButton.whileTrue(
+        DriveLockToHubCmd.create(
+            drive, () -> -driverLeftJoystick.getY(), () -> -driverLeftJoystick.getX()));
 
     // Supplier<Rotation2d> sweepRotationSupplier =
     //     () -> {
@@ -441,33 +448,40 @@ public class RobotContainer {
     //       return Rotation2d.fromDegrees(targetAngle + offset);
     //     };
 
-    // Lock to Hub / target while button is held
-    faceHubButton.whileTrue(
-        // DriveCommands.joystickDriveAtAngle(
-        //     drive,
-        //     () -> -driverLeftJoystick.getY(),
-        //     () -> -driverLeftJoystick.getX(),
-        //     sweepRotationSupplier));
-        DriveCommands.joystickDriveAtAngle(
+    turboButton.whileTrue(
+        DriveCommands.joystickDrive(
             drive,
-            () -> -driverLeftJoystick.getY(),
-            () -> -driverLeftJoystick.getX(),
-            () -> prepareShooterCmd.getAimAngle(),
-            () -> prepareShooterCmd.getVirtualTarget()));
+            () -> (-driverLeftJoystick.getY()),
+            () -> (-driverLeftJoystick.getX()),
+            () -> (-driverRightJoystick.getX())));
 
     // Lock to Hub / target while button is held
-    lockToTargetBtn.whileTrue(
-        // DriveCommands.joystickDriveAtAngle(
-        //     drive,
-        //     () -> -driverLeftJoystick.getY(),
-        //     () -> -driverLeftJoystick.getX(),
-        //     sweepRotationSupplier));
-        DriveCommands.joystickDriveAtAngle(
-            drive,
-            () -> -driverLeftJoystick.getY(),
-            () -> -driverLeftJoystick.getX(),
-            () -> prepareShooterCmd.getAimAngle(),
-            () -> prepareShooterCmd.getVirtualTarget()));
+    // faceHubButton.whileTrue(
+    //     // DriveCommands.joystickDriveAtAngle(
+    //     //     drive,
+    //     //     () -> -driverLeftJoystick.getY(),
+    //     //     () -> -driverLeftJoystick.getX(),
+    //     //     sweepRotationSupplier));
+    //     DriveCommands.joystickDriveAtAngle(
+    //         drive,
+    //         () -> -driverLeftJoystick.getY(),
+    //         () -> -driverLeftJoystick.getX(),
+    //         () -> prepareShooterCmd.getAimAngle(),
+    //         () -> prepareShooterCmd.getVirtualTarget()));
+
+    // Lock to Hub / target while button is held
+    // lockToTargetBtn.whileTrue(
+    //     DriveCommands.joystickDriveAtAngle(
+    //         drive,
+    //         () -> -driverLeftJoystick.getY(),
+    //         () -> -driverLeftJoystick.getX(),
+    //         sweepRotationSupplier));
+    // DriveCommands.joystickDriveAtAngle(
+    //     drive,
+    //     () -> -driverLeftJoystick.getY(),
+    //     () -> -driverLeftJoystick.getX(),
+    //     () -> prepareShooterCmd.getAimAngle(),
+    //     () -> prepareShooterCmd.getVirtualTarget()));
 
     // Reset gyro to 0° when 7 on right joystick button is pressed
     resetGyro.onTrue(
@@ -508,9 +522,7 @@ public class RobotContainer {
                     () -> DONT_OVERRIDE_VAL,
                     () -> DONT_OVERRIDE_VAL,
                     () -> DONT_OVERRIDE_VAL))
-            .alongWith(
-                Commands.waitSeconds(0.2)
-                    .andThen(new InstantCommand(() -> rollers.setVelocity(NORMAL_RPS)))));
+            .alongWith(Commands.waitSeconds(0.0).andThen(new Roll(rollers))));
     //     .onlyIf(() -> prepareShooterCmd.isAligned()));
 
     // TODO: TA - add the onlyif logic when tested that everything works without it.
@@ -567,6 +579,8 @@ public class RobotContainer {
     harvestStartBtn.onTrue(new HarvesterDeploy(harvester, DEPLOY_OUT_ANGLE, 0.0));
     harvestStopBtn.onTrue(new HarvesterDeploy(harvester, DEPLOY_IN_ANGLE, 0.0));
 
+    deployHarvZero.onTrue(new HarvesterDeploy(harvester, -5.0, 0.0));
+
     harvestAgitate.whileTrue(HarvesterAgitate.create(harvester));
 
     // Prepare to shoot from Hub - 1 meter// TODO: TA - All parameters must be fixed
@@ -577,18 +591,18 @@ public class RobotContainer {
                 shooter,
                 drive,
                 (DoubleSupplier) () -> 40.0,
-                (DoubleSupplier) () -> 0.0,
+                (DoubleSupplier) () -> 0.25,
                 (DoubleSupplier) () -> DONT_OVERRIDE_VAL));
 
-    // Prepare to shoot from Tower - 3.4 meters// TODO: TA - All parameters must be fixed
+    // Prepare to shoot from Tower - 5.5 meters// TODO: TA - All parameters must be fixed
     new POVButton(operatorAutoJoystick, 180)
         .debounce(0.10)
         .onTrue(
             new PrepareShooterCmd(
                 shooter,
                 drive,
-                (DoubleSupplier) () -> 49.0,
-                (DoubleSupplier) () -> 0.51 / 2.0,
+                (DoubleSupplier) () -> 40.0,
+                (DoubleSupplier) () -> 0.75,
                 (DoubleSupplier) () -> DONT_OVERRIDE_VAL));
 
     // Prepare to shoot from Depot - 2.25 meters // TODO: TA - All parameters must be fixed
@@ -598,19 +612,19 @@ public class RobotContainer {
             new PrepareShooterCmd(
                 shooter,
                 drive,
-                (DoubleSupplier) () -> 46.0,
-                (DoubleSupplier) () -> 0.3 / 2.0,
+                (DoubleSupplier) () -> 50,
+                (DoubleSupplier) () -> 0.25,
                 (DoubleSupplier) () -> DONT_OVERRIDE_VAL));
 
-    // Prepare to shoot from Outpost 5.5 meters // TODO: TA - All parameters must be fixed
+    // Prepare to shoot from Outpost 3.4 meters // TODO: TA - All parameters must be fixed
     new POVButton(operatorAutoJoystick, 270)
         .debounce(0.10)
         .onTrue(
             new PrepareShooterCmd(
                 shooter,
                 drive,
-                (DoubleSupplier) () -> 56.0,
-                (DoubleSupplier) () -> 0.85 / 2.0,
+                (DoubleSupplier) () -> 50,
+                (DoubleSupplier) () -> 0.75,
                 (DoubleSupplier) () -> DONT_OVERRIDE_VAL));
 
     //////////////////////////////////////////////////////////////
@@ -623,17 +637,17 @@ public class RobotContainer {
             (new PrepareShooterCmd(
                 shooter,
                 drive,
-                (DoubleSupplier) () -> (operatorManualJoystick.getZ() - 1) / 2.0,
-                (DoubleSupplier) () -> hoodEntry.getDouble(999.0),
+                (DoubleSupplier) () -> (operatorManualJoystick.getZ() + 1) * 50.0,
+                (DoubleSupplier) () -> (driverRightJoystick.getZ() + 1) / 2.0,
                 (DoubleSupplier) () -> turretEntry.getDouble(999.0))));
 
     // Kicker
-    kickBtn.whileTrue(new Kick(kicker));
+    // kickBtn.whileTrue(new Kick(kicker));
 
     // Harvester Deploy
     // harvesterDeployBtn.onTrue(new HarvesterDeploy(harvester, DEPLOY_IN_ANGLE, 0.0));
-    harvesterDeployBtn.onTrue(new HarvesterDeploy(harvester, 45.0, 0.0));
-    harvesterDeployBtn.onFalse(new HarvesterDeploy(harvester, DEPLOY_START_ANGLE, 0.0));
+    // harvesterDeployBtn.onTrue(new HarvesterDeploy(harvester, 45.0, 0.0));
+    // harvesterDeployBtn.onFalse(new HarvesterDeploy(harvester, DEPLOY_START_ANGLE, 0.0));
 
     // Harvester Spin
     harvesterSpin.whileTrue(new HarvesterSpin(harvester, false));
@@ -643,15 +657,15 @@ public class RobotContainer {
     rollersSpin.whileTrue(new InstantCommand(() -> rollers.setVelocity(NORMAL_RPS)));
     rollersSpinReverse.whileTrue(new InstantCommand(() -> rollers.setVelocity(REVERSE_RPS)));
 
-    zeroHoodBtn
-        .debounce(0.10)
-        .onTrue(
-            (new PrepareShooterCmd(
-                shooter,
-                drive,
-                (DoubleSupplier) () -> flyEntry.getDouble(999.0),
-                (DoubleSupplier) () -> 0.0,
-                (DoubleSupplier) () -> turretEntry.getDouble(999.0))));
+    // zeroHoodBtn
+    //     .debounce(0.10)
+    //     .onTrue(
+    //         (new PrepareShooterCmd(
+    //             shooter,
+    //             drive,
+    //             (DoubleSupplier) () -> flyEntry.getDouble(999.0),
+    //             (DoubleSupplier) () -> 0.0,
+    //             (DoubleSupplier) () -> turretEntry.getDouble(999.0))));
 
     shootBtn
         .debounce(0.10)
@@ -659,9 +673,14 @@ public class RobotContainer {
             new Kick(kicker)
                 .alongWith(
                     Commands.waitSeconds(0.2)
-                        .andThen(new InstantCommand(() -> rollers.setVelocity(NORMAL_RPS)))));
+                        .alongWith(Commands.waitSeconds(0.2).andThen(new Roll(rollers)))));
+    //                      .andThen(new InstantCommand(() -> rollers.setVelocity(NORMAL_RPS)))));
 
     resetHarvesterEncoder.onTrue(new InstantCommand(() -> harvester.zeroDeployEncoder()));
+
+    harvestIncrementUp.onTrue(new InstantCommand(() -> harvester.setDeployVelocity(6.0)));
+
+    harvestIncrementDown.onTrue(new InstantCommand(() -> harvester.setDeployVelocity(-6.0)));
 
     // flyEntry = Shuffleboard.getTab("Shooter").add("Flywheel", 0).getEntry();
     // hoodEntry = Shuffleboard.getTab("Shooter").add("Hood", 0).getEntry();
@@ -750,32 +769,32 @@ public class RobotContainer {
       canCoderFaultAlertSent = false;
     }
 
-    if (rioUsage > 90) {
-      if (!canUtilizationAlertSent) {
-        Elastic.sendNotification(
-            new Elastic.Notification(
-                Elastic.NotificationLevel.ERROR,
-                "RIO CAN High Load",
-                "RIO CAN bus at %.1f%% utilization — keep below 90%"));
-        canUtilizationAlertSent = true; // Mark as sent so it doesn't repeat
-      }
-    } else {
-      // Reset the alert state when the CAN bus is healthy again
-      canUtilizationAlertSent = false;
-    }
+    // if (rioUsage > 90) {
+    //   if (!canUtilizationAlertSent) {
+    //     Elastic.sendNotification(
+    //         new Elastic.Notification(
+    //             Elastic.NotificationLevel.ERROR,
+    //             "RIO CAN High Load",
+    //             "RIO CAN bus at %.1f%% utilization — keep below 90%"));
+    //     canUtilizationAlertSent = true; // Mark as sent so it doesn't repeat
+    //   }
+    // } else {
+    //   // Reset the alert state when the CAN bus is healthy again
+    //   canUtilizationAlertSent = false;
+    // }
 
-    if (canivoreUsage > 90) {
-      if (!canCoderUtilizationAlertSent) {
-        Elastic.sendNotification(
-            new Elastic.Notification(
-                Elastic.NotificationLevel.ERROR,
-                "CANivore High Load",
-                "CANivore bus at %.1f%% utilization — keep below 90%%.\", canivoreUsage"));
-        canCoderUtilizationAlertSent = true; // Mark as sent so it doesn't repeat
-      }
-    } else {
-      // Reset the alert state when the CAN bus is healthy again
-      canCoderUtilizationAlertSent = false;
-    }
+    // if (canivoreUsage > 90) {
+    //   if (!canCoderUtilizationAlertSent) {
+    //     Elastic.sendNotification(
+    //         new Elastic.Notification(
+    //             Elastic.NotificationLevel.ERROR,
+    //             "CANivore High Load",
+    //             "CANivore bus at %.1f%% utilization — keep below 90%%.\", canivoreUsage"));
+    //     canCoderUtilizationAlertSent = true; // Mark as sent so it doesn't repeat
+    //   }
+    // } else {
+    //   // Reset the alert state when the CAN bus is healthy again
+    //   canCoderUtilizationAlertSent = false;
+    // }
   }
 }

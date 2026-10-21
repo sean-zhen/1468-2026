@@ -99,6 +99,12 @@ public class VisionSubsystem extends SubsystemBase {
   private volatile double photonTimestampOffset =
       0.0; // seconds to add to photon ts to map to FPGA time
 
+  private static final Set<Integer> IGNORED_TAGS = Set.of(13, 14, 15, 16, 29, 30, 31, 32);
+
+  // ********************** Change this to the actual number of active cameras (1-4)
+  // **********************
+  private static final int ACTIVE_CAMERAS = 4;
+
   private static class Measurement {
     Pose2d pose;
     double score;
@@ -114,7 +120,7 @@ public class VisionSubsystem extends SubsystemBase {
             Units.inchesToMeters(-11.946),
             Units.inchesToMeters(10.063),
             Units.inchesToMeters(7.799)),
-        new Rotation3d(0, Units.degreesToRadians(-28), Units.degreesToRadians(220))), // Cam 3
+        new Rotation3d(0, Units.degreesToRadians(-28), Units.degreesToRadians(220))), // Cam 1
     new Transform3d(
         new Translation3d(
             Units.inchesToMeters(-11.946),
@@ -123,23 +129,31 @@ public class VisionSubsystem extends SubsystemBase {
         new Rotation3d(0, Units.degreesToRadians(-28), Units.degreesToRadians(140))), // Cam 2
     new Transform3d(
         new Translation3d(
-            Units.inchesToMeters(-7.857),
+            Units.inchesToMeters(1.643),
             Units.inchesToMeters(-12.293),
             Units.inchesToMeters(8.181)),
-        new Rotation3d(0, Units.degreesToRadians(-18), Units.degreesToRadians(290))), // Cam 1
+        new Rotation3d(0, Units.degreesToRadians(-18), Units.degreesToRadians(290))), // Cam 3
     new Transform3d(
         new Translation3d(
-            Units.inchesToMeters(-7.857),
-            Units.inchesToMeters(12.293),
-            Units.inchesToMeters(8.181)),
-        new Rotation3d(0, Units.degreesToRadians(-18), Units.degreesToRadians(70))), // Cam 4
+            Units.inchesToMeters(1.643), Units.inchesToMeters(12.293), Units.inchesToMeters(8.181)),
+        new Rotation3d(0, Units.degreesToRadians(-18), Units.degreesToRadians(70))) // Cam 4
   };
 
   public VisionSubsystem(Drive drive) {
     this.drive = drive;
-    fieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltWelded);
+    // fieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltWelded);
 
-    for (int i = 0; i < 4; i++) {
+    AprilTagFieldLayout baseLayout =
+        AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltWelded);
+
+    var filteredTags =
+        baseLayout.getTags().stream().filter(tag -> !IGNORED_TAGS.contains(tag.ID)).toList();
+
+    fieldLayout =
+        new AprilTagFieldLayout(
+            filteredTags, baseLayout.getFieldLength(), baseLayout.getFieldWidth());
+
+    for (int i = 0; i < ACTIVE_CAMERAS; i++) {
       cameras[i] = new PhotonCamera(CAM_NAMES[i]);
       estimators[i] = new PhotonPoseEstimator(fieldLayout, CAMERA_TRANSFORMS[i]);
     }
@@ -153,7 +167,7 @@ public class VisionSubsystem extends SubsystemBase {
     poseUpdatedPub = visionTable.getBooleanTopic("PoseUpdated").publish();
 
     // Cache per-camera publishers
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < ACTIVE_CAMERAS; i++) {
       NetworkTable camTable = visionTable.getSubTable("Cam" + (i + 1));
       NetworkTable dbg = camTable.getSubTable("Debug");
       camConnectedPub[i] = dbg.getBooleanTopic("Connected").publish();
@@ -290,7 +304,7 @@ public class VisionSubsystem extends SubsystemBase {
 
   private List<Measurement> collectMeasurements(double velocity) {
     List<Measurement> list = new ArrayList<>();
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < ACTIVE_CAMERAS; i++) {
       var results = cameras[i].getAllUnreadResults();
       camConnectedPub[i].set(cameras[i].isConnected());
       camResultCountPub[i].set(results.size());

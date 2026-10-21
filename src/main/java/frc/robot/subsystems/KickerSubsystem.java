@@ -103,6 +103,10 @@ public class KickerSubsystem extends SubsystemBase {
     slot0.kD = Kicker.kD;
     config.Slot0 = slot0;
     config.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
+
+    config.CurrentLimits.StatorCurrentLimit = 80.0;
+    config.CurrentLimits.StatorCurrentLimitEnable = true;
+
     motor.getConfigurator().apply(config);
     motor.setNeutralMode(NeutralModeValue.Brake);
   }

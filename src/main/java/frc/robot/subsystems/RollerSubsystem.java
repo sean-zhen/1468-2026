@@ -83,13 +83,19 @@ public class RollerSubsystem extends SubsystemBase {
 
   private void configureMotor(TalonFX motor) {
     TalonFXConfiguration config = new TalonFXConfiguration();
+
     Slot0Configs slot0 = new Slot0Configs();
     slot0.kP = Rollers.kP;
     slot0.kI = Rollers.kI;
     slot0.kD = Rollers.kD;
     slot0.kV = Rollers.kV;
     config.Slot0 = slot0;
+
     config.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+
+    config.CurrentLimits.StatorCurrentLimit = 80.0;
+    config.CurrentLimits.StatorCurrentLimitEnable = true;
+
     motor.getConfigurator().apply(config);
     motor.setNeutralMode(NeutralModeValue.Brake);
   }

@@ -1,0 +1,184 @@
+{
+  "version": "2025.0",
+  "waypoints": [
+    {
+      "anchor": {
+        "x": 3.0643309859154937,
+        "y": 2.5180105633802814
+      },
+      "prevControl": null,
+      "nextControl": {
+        "x": 3.6844022240610323,
+        "y": 2.428278761271239
+      },
+      "isLocked": false,
+      "linkedName": "AARtHarvEndPt"
+    },
+    {
+      "anchor": {
+        "x": 6.050404929570617,
+        "y": 2.5978521126684995
+      },
+      "prevControl": {
+        "x": 2.016076297429053,
+        "y": 2.589952458606935
+      },
+      "nextControl": {
+        "x": 6.300404450298277,
+        "y": 2.598341638909265
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 7.136250000000001,
+        "y": 1.208609154929578
+      },
+      "prevControl": {
+        "x": 6.110066961973956,
+        "y": 0.876376271744723
+      },
+      "nextControl": {
+        "x": 8.207757025234043,
+        "y": 1.555515949482635
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 7.439647887323944,
+        "y": 3.4282042253521126
+      },
+      "prevControl": {
+        "x": 7.881415462299387,
+        "y": 3.195839310650615
+      },
+      "nextControl": {
+        "x": 6.711252662834359,
+        "y": 3.811332150068881
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 5.204084507042254,
+        "y": 2.5
+      },
+      "prevControl": {
+        "x": 5.614165004316583,
+        "y": 2.53075238476143
+      },
+      "nextControl": {
+        "x": 4.824260049179642,
+        "y": 2.4715165487078044
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 3.0643309859154937,
+        "y": 2.5180105633802814
+      },
+      "prevControl": {
+        "x": 3.451518883464938,
+        "y": 2.476035271135632
+      },
+      "nextControl": null,
+      "isLocked": false,
+      "linkedName": "AARtHarvEndPt"
+    }
+  ],
+  "rotationTargets": [
+    {
+      "waypointRelativePos": 0.8695652173913038,
+      "rotationDegrees": -135.0
+    },
+    {
+      "waypointRelativePos": 1.2922705314009661,
+      "rotationDegrees": -80.0
+    },
+    {
+      "waypointRelativePos": 2.367149758454101,
+      "rotationDegrees": 90.0
+    },
+    {
+      "waypointRelativePos": 3.8888888888888893,
+      "rotationDegrees": -135.0
+    }
+  ],
+  "constraintZones": [],
+  "pointTowardsZones": [],
+  "eventMarkers": [
+    {
+      "name": "StopHarvest",
+      "waypointRelativePos": 0.0,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "parallel",
+        "data": {
+          "commands": [
+            {
+              "type": "named",
+              "data": {
+                "name": "HarvestMid"
+              }
+            },
+            {
+              "type": "named",
+              "data": {
+                "name": "Aim225"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "StartHarvest",
+      "waypointRelativePos": 1.0000000000000047,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "parallel",
+        "data": {
+          "commands": [
+            {
+              "type": "named",
+              "data": {
+                "name": "StartHarvest"
+              }
+            },
+            {
+              "type": "named",
+              "data": {
+                "name": "Aim225"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "globalConstraints": {
+    "maxVelocity": 2.05,
+    "maxAcceleration": 2.5,
+    "maxAngularVelocity": 400.0,
+    "maxAngularAcceleration": 720.0,
+    "nominalVoltage": 12.0,
+    "unlimited": false
+  },
+  "goalEndState": {
+    "velocity": 0,
+    "rotation": -135.0
+  },
+  "reversed": false,
+  "folder": null,
+  "idealStartingState": {
+    "velocity": 0,
+    "rotation": -135.0
+  },
+  "useDefaultConstraints": true
+}

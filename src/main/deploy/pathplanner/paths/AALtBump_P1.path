@@ -8,8 +8,8 @@
       },
       "prevControl": null,
       "nextControl": {
-        "x": 5.6183968398976605,
-        "y": 7.308182058698851
+        "x": 5.6979681188577285,
+        "y": 7.376127411873634
       },
       "isLocked": false,
       "linkedName": null
@@ -20,44 +20,44 @@
         "y": 7.35
       },
       "prevControl": {
-        "x": 6.2817130859332,
-        "y": 7.4307991563243645
+        "x": 6.284395780392034,
+        "y": 7.535978763513087
       },
       "nextControl": {
-        "x": 7.498281725454816,
-        "y": 7.195798451357704
+        "x": 7.112997090630027,
+        "y": 7.165187900829478
       },
       "isLocked": false,
       "linkedName": null
     },
     {
       "anchor": {
-        "x": 7.25,
-        "y": 4.705669014084507
+        "x": 7.519489436619718,
+        "y": 3.7156338028169014
       },
       "prevControl": {
-        "x": 8.177330703776947,
-        "y": 5.385981328691126
+        "x": 8.590995828539523,
+        "y": 4.170200969464683
       },
       "nextControl": {
-        "x": 6.9664186008501625,
-        "y": 4.497626815924514
+        "x": 6.735648136649331,
+        "y": 3.383103337748319
       },
       "isLocked": false,
       "linkedName": null
     },
     {
       "anchor": {
-        "x": 5.778943661971832,
-        "y": 5.152781690140846
+        "x": 5.826848591549297,
+        "y": 5.280528169014085
       },
       "prevControl": {
-        "x": 6.702796272869785,
-        "y": 4.399052089795038
+        "x": 6.4465958465621975,
+        "y": 4.681357493914615
       },
       "nextControl": {
-        "x": 5.49343072859336,
-        "y": 5.385718791395286
+        "x": 5.479440454256141,
+        "y": 5.616401811814901
       },
       "isLocked": false,
       "linkedName": null
@@ -68,8 +68,8 @@
         "y": 5.535
       },
       "prevControl": {
-        "x": 4.216218847166107,
-        "y": 5.457997979215487
+        "x": 4.353300894161116,
+        "y": 5.354072479233834
       },
       "nextControl": null,
       "isLocked": false,
@@ -99,7 +99,7 @@
   "eventMarkers": [
     {
       "name": "StartHarvest",
-      "waypointRelativePos": 0.4776119402985078,
+      "waypointRelativePos": 0.8,
       "endWaypointRelativePos": null,
       "command": {
         "type": "parallel",
@@ -147,8 +147,8 @@
     }
   ],
   "globalConstraints": {
-    "maxVelocity": 3.0,
-    "maxAcceleration": 3.0,
+    "maxVelocity": 2.05,
+    "maxAcceleration": 2.5,
     "maxAngularVelocity": 400.0,
     "maxAngularAcceleration": 720.0,
     "nominalVoltage": 12.0,

@@ -17,7 +17,7 @@
               {
                 "type": "wait",
                 "data": {
-                  "waitTime": 3.5
+                  "waitTime": 15.0
                 }
               },
               {
@@ -30,6 +30,12 @@
                 "type": "named",
                 "data": {
                   "name": "Fire"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "HarvestMid"
                 }
               }
             ]

@@ -40,7 +40,7 @@ public class ShooterSubsystem extends SubsystemBase {
   private final VelocityVoltage hoodVelocityRequest = new VelocityVoltage(0);
 
   // --- Control Requests ---
-  private final VelocityVoltage m_velocityReq = new VelocityVoltage(0);
+  // private final VelocityVoltage m_velocityReq = new VelocityVoltage(0);
   private final MotionMagicVoltage m_mmReq = new MotionMagicVoltage(0);
 
   private double targetFlyWheelVeloRPS = 0.0;
@@ -218,8 +218,8 @@ public class ShooterSubsystem extends SubsystemBase {
   private void configureMotors() {
     // --- Lead Flywheel (Velocity PID) ---
     TalonFXConfiguration leadConfigs = new TalonFXConfiguration();
-    leadConfigs.Slot0.kP = 0.11;
-    leadConfigs.Slot0.kV = 0.12;
+    leadConfigs.Slot0.kP = 0.5; // was 0.11     0.5
+    leadConfigs.Slot0.kV = 0.12; // was 0.12     0.3 too high
     leadConfigs.MotorOutput.NeutralMode = NeutralModeValue.Coast;
     leadConfigs.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
     leadConfigs.withCurrentLimits(
@@ -313,7 +313,9 @@ public class ShooterSubsystem extends SubsystemBase {
 
     // flywheelLead.setControl(new VelocityVoltage(flyRPS));
     // hoodMotor.setControl(new PositionVoltage(hoodRot * Shooter.HOOD_GEAR_RATIO));
-    flywheelLead.setControl(m_velocityReq.withVelocity(flyRPS));
+    // flywheelLead.setControl(m_velocityReq.withVelocity(flyRPS));
+    flywheelLead.setControl(leadRequest.withVelocity(flyRPS));
+
     hoodMotor.setControl(m_mmReq.withPosition(hoodRot));
 
     distanceEntry.setValue(distance);
@@ -324,7 +326,7 @@ public class ShooterSubsystem extends SubsystemBase {
         zone.equals("Alliance")
             ? flyAlliance.get(distance)
             : zone.equals("Neutral") ? flyNeutral.get(distance) : flyOpposition.get(distance);
-    flywheelLead.setControl(m_velocityReq.withVelocity(flyRPS));
+    flywheelLead.setControl(leadRequest.withVelocity(flyRPS));
 
     distanceEntry.setValue(distance);
   }
@@ -426,53 +428,63 @@ public class ShooterSubsystem extends SubsystemBase {
   private void setupTables() {
     // Alliance Zone Flywheel and Hood Tables // TODO TA: Must empirically obtain values
     // parameters are distance to Hub in METERS and RPS velocity of the flywheel
-    flyAlliance.put(0.0, 40.0);
-    flyAlliance.put(1.0, 40.0); // ABOUT THE SHORTEST SHOT IN OUR ALLIANCE ZONE
-    flyAlliance.put(2.0, 45.0);
-    flyAlliance.put(3.86, 50.0);
-    flyAlliance.put(5.62, 57.0); // outpost
-    // flyAlliance.put(6.0, 60.0); // ABOUT THE LONGEST SHOT IN OUR ALLIANCE ZONE
-    flyAlliance.put(8.0, 70.0);
+    flyAlliance.put(0.0, 37.0);
+    flyAlliance.put(1.0, 37.0); // ABOUT THE SHORTEST SHOT IN OUR ALLIANCE ZONE
+    flyAlliance.put(1.65, 39.0); // tested 4/24/26
+    flyAlliance.put(2.0, 42.0); // tested 4/24/26
+    flyAlliance.put(3.0, 48.0); // tested 4/24/26
+    flyAlliance.put(4.0, 58.0); //  tested 4/24/26
+    flyAlliance.put(5.0, 70.0); // tested 4/24/26
+
+    flyAlliance.put(5.5, 80.0); // ABOUT THE LONGEST SHOT IN OUR ALLIANCE ZONE
+    flyAlliance.put(6.0, 85.0);
+    flyAlliance.put(8.0, 95.0);
 
     // parameters are distance to Hub in METERS and Hood angle in rotations
-    hoodAlliance.put(0.0, 0.0 / Shooter.HOOD_DEG_PER_ROTATION);
-    hoodAlliance.put(1.0, 0.0 / Shooter.HOOD_DEG_PER_ROTATION);
-    hoodAlliance.put(2.56, 0.35 / 4.0);
-    hoodAlliance.put(4.0, 8.0 / 4.0 / Shooter.HOOD_DEG_PER_ROTATION);
-    hoodAlliance.put(6.0, 12.0 / 4.0 / Shooter.HOOD_DEG_PER_ROTATION);
-    hoodAlliance.put(8.0, 14.0 / 4.0 / Shooter.HOOD_DEG_PER_ROTATION);
+    hoodAlliance.put(0.0, 0.0);
+    hoodAlliance.put(1.0, 0.0); // ABOUT THE SHORTEST SHOT IN OUR ALLIANCE ZONE
+    hoodAlliance.put(2.0, 0.0); // tested 4/24/26 value
+
+    hoodAlliance.put(3.0, 0.0); // tested 4/24/26 value
+    hoodAlliance.put(4.0, 0.22); //  tested 4/24/26
+
+    hoodAlliance.put(5.0, 0.5); // tested 4/24/26
+    hoodAlliance.put(5.5, 0.5); // tested 4/24/26
+
+    hoodAlliance.put(6.0, 0.55); // ABOUT THE LONGEST SHOT IN OUR ALLIANCE ZONE
+    hoodAlliance.put(8.0, 0.6);
 
     // Neutral Zone Flywheel and Hood Tables // TODO TA: Must empirically obtain values
     // parameters are distance to Hub in METERS and RPS velocity of the flywheel
     flyNeutral.put(0.0, 50.0);
-    flyNeutral.put(4.0, 52.0); // ABOUT THE SHORTEST SHOT IN THE NEUTRAL ZONE
-    flyNeutral.put(7.0, 65.0);
-    flyNeutral.put(10.0, 75.0);
-    flyNeutral.put(12.0, 80.0); // ABOUT THE LONGEST SHOT IN THE NEUTRAL ZONE
-    flyNeutral.put(15.0, 85.0);
+    flyNeutral.put(4.0, 60.0); // ABOUT THE SHORTEST SHOT IN THE NEUTRAL ZONE
+    flyNeutral.put(6.0, 85.0);
+    flyNeutral.put(10.0, 95.0);
+    flyNeutral.put(12.0, 100.0); // ABOUT THE LONGEST SHOT IN THE NEUTRAL ZONE
+    flyNeutral.put(15.0, 100.0);
 
     // parameters are distance to Hub in METERS and Hood angle in rotation
-    hoodNeutral.put(0.0, 8.0 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
-    hoodNeutral.put(4.0, 8.0 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
-    hoodNeutral.put(7.0, 10.5 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
-    hoodNeutral.put(10.0, 13.0 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
-    hoodNeutral.put(12.0, 13.5 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
-    hoodNeutral.put(15.0, 14.0 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
+    hoodNeutral.put(0.0, 0.0);
+    hoodNeutral.put(4.0, 0.2);
+    hoodNeutral.put(7.0, 0.5);
+    hoodNeutral.put(10.0, 0.7);
+    hoodNeutral.put(12.0, 0.8);
+    hoodNeutral.put(15.0, 0.8);
 
     // Opposition Zone Flywheel and Hood Tables // TODO TA: Must empirically obtain values
     // parameters are distance to Hub in METERS and RPS velocity of the flywheel
-    flyOpposition.put(0.0, 65.0);
-    flyOpposition.put(10.0, 75.0); // ABOUT THE SHORTEST SHOT IN OPPONENTS ZONE
-    flyOpposition.put(12.0, 80.0);
-    flyOpposition.put(15.0, 85.0); // ABOUT THE LONGEST SHOT IN OPPONENTS ZONE
-    flyOpposition.put(20.0, 90.0);
+    flyOpposition.put(0.0, 95.0);
+    flyOpposition.put(10.0, 100.0); // ABOUT THE SHORTEST SHOT IN OPPONENTS ZONE
+    flyOpposition.put(12.0, 100.0);
+    flyOpposition.put(15.0, 100.0); // ABOUT THE LONGEST SHOT IN OPPONENTS ZONE
+    flyOpposition.put(20.0, 100.0);
 
     // parameters are distance to Hub in METERS and Hood angle in rotation
-    hoodOpposition.put(0.0, 13.0 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
-    hoodOpposition.put(10.0, 13.0 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
-    hoodOpposition.put(12.0, 13.5 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
-    hoodOpposition.put(15.0, 14.0 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
-    hoodOpposition.put(20.0, 14.5 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
+    hoodOpposition.put(0.0, 0.8);
+    hoodOpposition.put(10.0, 0.8);
+    hoodOpposition.put(12.0, 0.8);
+    hoodOpposition.put(15.0, 0.8);
+    hoodOpposition.put(20.0, 0.8);
   }
 
   public List<BaseStatusSignal> getSignals() {
@@ -486,3 +498,64 @@ public class ShooterSubsystem extends SubsystemBase {
     return flywheelVelocitySignal.getStatus().isOK() && hoodPositionSignal.getStatus().isOK();
   }
 }
+
+  // private void setupTables() {
+  //   // Alliance Zone Flywheel and Hood Tables // TODO TA: Must empirically obtain values
+  //   // parameters are distance to Hub in METERS and RPS velocity of the flywheel
+  //   flyAlliance.put(0.0, 45.0);
+  //   flyAlliance.put(1.0, 45.0); // ABOUT THE SHORTEST SHOT IN OUR ALLIANCE ZONE
+  //   flyAlliance.put(1.65, 45.0); // tested value
+  //   flyAlliance.put(2.0, 45.0); // tested value
+
+  //   flyAlliance.put(3.86, 55.0); // tested value
+  //   // flyAlliance.put(4.0, 47.0); // tested value
+  //   flyAlliance.put(5.62, 57.0); // tested value
+
+  //   // flyAlliance.put(6.0, 55.0); // ABOUT THE LONGEST SHOT IN OUR ALLIANCE ZONE
+  //   flyAlliance.put(8.0, 70.0);
+
+  //   // parameters are distance to Hub in METERS and Hood angle in rotations
+  //   hoodAlliance.put(0.0, 0.0);
+  //   hoodAlliance.put(1.0, 0.0); // ABOUT THE SHORTEST SHOT IN OUR ALLIANCE ZONE
+  //   hoodAlliance.put(2.0, 0.0); // tested value
+
+  //   hoodAlliance.put(2.560, 0.09); // tested value
+  //   hoodAlliance.put(4.0, 0.125); // tested value
+
+  //   hoodAlliance.put(5.0, 0.15); // tested value
+
+  //   hoodAlliance.put(6.0, 0.2); // ABOUT THE LONGEST SHOT IN OUR ALLIANCE ZONE
+  //   hoodAlliance.put(8.0, 0.3);
+
+  //   // Neutral Zone Flywheel and Hood Tables // TODO TA: Must empirically obtain values
+  //   // parameters are distance to Hub in METERS and RPS velocity of the flywheel
+  //   flyNeutral.put(0.0, 50.0);
+  //   flyNeutral.put(4.0, 55.0); // ABOUT THE SHORTEST SHOT IN THE NEUTRAL ZONE
+  //   flyNeutral.put(7.0, 70.0);
+  //   flyNeutral.put(10.0, 80.0);
+  //   flyNeutral.put(12.0, 85.0); // ABOUT THE LONGEST SHOT IN THE NEUTRAL ZONE
+  //   flyNeutral.put(15.0, 90.0);
+
+  //   // parameters are distance to Hub in METERS and Hood angle in rotation
+  //   hoodNeutral.put(0.0, 8.0 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
+  //   hoodNeutral.put(4.0, 8.0 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
+  //   hoodNeutral.put(7.0, 10.5 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
+  //   hoodNeutral.put(10.0, 13.0 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
+  //   hoodNeutral.put(12.0, 13.5 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
+  //   hoodNeutral.put(15.0, 14.0 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
+
+  //   // Opposition Zone Flywheel and Hood Tables // TODO TA: Must empirically obtain values
+  //   // parameters are distance to Hub in METERS and RPS velocity of the flywheel
+  //   flyOpposition.put(0.0, 65.0);
+  //   flyOpposition.put(10.0, 80.0); // ABOUT THE SHORTEST SHOT IN OPPONENTS ZONE
+  //   flyOpposition.put(12.0, 85.0);
+  //   flyOpposition.put(15.0, 90.0); // ABOUT THE LONGEST SHOT IN OPPONENTS ZONE
+  //   flyOpposition.put(20.0, 95.0);
+
+  //   // parameters are distance to Hub in METERS and Hood angle in rotation
+  //   hoodOpposition.put(0.0, 13.0 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
+  //   hoodOpposition.put(10.0, 13.0 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
+  //   hoodOpposition.put(12.0, 13.5 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
+  //   hoodOpposition.put(15.0, 14.0 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
+  //   hoodOpposition.put(20.0, 14.5 / 2.0 / Shooter.HOOD_DEG_PER_ROTATION);
+  // }

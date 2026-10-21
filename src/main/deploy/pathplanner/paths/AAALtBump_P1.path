@@ -1,0 +1,216 @@
+{
+  "version": "2025.0",
+  "waypoints": [
+    {
+      "anchor": {
+        "x": 3.591285211267606,
+        "y": 5.504084507042253
+      },
+      "prevControl": null,
+      "nextControl": {
+        "x": 3.7902980887370297,
+        "y": 5.323042981701338
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 5.7470070422535215,
+        "y": 5.296496478873239
+      },
+      "prevControl": {
+        "x": 2.9988529036734617,
+        "y": 5.7389591281220635
+      },
+      "nextControl": {
+        "x": 6.271495886006834,
+        "y": 5.212051898399872
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 6.529454225352114,
+        "y": 4.386302816901408
+      },
+      "prevControl": {
+        "x": 6.38355732247008,
+        "y": 4.589315362645335
+      },
+      "nextControl": {
+        "x": 6.911847472465818,
+        "y": 3.8542104623802986
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 7.982570422535211,
+        "y": 4.306461267605634
+      },
+      "prevControl": {
+        "x": 7.792558014728727,
+        "y": 4.1439950099409035
+      },
+      "nextControl": {
+        "x": 8.222339926070985,
+        "y": 4.511471321376756
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 8.110316901408451,
+        "y": 6.062975352112676
+      },
+      "prevControl": {
+        "x": 8.34797186967837,
+        "y": 5.4499293098968895
+      },
+      "nextControl": {
+        "x": 8.005237805821741,
+        "y": 6.3340335342243295
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 7.104313380281691,
+        "y": 6.621866197183099
+      },
+      "prevControl": {
+        "x": 7.567832072740886,
+        "y": 6.685661137967785
+      },
+      "nextControl": {
+        "x": 6.672300344307813,
+        "y": 6.562407438568758
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 5.7310387323875025,
+        "y": 5.583926056331964
+      },
+      "prevControl": {
+        "x": 6.009596210166644,
+        "y": 5.665751074031195
+      },
+      "nextControl": {
+        "x": 5.1763373375878325,
+        "y": 5.420984993650249
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 3.125,
+        "y": 5.535
+      },
+      "prevControl": {
+        "x": 3.3746631585205726,
+        "y": 5.547973329469775
+      },
+      "nextControl": null,
+      "isLocked": false,
+      "linkedName": "AALtHarvEndPt"
+    }
+  ],
+  "rotationTargets": [
+    {
+      "waypointRelativePos": 0.8236714975845407,
+      "rotationDegrees": 135.0
+    },
+    {
+      "waypointRelativePos": 2.0724637681159437,
+      "rotationDegrees": 10.0
+    },
+    {
+      "waypointRelativePos": 3.710144927536237,
+      "rotationDegrees": 91.0
+    },
+    {
+      "waypointRelativePos": 5.55,
+      "rotationDegrees": -135.0
+    }
+  ],
+  "constraintZones": [],
+  "pointTowardsZones": [],
+  "eventMarkers": [
+    {
+      "name": "StartHarvest",
+      "waypointRelativePos": 0.10447761194029759,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "parallel",
+        "data": {
+          "commands": [
+            {
+              "type": "named",
+              "data": {
+                "name": "StartHarvest"
+              }
+            },
+            {
+              "type": "named",
+              "data": {
+                "name": "Aim225"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "StopHarvest",
+      "waypointRelativePos": 6.310447761194036,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "parallel",
+        "data": {
+          "commands": [
+            {
+              "type": "named",
+              "data": {
+                "name": "HarvestMid"
+              }
+            },
+            {
+              "type": "named",
+              "data": {
+                "name": "Aim225"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "globalConstraints": {
+    "maxVelocity": 2.05,
+    "maxAcceleration": 2.5,
+    "maxAngularVelocity": 400.0,
+    "maxAngularAcceleration": 720.0,
+    "nominalVoltage": 12.0,
+    "unlimited": false
+  },
+  "goalEndState": {
+    "velocity": 0,
+    "rotation": 135.0
+  },
+  "reversed": false,
+  "folder": null,
+  "idealStartingState": {
+    "velocity": 0,
+    "rotation": 135.0
+  },
+  "useDefaultConstraints": true
+}

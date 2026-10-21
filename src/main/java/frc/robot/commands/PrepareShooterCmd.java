@@ -172,10 +172,10 @@ public class PrepareShooterCmd extends Command {
 
     // Correct lead sign: subtract robot/turret velocity
     // Translation2d virtualTarget = shootingTarget.minus(turretVel.times(flightTime));
-    cachedVirtualTarget = shootingTarget.minus(turretVel.times(flightTime));
+    cachedVirtualTarget = shootingTarget.plus(turretVel.times(flightTime));
     // Translation2d virtualTarget = cachedVirtualTarget;
     // filteredTarget = filteredTarget.interpolate(cachedVirtualTarget, 0.1);
-    filteredTarget = filteredTarget.interpolate(cachedVirtualTarget, 0.5);
+    filteredTarget = filteredTarget.interpolate(cachedVirtualTarget, 0.9);
 
     Translation2d virtualTarget = filteredTarget;
 
@@ -185,11 +185,12 @@ public class PrepareShooterCmd extends Command {
     Translation2d relTrans = virtualTarget.minus(robotFieldPos);
     double targetAngle = Math.atan2(relTrans.getY(), relTrans.getX());
 
+    // cachedAimAngle = new Rotation2d(targetAngle);
     cachedAimAngle = new Rotation2d(targetAngle);
 
-    double robotRot =
-        MathUtil.inputModulus(
-            (targetAngle / (2 * Math.PI)) - robotPose.getRotation().getRotations(), -0.5, 0.5);
+    // double robotRot =
+    //     MathUtil.inputModulus(
+    //         (targetAngle / (2 * Math.PI)) - robotPose.getRotation().getRotations(), -0.5, 0.5);
 
     // // Apply turret angle (unless overridden)
     // if (TurretAngleOverride.getAsDouble() == DONT_OVERRIDE_VAL)

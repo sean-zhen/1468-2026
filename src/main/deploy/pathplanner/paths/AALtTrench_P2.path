@@ -3,13 +3,13 @@
   "waypoints": [
     {
       "anchor": {
-        "x": 3.6,
-        "y": 7.3
+        "x": 3.495475352112677,
+        "y": 7.34044014084507
       },
       "prevControl": null,
       "nextControl": {
-        "x": 4.777087233007352,
-        "y": 7.281695198730512
+        "x": 4.672562585120029,
+        "y": 7.322135339575582
       },
       "isLocked": false,
       "linkedName": "AALtThEP1"
@@ -183,8 +183,8 @@
     }
   ],
   "globalConstraints": {
-    "maxVelocity": 3.0,
-    "maxAcceleration": 3.0,
+    "maxVelocity": 2.05,
+    "maxAcceleration": 2.5,
     "maxAngularVelocity": 400.0,
     "maxAngularAcceleration": 720.0,
     "nominalVoltage": 12.0,

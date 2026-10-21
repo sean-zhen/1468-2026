@@ -111,7 +111,7 @@ public final class Constants {
   public static final class Kicker {
     public static final int KICKER1_MOTOR_ID = 42;
     public static final int KICKER2_MOTOR_ID = 43;
-    public static final double KICKER_TARGET_RPS = 45.0;
+    public static final double KICKER_TARGET_RPS = 75.0; // 75.0; // WAS 45
     public static final double KICKER_GEAR_RATIO = 5.0;
 
     // TODO: Tune these values
@@ -127,7 +127,10 @@ public final class Constants {
   //////////////////////////    HARVESTER     /////////////////////////////////////////
 
   public static final class Harvester {
+
+    public static final boolean USE_SECOND_DEPLOY_MOTOR = true;
     public static final int DEPLOY_MOTOR_ID = 31;
+    public static final int DEPLOY_MOTOR_2_ID = 33;
     // THE DEPLOY MECHANISM HAS A 20:1 GEAR RATIO AND A 20:1 REDUCTIONS ON THE BELT DRIVE
     // THE GEAR RATIO IS HANDED OFF TO THE MOTOR CONFIGURATION
     public static final double DEPLOY_GEAR_RATIO = 20.0;
@@ -135,14 +138,14 @@ public final class Constants {
     public static final double DEPLOY_DEGREES_TO_ROTATIONS = 2.5 / 360.0;
 
     public static final double DEPLOY_START_ANGLE = 0.0; // Degrees
-    public static final double DEPLOY_IN_ANGLE = 12.0; // Degrees  was 12
-    public static final double DEPLOY_OUT_ANGLE = 100.0; // Degrees
+    public static final double DEPLOY_IN_ANGLE = 0.0; // Degrees  was 12
+    public static final double DEPLOY_OUT_ANGLE = 110.0; // Degrees  // TA - was 100.0
 
     public static final int SPIN_MOTOR_ID = 32;
     public static final double SPIN_GEAR_RATIO = 3.0; // NEED TO INSERT
     public static final double SPIN_TARGET_RPS =
-        -20.0; // even .75 not fast enoughwas 25 TODO: TA - using old hopper have to retune
-    // direction)
+        -200.0; // even .75 not fast enoughwas 25 TODO: TA - using old hopper have to retune
+    // direction)  // TA 10/19/26, was -20.0
 
     // TODO: Tune these values
     public static final double deploykP = 0.89;
@@ -160,9 +163,9 @@ public final class Constants {
     public static final double DEPLOY_HOMING_CURRENT_AMPS = 35.0;
     // Motion Magic tuning for deploy (mechanism output RPS)
     // Cruise velocity in rotations-per-second (mechanism output)
-    public static final double DEPLOY_MM_CRUISE_RPS = 4.0;
+    public static final double DEPLOY_MM_CRUISE_RPS = 8.0;
     // Motion Magic acceleration (rotations-per-second-per-second)
-    public static final double DEPLOY_MM_ACCEL_RPSPS = 2.0;
+    public static final double DEPLOY_MM_ACCEL_RPSPS = 4.0;
     // Motion Magic jerk (rotations-per-second-per-second-per-second) - currently unused
     public static final double DEPLOY_MM_JERK = 0.0;
     // How many consecutive cycles the current must exceed the threshold to declare a hit
@@ -179,7 +182,7 @@ public final class Constants {
     public static final int LEFT_ROLLER_MOTOR_ID = 44;
     public static final int RIGHT_ROLLER_MOTOR_ID = 45;
     public static final double GEAR_RATIO = 105.0 / 19.0; // todo: ta VERIFY
-    public static final double NORMAL_RPS = 25.0; // was 5.0
+    public static final double NORMAL_RPS = 5.0; // 50.0; // was 25.0
     public static final double REVERSE_RPS = -2.0;
 
     // TODO: Tune these values

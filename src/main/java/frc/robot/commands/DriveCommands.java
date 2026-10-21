@@ -10,7 +10,6 @@ package frc.robot.commands;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.filter.SlewRateLimiter;
-import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
@@ -127,8 +126,7 @@ public class DriveCommands {
       Drive drive,
       DoubleSupplier xSupplier,
       DoubleSupplier ySupplier,
-      Supplier<Rotation2d> rotationSupplier,
-      Supplier<Translation2d> targetSupplier) {
+      Supplier<Rotation2d> rotationSupplier) {
 
     // Create PID controller
     ProfiledPIDController angleController =
@@ -142,75 +140,24 @@ public class DriveCommands {
     // Construct command
     return Commands.run(
             () -> {
-              // Get robot + target positions
-              Pose2d robotPose = drive.getPose();
-              Translation2d robotPos = robotPose.getTranslation();
-              Translation2d target = targetSupplier.get();
-
-              Translation2d toTarget = target.minus(robotPos);
-
-              // Joystick input
-              Translation2d joystick =
+              // Get linear velocity
+              Translation2d linearVelocity =
                   getLinearVelocityFromJoysticks(xSupplier.getAsDouble(), ySupplier.getAsDouble());
 
-              // Safe unit vector toward target
-              Translation2d radialDir =
-                  toTarget.getNorm() > 1e-6
-                      ? toTarget.div(toTarget.getNorm())
-                      : new Translation2d();
-
-              // Project joystick onto radial direction
-              double radialSpeed =
-                  joystick.getX() * radialDir.getX() + joystick.getY() * radialDir.getY();
-
-              Translation2d radial = radialDir.times(radialSpeed);
-
-              // Tangential component (sideways relative to target)
-              Translation2d tangential = joystick.minus(radial);
-
-              // Limit sideways motion
-              // Translation2d limitedTangential = tangential.times(0.25);
-
-              double distance = toTarget.getNorm();
-
-              // Tune these numbers
-              double minScale = 0.15; // tight control when close
-              double maxScale = 0.6; // more freedom when far
-              double maxDistance = 5.0;
-
-              double scale = MathUtil.clamp(distance / maxDistance, minScale, maxScale);
-
-              Translation2d limitedTangential = tangential.times(scale);
-
-              // Final velocity
-              Translation2d linearVelocity = radial.plus(limitedTangential);
-
-              // Apply slew rate limiting
-              linearVelocity =
-                  new Translation2d(
-                      xLimiter.calculate(linearVelocity.getX()),
-                      yLimiter.calculate(linearVelocity.getY()));
-              // slow overall speed scaling so we don't have to worry about tuning PID for full
-              // speed
-              double speedScale = 0.6;
-              linearVelocity = linearVelocity.times(speedScale);
-
-              // PID-controlled rotation
+              // Calculate angular speed
               double omega =
                   angleController.calculate(
                       drive.getRotation().getRadians(), rotationSupplier.get().getRadians());
 
-              // Convert to chassis speeds
+              // Convert to field relative speeds & send command
               ChassisSpeeds speeds =
                   new ChassisSpeeds(
                       linearVelocity.getX() * drive.getMaxLinearSpeedMetersPerSec(),
                       linearVelocity.getY() * drive.getMaxLinearSpeedMetersPerSec(),
                       omega);
-
               boolean isFlipped =
                   DriverStation.getAlliance().isPresent()
                       && DriverStation.getAlliance().get() == Alliance.Red;
-
               drive.runVelocity(
                   ChassisSpeeds.fromFieldRelativeSpeeds(
                       speeds,
@@ -220,7 +167,7 @@ public class DriveCommands {
             },
             drive)
 
-        // Reset PID on start
+        // Reset PID controller when command starts
         .beforeStarting(() -> angleController.reset(drive.getRotation().getRadians()));
   }
 

@@ -37,7 +37,7 @@ public class TunerConstants {
 
   private static final Slot0Configs driveGains =
       new Slot0Configs()
-          .withKP(2.6) // Keep this low for now
+          .withKP(2.3) // was 2.6, 2.3 too slow
           .withKI(0)
           .withKD(0)
           .withKS(0.16058) // Static friction compensation (helps "unstick" the motors)
@@ -63,7 +63,7 @@ public class TunerConstants {
 
   // The stator current at which the wheels start to slip;
   // This needs to be tuned to your individual robot
-  private static final Current kSlipCurrent = Amps.of(120);
+  private static final Current kSlipCurrent = Amps.of(80);
 
   // Initial configs for the drive and steer motors and the azimuth encoder; these cannot be null.
   // Some configs will be overwritten; check the `with*InitialConfigs()` API documentation.

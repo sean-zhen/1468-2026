@@ -32,16 +32,16 @@
     },
     {
       "anchor": {
-        "x": 7.152218309859155,
-        "y": 3.54
+        "x": 7.248028169014085,
+        "y": 4.114841549295774
       },
       "prevControl": {
-        "x": 7.836298908421278,
-        "y": 3.391562354266555
+        "x": 7.932108767576208,
+        "y": 3.9664039035623295
       },
       "nextControl": {
-        "x": 6.6144211679268885,
-        "y": 3.656695813034889
+        "x": 6.710231027081819,
+        "y": 4.231537362330664
       },
       "isLocked": false,
       "linkedName": null
@@ -119,7 +119,7 @@
   "eventMarkers": [
     {
       "name": "StartHarvest",
-      "waypointRelativePos": 0.4776119402985078,
+      "waypointRelativePos": 0.7611940298507465,
       "endWaypointRelativePos": null,
       "command": {
         "type": "parallel",
@@ -143,7 +143,7 @@
     },
     {
       "name": "StopHarvest",
-      "waypointRelativePos": 3.5373134328358242,
+      "waypointRelativePos": 3.2537313432835804,
       "endWaypointRelativePos": null,
       "command": {
         "type": "parallel",
@@ -167,8 +167,8 @@
     }
   ],
   "globalConstraints": {
-    "maxVelocity": 3.0,
-    "maxAcceleration": 3.0,
+    "maxVelocity": 2.05,
+    "maxAcceleration": 2.5,
     "maxAngularVelocity": 400.0,
     "maxAngularAcceleration": 720.0,
     "nominalVoltage": 12.0,

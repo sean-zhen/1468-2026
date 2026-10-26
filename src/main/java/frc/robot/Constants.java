@@ -182,7 +182,7 @@ public final class Constants {
     public static final int LEFT_ROLLER_MOTOR_ID = 44;
     public static final int RIGHT_ROLLER_MOTOR_ID = 45;
     public static final double GEAR_RATIO = 105.0 / 19.0; // todo: ta VERIFY
-    public static final double NORMAL_RPS = 5.0; // 50.0; // was 25.0
+    public static final double NORMAL_RPS = 15.0; // 50.0; // was 25.0
     public static final double REVERSE_RPS = -2.0;
 
     // TODO: Tune these values

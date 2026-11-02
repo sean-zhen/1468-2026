@@ -381,7 +381,10 @@ public class RobotContainer {
     final JoystickButton harvestStartBtn = new JoystickButton(operatorAutoJoystick, 5);
     final JoystickButton harvestAgitate = new JoystickButton(operatorAutoJoystick, 6);
     final JoystickButton aimStopBtn = new JoystickButton(operatorAutoJoystick, 8);
-    final JoystickButton deployHarvZero = new JoystickButton(operatorAutoJoystick, 12);
+    final JoystickButton deployHarvZero = new JoystickButton(operatorAutoJoystick, 10);
+    final JoystickButton moveHarvestDown = new JoystickButton(operatorAutoJoystick, 11);
+    final JoystickButton moveHarvestUp = new JoystickButton(operatorAutoJoystick, 12);
+    final JoystickButton manualHarvest = new JoystickButton(operatorAutoJoystick, 7);
     // final JoystickButton climberUpBtn = new JoystickButton(operatorAutoJoystick, 9);
     // final JoystickButton climberDownBtn = new JoystickButton(operatorAutoJoystick, 10);
     ////////////////////////////////////////////////////////////////////////////////////////////
@@ -578,6 +581,23 @@ public class RobotContainer {
 
     harvestStartBtn.onTrue(new HarvesterDeploy(harvester, DEPLOY_OUT_ANGLE, 0.0));
     harvestStopBtn.onTrue(new HarvesterDeploy(harvester, DEPLOY_IN_ANGLE, 0.0));
+
+    // Manually drive the harvester down (out) with velocity control while held; stop on release
+    moveHarvestDown.whileTrue(
+        Commands.startEnd(
+            () -> harvester.setDeployVelocity(DEPLOY_MANUAL_DOWN_RPS),
+            harvester::stopDeploy,
+            harvester));
+
+    moveHarvestUp.whileTrue(
+        Commands.startEnd(
+            () -> harvester.setDeployVelocity(-DEPLOY_MANUAL_DOWN_RPS),
+            harvester::stopDeploy,
+            harvester));
+
+    manualHarvest.whileTrue(
+        Commands.startEnd(
+            () -> harvester.setSpinVelocity(SPIN_TARGET_RPS), harvester::stopSpin, harvester));
 
     deployHarvZero.onTrue(new HarvesterDeploy(harvester, -5.0, 0.0));
 

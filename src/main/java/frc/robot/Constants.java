@@ -111,7 +111,7 @@ public final class Constants {
   public static final class Kicker {
     public static final int KICKER1_MOTOR_ID = 42;
     public static final int KICKER2_MOTOR_ID = 43;
-    public static final double KICKER_TARGET_RPS = 75.0; // 75.0; // WAS 45
+    public static final double KICKER_TARGET_RPS = 250.0; // 75.0; // WAS 45
     public static final double KICKER_GEAR_RATIO = 5.0;
 
     // TODO: Tune these values
@@ -127,6 +127,8 @@ public final class Constants {
   //////////////////////////    HARVESTER     /////////////////////////////////////////
 
   public static final class Harvester {
+
+    public static final double DEPLOY_MANUAL_DOWN_RPS = 0.05; // passed to setDeployVelocity()
 
     public static final boolean USE_SECOND_DEPLOY_MOTOR = true;
     public static final int DEPLOY_MOTOR_ID = 31;
